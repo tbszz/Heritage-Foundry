@@ -1,0 +1,975 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>非遗造物局 - AI 非遗文创与拼豆生成平台</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #1f2328;
+        --muted: #687076;
+        --line: #d9d2c3;
+        --paper: #fffaf0;
+        --panel: #ffffff;
+        --accent: #d3382f;
+        --accent-2: #1f7a6d;
+        --gold: #c99a2e;
+        --blue: #2f5f9f;
+        --shadow: 0 18px 50px rgba(31, 35, 40, 0.14);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", "Microsoft YaHei", sans-serif;
+        color: var(--ink);
+        background:
+          linear-gradient(90deg, rgba(211, 56, 47, 0.06) 1px, transparent 1px),
+          linear-gradient(rgba(31, 122, 109, 0.06) 1px, transparent 1px),
+          var(--paper);
+        background-size: 32px 32px;
+      }
+
+      .shell {
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr);
+      }
+
+      aside {
+        border-right: 1px solid var(--line);
+        background: rgba(255, 250, 240, 0.92);
+        padding: 28px 20px;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+      }
+
+      .brand {
+        display: grid;
+        gap: 8px;
+      }
+
+      .brand-mark {
+        width: 44px;
+        height: 44px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 3px;
+      }
+
+      .brand-mark span {
+        border-radius: 3px;
+        background: var(--accent);
+      }
+
+      .brand-mark span:nth-child(2n) {
+        background: var(--accent-2);
+      }
+
+      .brand-mark span:nth-child(3n) {
+        background: var(--gold);
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 26px;
+        letter-spacing: 0;
+      }
+
+      .tagline {
+        color: var(--muted);
+        line-height: 1.6;
+        font-size: 14px;
+      }
+
+      nav {
+        margin-top: 34px;
+        display: grid;
+        gap: 10px;
+      }
+
+      nav a {
+        color: var(--ink);
+        text-decoration: none;
+        padding: 10px 12px;
+        border-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        border: 1px solid transparent;
+      }
+
+      nav a:hover {
+        background: #fff;
+        border-color: var(--line);
+      }
+
+      main {
+        padding: 34px;
+      }
+
+      .hero {
+        min-height: 460px;
+        display: grid;
+        grid-template-columns: minmax(0, 0.9fr) minmax(420px, 1.1fr);
+        gap: 28px;
+        align-items: stretch;
+      }
+
+      .hero-copy {
+        display: grid;
+        align-content: center;
+        gap: 20px;
+        padding: 24px 0;
+      }
+
+      .eyebrow {
+        width: max-content;
+        color: var(--accent);
+        font-weight: 800;
+        font-size: 14px;
+        border-bottom: 3px solid rgba(211, 56, 47, 0.25);
+      }
+
+      .hero h2 {
+        font-size: 52px;
+        line-height: 1.08;
+        letter-spacing: 0;
+      }
+
+      .hero-copy p {
+        max-width: 620px;
+        color: #3d4247;
+        line-height: 1.85;
+        font-size: 17px;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      button {
+        border: 0;
+        border-radius: 8px;
+        padding: 12px 16px;
+        font-weight: 800;
+        cursor: pointer;
+        color: #fff;
+        background: var(--ink);
+      }
+
+      button.secondary {
+        background: #fff;
+        color: var(--ink);
+        border: 1px solid var(--line);
+      }
+
+      .workbench {
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+        display: grid;
+        grid-template-rows: auto 1fr;
+      }
+
+      .toolbar {
+        min-height: 52px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        background: #fff;
+      }
+
+      .dots {
+        display: flex;
+        gap: 7px;
+      }
+
+      .dots span {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: var(--accent);
+      }
+
+      .dots span:nth-child(2) {
+        background: var(--gold);
+      }
+
+      .dots span:nth-child(3) {
+        background: var(--accent-2);
+      }
+
+      .toolbar strong {
+        font-size: 14px;
+      }
+
+      .workspace {
+        padding: 20px;
+        display: grid;
+        grid-template-columns: 190px 1fr;
+        gap: 18px;
+      }
+
+      .control-panel {
+        display: grid;
+        gap: 16px;
+        align-content: start;
+      }
+
+      .field {
+        display: grid;
+        gap: 7px;
+      }
+
+      label {
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 800;
+      }
+
+      select {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 10px;
+        font: inherit;
+      }
+
+      .preview {
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        gap: 16px;
+      }
+
+      .product-card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 16px;
+        background: #fffef9;
+        display: grid;
+        grid-template-columns: 1fr 160px;
+        gap: 16px;
+      }
+
+      .product-card h3 {
+        font-size: 22px;
+      }
+
+      .product-card p {
+        margin-top: 8px;
+        color: var(--muted);
+        line-height: 1.6;
+        font-size: 14px;
+      }
+
+      .mock-bag {
+        min-height: 190px;
+        border-radius: 8px 8px 28px 28px;
+        background: #f4e5c9;
+        border: 3px solid #d6bd90;
+        position: relative;
+        display: grid;
+        place-items: center;
+      }
+
+      .mock-bag:before {
+        content: "";
+        position: absolute;
+        top: -24px;
+        width: 76px;
+        height: 42px;
+        border: 5px solid #d6bd90;
+        border-bottom: 0;
+        border-radius: 50px 50px 0 0;
+      }
+
+      .pixel-grid {
+        display: grid;
+        grid-template-columns: repeat(12, 10px);
+        grid-template-rows: repeat(12, 10px);
+        gap: 2px;
+        padding: 8px;
+        background: rgba(255, 255, 255, 0.66);
+        border-radius: 8px;
+      }
+
+      .pixel-grid i {
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+        background: #f6ead3;
+      }
+
+      .pixel-grid i.r {
+        background: var(--accent);
+      }
+
+      .pixel-grid i.g {
+        background: var(--accent-2);
+      }
+
+      .pixel-grid i.y {
+        background: var(--gold);
+      }
+
+      .pixel-grid i.b {
+        background: var(--blue);
+      }
+
+      .grid-panel {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background:
+          linear-gradient(180deg, rgba(248, 241, 228, 0.8), #fff 28%),
+          #fff;
+        padding: 16px;
+      }
+
+      .grid-panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+
+      .pattern-studio {
+        display: grid;
+        grid-template-columns: 180px minmax(0, 1fr);
+        gap: 16px;
+        align-items: start;
+      }
+
+      .finished-preview {
+        border-radius: 8px;
+        border: 1px solid #eadcc4;
+        background: #fffaf0;
+        padding: 12px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .pegboard-preview {
+        aspect-ratio: 1;
+        border-radius: 18px;
+        background:
+          radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.95) 0 31%, transparent 32%),
+          #eadcc4;
+        background-size: 18px 18px;
+        padding: 16px;
+        display: grid;
+        place-items: center;
+        box-shadow: inset 0 0 0 1px rgba(31, 35, 40, 0.08);
+      }
+
+      .mini-bead-art {
+        display: grid;
+        grid-template-columns: repeat(12, 9px);
+        grid-template-rows: repeat(12, 9px);
+        gap: 2px;
+        padding: 8px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.76);
+        box-shadow: 0 10px 28px rgba(31, 35, 40, 0.14);
+      }
+
+      .mini-bead-art i {
+        width: 9px;
+        height: 9px;
+        border-radius: 999px;
+        background: transparent;
+      }
+
+      .preview-meta {
+        display: grid;
+        gap: 8px;
+      }
+
+      .preview-meta span {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .preview-meta strong {
+        color: var(--ink);
+      }
+
+      .pattern-board-wrap {
+        min-width: 0;
+        overflow: auto;
+        border-radius: 8px;
+        border: 1px solid #eadcc4;
+        background: #fcf6ea;
+        padding: 12px;
+      }
+
+      .pattern-board-shell {
+        width: max-content;
+        display: grid;
+        grid-template-columns: 26px repeat(18, 24px);
+        grid-template-rows: 24px repeat(12, 24px);
+        gap: 0;
+        background: #d9c8a8;
+        border: 1px solid #d9c8a8;
+      }
+
+      .axis,
+      .corner-axis {
+        display: grid;
+        place-items: center;
+        background: #f4e8d2;
+        color: #8b7755;
+        font-size: 10px;
+        font-weight: 800;
+        border: 1px solid #d9c8a8;
+      }
+
+      .bead-board {
+        display: contents;
+      }
+
+      .bead {
+        width: 24px;
+        height: 24px;
+        border-radius: 999px;
+        background:
+          radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.72), transparent 28%),
+          #fff8e9;
+        box-shadow:
+          inset 0 -2px 4px rgba(31, 35, 40, 0.15),
+          inset 0 0 0 1px rgba(31, 35, 40, 0.08);
+        border: 1px solid #d9c8a8;
+        position: relative;
+      }
+
+      .bead:after {
+        content: attr(data-key);
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        font-size: 9px;
+        font-weight: 900;
+        color: rgba(31, 35, 40, 0.58);
+      }
+
+      .bead.r {
+        background:
+          radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.55), transparent 28%),
+          #d3382f;
+      }
+
+      .bead.g {
+        background:
+          radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.55), transparent 28%),
+          #1f7a6d;
+      }
+
+      .bead.y {
+        background:
+          radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.55), transparent 28%),
+          #c99a2e;
+      }
+
+      .bead.b {
+        background:
+          radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.55), transparent 28%),
+          #2f5f9f;
+      }
+
+      .bead.r:after,
+      .bead.g:after,
+      .bead.b:after {
+        color: rgba(255, 255, 255, 0.86);
+      }
+
+      .bead.empty:after {
+        content: "";
+      }
+
+      .color-ledger {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+      }
+
+      .color-chip {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 10px;
+        display: grid;
+        grid-template-columns: 28px 1fr;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .chip-dot {
+        width: 28px;
+        height: 28px;
+        border-radius: 999px;
+        box-shadow: inset 0 -2px 4px rgba(31, 35, 40, 0.18);
+      }
+
+      .chip-dot.r {
+        background: #d3382f;
+      }
+
+      .chip-dot.g {
+        background: #1f7a6d;
+      }
+
+      .chip-dot.y {
+        background: #c99a2e;
+      }
+
+      .chip-dot.b {
+        background: #2f5f9f;
+      }
+
+      .chip-text {
+        display: grid;
+        gap: 2px;
+      }
+
+      .chip-text strong {
+        font-size: 12px;
+      }
+
+      .chip-text span {
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+      }
+
+      .stat {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 14px;
+        background: #fff;
+      }
+
+      .stat strong {
+        display: block;
+        font-size: 22px;
+      }
+
+      .stat span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .section {
+        margin-top: 34px;
+      }
+
+      .section h2 {
+        font-size: 28px;
+        margin-bottom: 16px;
+      }
+
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 18px;
+        background: rgba(255, 255, 255, 0.92);
+      }
+
+      .card h3 {
+        margin-bottom: 10px;
+      }
+
+      .card p,
+      .card li {
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .card ul {
+        padding-left: 18px;
+        margin: 0;
+      }
+
+      .story-card {
+        border-left: 5px solid var(--accent);
+        background: #fff;
+        padding: 18px;
+        border-radius: 8px;
+        box-shadow: 0 10px 28px rgba(31, 35, 40, 0.08);
+      }
+
+      .story-card p {
+        color: #3d4247;
+        line-height: 1.8;
+      }
+
+      @media (max-width: 980px) {
+        .shell {
+          grid-template-columns: 1fr;
+        }
+
+        aside {
+          height: auto;
+          position: static;
+        }
+
+        .hero,
+        .workspace,
+        .product-card {
+          grid-template-columns: 1fr;
+        }
+
+        .hero h2 {
+          font-size: 38px;
+        }
+
+        .cards,
+        .color-ledger,
+        .stats {
+          grid-template-columns: 1fr;
+        }
+
+        .pattern-studio {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <aside>
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">
+            <span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span>
+          </div>
+          <h1>非遗造物局</h1>
+          <p class="tagline">AI 非遗文创与拼豆手作方案生成平台</p>
+        </div>
+        <nav aria-label="页面导航">
+          <a href="#demo"><span>创意 Demo</span><strong>01</strong></a>
+          <a href="#flow"><span>生成流程</span><strong>02</strong></a>
+          <a href="#value"><span>价值说明</span><strong>03</strong></a>
+        </nav>
+      </aside>
+
+      <main>
+        <section class="hero" id="demo">
+          <div class="hero-copy">
+            <p class="eyebrow">生活娱乐 / 非遗文创 / 拼豆手作</p>
+            <h2>把非遗纹样，变成年轻人愿意拥有的日常小物。</h2>
+            <p>
+              用户选择非遗技艺、产品载体和喜欢的风格，平台生成文创方案、
+              商品文案、非遗故事卡，并把纹样转成可制作的拼豆图纸。
+            </p>
+            <div class="actions">
+              <button type="button" onclick="randomizeBeads()">生成拼豆图纸</button>
+              <button class="secondary" type="button" onclick="switchProduct()">
+                切换文创载体
+              </button>
+            </div>
+          </div>
+
+          <div class="workbench" aria-label="非遗造物局 Demo 工作台">
+            <div class="toolbar">
+              <div class="dots" aria-hidden="true">
+                <span></span><span></span><span></span>
+              </div>
+              <strong>AI 文创生成工作台</strong>
+            </div>
+            <div class="workspace">
+              <div class="control-panel">
+                <div class="field">
+                  <label for="craft">非遗技艺</label>
+                  <select id="craft" onchange="updateCopy()">
+                    <option>苗绣</option>
+                    <option>剪纸</option>
+                    <option>皮影</option>
+                    <option>扎染</option>
+                    <option>木版年画</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="product">产品载体</label>
+                  <select id="product" onchange="updateCopy()">
+                    <option>拼豆挂件</option>
+                    <option>帆布包</option>
+                    <option>手机壳</option>
+                    <option>贴纸套组</option>
+                    <option>冰箱贴</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="style">年轻化风格</label>
+                  <select id="style" onchange="updateCopy()">
+                    <option>国潮明亮</option>
+                    <option>可爱校园</option>
+                    <option>复古市集</option>
+                    <option>极简日常</option>
+                    <option>节日礼物</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="preview">
+                <div class="product-card">
+                  <div>
+                    <h3 id="productName">苗绣守护花拼豆挂件</h3>
+                    <p id="productDesc">
+                      从苗绣花鸟纹样中提取对称轮廓和高饱和配色，转译为适合手作的像素拼豆图纸。
+                    </p>
+                  </div>
+                  <div class="mock-bag" aria-label="文创商品预览">
+                    <div class="pixel-grid" id="smallGrid"></div>
+                  </div>
+                </div>
+
+                <div class="grid-panel">
+                  <div class="grid-panel-header">
+                    <h3>专业拼豆图纸</h3>
+                    <span class="tagline">坐标网格 / 色号 Key / 采购清单</span>
+                  </div>
+                  <div class="pattern-studio">
+                    <div class="finished-preview">
+                      <div class="pegboard-preview">
+                        <div class="mini-bead-art" id="miniBeadArt" aria-label="成品拼豆挂件预览"></div>
+                      </div>
+                      <div class="preview-meta">
+                        <span><strong>豆板尺寸</strong><em>18 × 12</em></span>
+                        <span><strong>推荐品牌</strong><em>Artkal / Hama</em></span>
+                        <span><strong>导出内容</strong><em>图纸 + 色表</em></span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div class="pattern-board-wrap">
+                        <div class="pattern-board-shell" id="patternShell" aria-label="带坐标的拼豆图纸">
+                          <div class="corner-axis">#</div>
+                          <div class="bead-board" id="beadBoard" aria-label="拼豆网格"></div>
+                        </div>
+                      </div>
+                      <div class="color-ledger" id="colorLedger" aria-label="拼豆颜色统计"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="stats">
+                  <div class="stat"><strong id="beadCount">132</strong><span>预计豆子数量</span></div>
+                  <div class="stat"><strong id="colorCount">4 色</strong><span>智能匹配色号</span></div>
+                  <div class="stat"><strong id="timeCost">35 分钟</strong><span>制作时长</span></div>
+                  <div class="stat"><strong id="difficulty">入门</strong><span>制作难度</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="flow">
+          <h2>生成流程</h2>
+          <div class="cards">
+            <article class="card">
+              <h3>选非遗</h3>
+              <p>从剪纸、皮影、苗绣、扎染、木版年画等技艺中选择灵感来源。</p>
+            </article>
+            <article class="card">
+              <h3>选载体</h3>
+              <p>选择拼豆挂件、手机壳、帆布包、贴纸、明信片、冰箱贴等文创形态。</p>
+            </article>
+            <article class="card">
+              <h3>生成方案</h3>
+              <p>输出图案方向、配色、商品名称、卖点文案、非遗故事和手作材料清单。</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="value">
+          <h2>价值说明</h2>
+          <div class="story-card">
+            <p>
+              非遗造物局不是把非遗做成静态展板，而是让年轻人把传统纹样变成自己的生活物件。
+              它降低了文创设计和手作转译门槛，也帮助传承人、小店、景区和校园社团快速生成
+              更适合年轻人传播的产品方案。非遗因此不只是被看见，还能被制作、被使用、被分享。
+            </p>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      const beadBoard = document.querySelector("#beadBoard");
+      const patternShell = document.querySelector("#patternShell");
+      const miniBeadArt = document.querySelector("#miniBeadArt");
+      const smallGrid = document.querySelector("#smallGrid");
+      const colorLedger = document.querySelector("#colorLedger");
+      const craft = document.querySelector("#craft");
+      const product = document.querySelector("#product");
+      const style = document.querySelector("#style");
+      const productName = document.querySelector("#productName");
+      const productDesc = document.querySelector("#productDesc");
+      const beadCount = document.querySelector("#beadCount");
+      const colorCount = document.querySelector("#colorCount");
+      const timeCost = document.querySelector("#timeCost");
+      const difficulty = document.querySelector("#difficulty");
+
+      const palette = {
+        r: { key: "A", name: "朱砂红", code: "A-12", color: "#d3382f" },
+        g: { key: "B", name: "孔雀绿", code: "C-34", color: "#1f7a6d" },
+        y: { key: "C", name: "鎏金黄", code: "S-08", color: "#c99a2e" },
+        b: { key: "D", name: "靛青蓝", code: "M-22", color: "#2f5f9f" },
+      };
+      const colorClasses = ["r", "g", "y", "b"];
+      let seed = 2;
+
+      function buildPattern(width, height) {
+        const center = (width - 1) / 2;
+        return Array.from({ length: width * height }, (_, index) => {
+          const x = index % width;
+          const y = Math.floor(index / width);
+          const mirror = Math.abs(x - center);
+          const wave = Math.sin((y + seed) * 0.65) * 1.7;
+          const petal = mirror < 2.2 + wave && y > 1 && y < height - 1;
+          const border = y > 2 && y < height - 2 && (x + y + seed) % 7 === 0;
+          const eye = Math.abs(x - center) < 0.8 && y > 3 && y < height - 3;
+          const wing = y > 4 && y < height - 3 && mirror > 4 && mirror < 7 && (x + seed) % 2 === 0;
+          const active = petal || border || eye || wing;
+          if (!active) return "";
+          if (eye) return "y";
+          if (wing) return x < center ? "g" : "b";
+          return colorClasses[(x * 3 + y * 5 + seed) % colorClasses.length];
+        });
+      }
+
+      function summarize(pattern) {
+        return pattern.reduce((acc, name) => {
+          if (name) acc[name] = (acc[name] || 0) + 1;
+          return acc;
+        }, {});
+      }
+
+      function renderLedger(summary) {
+        colorLedger.innerHTML = Object.entries(palette)
+          .map(([name, meta]) => {
+            const amount = summary[name] || 0;
+            return `
+              <div class="color-chip">
+                <i class="chip-dot ${name}"></i>
+                <span class="chip-text">
+                  <strong>${meta.key} ${meta.name}</strong>
+                  <span>${meta.code} / ${amount} 颗</span>
+                </span>
+              </div>
+            `;
+          })
+          .join("");
+      }
+
+      function renderAxis(width, height) {
+        const existing = patternShell.querySelectorAll(".axis");
+        existing.forEach((node) => node.remove());
+        for (let x = 1; x <= width; x += 1) {
+          const axis = document.createElement("div");
+          axis.className = "axis";
+          axis.textContent = String(x);
+          patternShell.insertBefore(axis, beadBoard);
+        }
+        for (let y = 1; y <= height; y += 1) {
+          const axis = document.createElement("div");
+          axis.className = "axis";
+          axis.textContent = String(y);
+          beadBoard.appendChild(axis);
+          for (let x = 1; x <= width; x += 1) {
+            const bead = document.createElement("i");
+            bead.className = "bead empty";
+            beadBoard.appendChild(bead);
+          }
+        }
+      }
+
+      function renderGrid(container, width, height) {
+        const pattern = buildPattern(width, height);
+        if (container === beadBoard) {
+          beadBoard.innerHTML = "";
+          renderAxis(width, height);
+          const cells = beadBoard.querySelectorAll(".bead");
+          pattern.forEach((name, index) => {
+            const bead = cells[index];
+            const meta = palette[name];
+            bead.className = `bead ${name || "empty"}`;
+            bead.dataset.key = meta ? meta.key : "";
+          });
+          const summary = summarize(pattern);
+          const count = pattern.filter(Boolean).length;
+          beadCount.textContent = String(count);
+          colorCount.textContent = `${Object.values(summary).filter(Boolean).length} 色`;
+          timeCost.textContent = count > 95 ? "45 分钟" : "30 分钟";
+          difficulty.textContent = count > 105 ? "进阶" : "入门";
+          renderLedger(summary);
+          return;
+        }
+
+        container.innerHTML = pattern
+          .map((name) => `<i class="${name}" style="${name ? `background:${palette[name].color}` : ""}"></i>`)
+          .join("");
+      }
+
+      function updateCopy() {
+        productName.textContent = `${craft.value}灵感${product.value}`;
+        productDesc.textContent = `以${craft.value}的经典纹样为基础，转译成${style.value}风格的${product.value}方案，包含坐标图纸、色号 Key、材料统计、故事卡和制作建议。`;
+      }
+
+      function randomizeBeads() {
+        seed += 1;
+        renderGrid(beadBoard, 18, 12);
+        renderGrid(miniBeadArt, 12, 12);
+        renderGrid(smallGrid, 12, 12);
+      }
+
+      function switchProduct() {
+        const next = (product.selectedIndex + 1) % product.options.length;
+        product.selectedIndex = next;
+        updateCopy();
+        randomizeBeads();
+      }
+
+      updateCopy();
+      randomizeBeads();
+    </script>
+  </body>
+</html>
