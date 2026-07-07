@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>非遗技艺 - 非遗造物局</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="logo">
+        <div class="logo-icon">
+          <span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <div>
+          <h1>非遗造物局</h1>
+          <p>AI 非遗文创与手作方案生成平台</p>
+        </div>
+      </div>
+      <nav class="nav">
+        <a href="index.html" class="nav-link">首页</a>
+        <a href="crafts.html" class="nav-link active">非遗技艺</a>
+        <a href="generator.html" class="nav-link">创意生成</a>
+      </nav>
+    </header>
+
+    <main class="main">
+      <div id="crafts-page" class="page active">
+        <aside class="sidebar">
+          <div class="sidebar-header">
+            <h3>非遗技艺</h3>
+            <p>探索中国传统文化瑰宝</p>
+          </div>
+          <div id="craft-sidebar-list" class="craft-sidebar-list"></div>
+        </aside>
+
+        <div class="content-center">
+          <div class="content-header">
+            <div class="craft-title">
+              <h2 id="content-title">请选择一项非遗技艺</h2>
+              <p id="content-subtitle">点击左侧列表查看详细内容</p>
+            </div>
+            <div class="content-actions">
+              <button id="rotate-btn" class="action-btn">🔄 旋转</button>
+              <button id="reset-btn" class="action-btn">📐 复位</button>
+            </div>
+          </div>
+
+          <div class="three-view">
+            <div id="craft-three-container" class="three-container"></div>
+            <div class="view-controls">
+              <div class="control-item">🖱️ 拖拽旋转</div>
+              <div class="control-item">🔍 滚轮缩放</div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="right-panel">
+          <div class="info-panel">
+            <div class="info-section">
+              <h4>技艺简介</h4>
+              <p id="craft-description">选择非遗技艺后，此处将显示该技艺的详细介绍...</p>
+            </div>
+            <div class="info-section story-section">
+              <h4>非遗故事</h4>
+              <p id="craft-story">每一项非遗技艺都承载着千年的文化传承...</p>
+            </div>
+          </div>
+
+          <div class="create-panel">
+            <h4>📦 生成文创</h4>
+            <div class="product-grid">
+              <button class="product-btn" data-product="keychain">🔑 拼豆挂件</button>
+              <button class="product-btn" data-product="bag">👜 帆布包</button>
+              <button class="product-btn" data-product="phone">📱 手机壳</button>
+              <button class="product-btn" data-product="sticker">🏷️ 贴纸套组</button>
+              <button class="product-btn" data-product="magnet">🧲 冰箱贴</button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <p>非遗造物局 - 让非遗走进年轻人的日常生活</p>
+    </footer>
+  </div>
+
+  <script type="module" src="crafts.js"></script>
+</body>
+</html>

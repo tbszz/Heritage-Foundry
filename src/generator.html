@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>创意生成 - 非遗造物局</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="logo">
+        <div class="logo-icon">
+          <span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <div>
+          <h1>非遗造物局</h1>
+          <p>AI 非遗文创与手作方案生成平台</p>
+        </div>
+      </div>
+      <nav class="nav">
+        <a href="index.html" class="nav-link">首页</a>
+        <a href="crafts.html" class="nav-link">非遗技艺</a>
+        <a href="generator.html" class="nav-link active">创意生成</a>
+      </nav>
+    </header>
+
+    <main class="main">
+      <div id="generator-page" class="page active">
+        <div class="page-header">
+          <h2>创意生成</h2>
+          <p>选择非遗技艺与流行IP，打造专属文创方案</p>
+          <div class="workflow-rail" aria-label="生成流程">
+            <span class="workflow-step active" data-step="idea">1 选灵感</span>
+            <span class="workflow-step" data-step="image">2 生成图像</span>
+            <span class="workflow-step" data-step="pattern">3 拼豆图纸</span>
+            <span class="workflow-step" data-step="save">4 保存作品</span>
+          </div>
+        </div>
+        
+        <div class="control-panel">
+          <div class="control-group">
+            <label for="craft">非遗技艺</label>
+            <select id="craft">
+              <option value="papercut">剪纸 - 中国传统民间艺术，以剪刀或刻刀在纸上剪刻花纹</option>
+              <option value="shadow">皮影 - 用兽皮或纸板做成的人物剪影以表演故事</option>
+              <option value="embroidery">苗绣 - 苗族民间刺绣，色彩鲜艳，纹样繁复</option>
+              <option value="tie-dye">扎染 - 中国民间传统而独特的染色工艺</option>
+              <option value="new-year">木版年画 - 用木版印刷的年画，线条粗犷，色彩鲜明</option>
+              <option value="porcelain">景德镇陶瓷 - 白如玉、明如镜、薄如纸、声如磬</option>
+              <option value="calligraphy">中国书法 - 以汉字为表象的书写艺术，笔墨韵律</option>
+              <option value="seal">中国篆刻 - 以石材为材料，以刻刀为工具的镌刻艺术</option>
+              <option value="brocade">南京云锦 - 中国织锦技艺最高水平的代表</option>
+              <option value="tangka">唐卡 - 藏族传统绘画艺术，色彩鲜艳内容丰富</option>
+              <option value="clay">泥塑 - 以黏土为原料塑造各种形象的传统民间艺术</option>
+              <option value="tea">制茶技艺 - 中国传统制茶工艺，多道工序精心制作</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="ip">流行IP</label>
+            <select id="ip">
+              <option value="doraemon">哆啦A梦 - 经典日本动漫角色</option>
+              <option value="bears">熊大熊二 - 国产动画《熊出没》角色</option>
+              <option value="nezha">哪吒 - 中国神话人物，国漫热门角色</option>
+              <option value="monkey">孙悟空 - 中国神话经典角色</option>
+              <option value="pikachu">皮卡丘 - 精灵宝可梦热门角色</option>
+              <option value="mickey">米老鼠 - 迪士尼经典动画角色</option>
+              <option value="helloKitty">Hello Kitty - 日本三丽鸥卡通形象</option>
+              <option value="spiderMan">蜘蛛侠 - 漫威超级英雄</option>
+              <option value="batman">蝙蝠侠 - DC超级英雄</option>
+              <option value="pokemon">宝可梦 - 精灵宝可梦系列角色</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="carrier">文创载体</label>
+            <select id="carrier">
+              <option value="keychain">拼豆挂件 - 用拼豆制作的挂饰</option>
+              <option value="bag">帆布包 - 印有非遗纹样的帆布包</option>
+              <option value="phone">手机壳 - 印有非遗纹样的手机壳</option>
+              <option value="sticker">贴纸套组 - 非遗主题贴纸套装</option>
+              <option value="magnet">冰箱贴 - 非遗主题冰箱贴</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="style">风格</label>
+            <select id="style">
+              <option value="chinese">国潮明亮 - 高饱和度配色，现代国潮风格</option>
+              <option value="cute">可爱校园 - 圆润线条，可爱卡通风格</option>
+              <option value="vintage">复古市集 - 怀旧色调，复古文艺风格</option>
+              <option value="minimal">极简日常 - 简约线条，低饱和度配色</option>
+              <option value="festive">节日礼物 - 喜庆配色，节日氛围</option>
+            </select>
+          </div>
+
+          <div class="button-group">
+            <button id="generateBtn" class="btn btn-primary">生成AI图像</button>
+            <button id="patternBtn" class="btn btn-secondary">生成拼豆图纸</button>
+            <button id="saveCreationBtn" class="btn btn-secondary" disabled>保存作品</button>
+          </div>
+        </div>
+
+        <div class="preview-section">
+          <div class="preview-container">
+            <div id="three-container" class="three-container"></div>
+            <div id="image-preview" class="image-preview">
+              <div class="preview-placeholder">
+                <p>点击"生成AI图像"按钮</p>
+                <p>生成非遗风格的文创设计</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pattern-section">
+          <div class="section-toolbar">
+            <h3>拼豆图纸</h3>
+            <div class="tool-actions">
+              <select id="color-system-select" class="tool-select" aria-label="选择拼豆色号体系">
+                <option value="MARD">MARD 拼豆</option>
+                <option value="COCO">COCO 拼豆</option>
+                <option value="漫漫">漫漫拼豆</option>
+                <option value="盼盼">盼盼拼豆</option>
+                <option value="咪小窝">咪小窝拼豆</option>
+              </select>
+              <button id="download-image-btn" class="btn btn-secondary btn-small" disabled>下载图纸</button>
+              <button id="download-csv-btn" class="btn btn-secondary btn-small" disabled>下载CSV</button>
+            </div>
+          </div>
+          <div id="pattern-container" class="pattern-container">
+            <div class="pattern-placeholder">
+              <p>点击"生成拼豆图纸"按钮</p>
+              <p>将AI图像转译为拼豆图纸</p>
+            </div>
+          </div>
+
+          <div id="material-list" class="material-list">
+            <h3>材料清单</h3>
+            <div class="materials">
+              <div class="material-item">
+                <div class="color-dot" style="background: #d3382f"></div>
+                <span>朱砂红 (A-12)</span>
+                <span class="count">0 颗</span>
+              </div>
+              <div class="material-item">
+                <div class="color-dot" style="background: #1f7a6d"></div>
+                <span>孔雀绿 (C-34)</span>
+                <span class="count">0 颗</span>
+              </div>
+              <div class="material-item">
+                <div class="color-dot" style="background: #c99a2e"></div>
+                <span>鎏金黄 (S-08)</span>
+                <span class="count">0 颗</span>
+              </div>
+              <div class="material-item">
+                <div class="color-dot" style="background: #2f5f9f"></div>
+                <span>靛青蓝 (M-22)</span>
+                <span class="count">0 颗</span>
+              </div>
+            </div>
+          </div>
+
+          <div id="stats" class="stats">
+            <div class="stat-item">
+              <strong id="bead-count">0</strong>
+              <span>预计豆子数量</span>
+            </div>
+            <div class="stat-item">
+              <strong id="color-count">0 色</strong>
+              <span>智能匹配色号</span>
+            </div>
+            <div class="stat-item">
+              <strong id="time-cost">0 分钟</strong>
+              <span>制作时长</span>
+            </div>
+            <div class="stat-item">
+              <strong id="difficulty">入门</strong>
+              <span>制作难度</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="product-section">
+          <h3>商品文案</h3>
+          <div class="product-card">
+            <h4 id="product-name">请选择参数生成商品名称</h4>
+            <p id="product-desc">选择非遗技艺、流行IP和文创载体后，系统将为您生成独特的商品卖点文案。</p>
+            <div class="story-card">
+              <h5>非遗故事</h5>
+              <p id="story-content">每种非遗技艺都有独特的历史背景和文化内涵，选择非遗技艺后查看详细故事。</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="recent-section" id="recent-section" hidden>
+          <div class="section-toolbar">
+            <h3>最近作品</h3>
+            <button id="refreshCreationsBtn" class="btn btn-secondary btn-small">刷新</button>
+          </div>
+          <div id="recent-creations" class="recent-creations"></div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <p>非遗造物局 - 让非遗走进年轻人的日常生活</p>
+    </footer>
+  </div>
+
+  <script type="module" src="generator.js"></script>
+</body>
+</html>

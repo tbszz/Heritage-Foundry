@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>非遗造物局</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="home-shell">
+  <div class="app">
+    <header class="header">
+      <div class="logo">
+        <img class="logo-seal" src="/assets/generated/seal-mark.png" alt="" aria-hidden="true">
+        <div>
+          <h1>非遗造物局</h1>
+        </div>
+      </div>
+      <nav class="nav">
+        <a href="index.html" class="nav-link active">首页</a>
+        <a href="crafts.html" class="nav-link">非遗技艺</a>
+        <a href="generator.html" class="nav-link">创意生成</a>
+      </nav>
+      <a class="header-explore" href="crafts.html" aria-label="探索非遗之美">
+        <span aria-hidden="true">✧</span>
+        探索非遗之美
+      </a>
+    </header>
+
+    <main class="main home-main">
+      <section class="home-hero" data-component="HomeHeroShell" aria-labelledby="home-title">
+        <div class="home-pattern" aria-hidden="true"></div>
+        <div class="home-scanline" aria-hidden="true"></div>
+
+        <div class="heritage-selector-shell" data-component="HeritageSelector">
+          <div id="heritage-selector" class="heritage-selector" aria-label="非遗技艺选项"></div>
+        </div>
+
+        <div class="home-hero-grid">
+          <div class="museum-progress-rail" aria-hidden="true">
+            <span class="rail-dot active"></span>
+            <span class="rail-dot"></span>
+            <span class="rail-dot"></span>
+            <span class="rail-dot"></span>
+            <span class="rail-dot seal-dot">造</span>
+          </div>
+
+          <div id="home-copy-panel" class="home-copy" data-component="HeroCopyPanel">
+            <h2 id="home-title">让非遗在粒子中重生</h2>
+            <p id="home-description" class="home-description">选择一项技艺，数字粒子即刻聚合成它的三维形态。</p>
+          </div>
+
+          <div class="home-stage-wrap" data-component="GLBDisplayStage">
+            <div id="home-particle-stage" class="home-particle-stage" aria-label="非遗粒子三维展示"></div>
+            <div class="stage-scan" aria-hidden="true">
+              <span>扫描中</span>
+              <strong>87%</strong>
+            </div>
+            <div class="stage-motto" aria-hidden="true">
+              <span>千年匠心</span>
+              <span>生生不息</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="heritage-info-rail" data-component="StoryRail">
+          <div class="rail-craft-title">
+            <img id="home-craft-icon" src="/assets/generated/craft-icons/papercut.png" alt="" aria-hidden="true">
+            <strong id="home-craft-name">景德镇陶瓷</strong>
+          </div>
+          <span class="rail-divider" aria-hidden="true"></span>
+          <div class="rail-category">
+            <span class="rail-label">非遗门类</span>
+            <strong id="home-craft-category">传统陶瓷</strong>
+          </div>
+          <span class="rail-divider" aria-hidden="true"></span>
+          <p id="home-craft-story">剪纸是中国最古老的民间艺术之一，以剪刀或刻刀在纸上剪刻花纹。</p>
+          <a id="home-generator-link" class="home-cta" href="generator.html">
+            进入创意生成
+            <span aria-hidden="true">→</span>
+          </a>
+          <a id="home-craft-link" class="sr-only" href="crafts.html">查看技艺故事</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>非遗造物局 - 让非遗走进年轻人的日常生活</p>
+    </footer>
+  </div>
+  <script type="module" src="home.js"></script>
+</body>
+</html>
