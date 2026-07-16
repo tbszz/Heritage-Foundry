@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AR 体验 - 非遗造物局</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- model-viewer 自包含 bundle（内置 three），本地托管保证离线演示可用 -->
+  <script type="module" src="/vendor/model-viewer.min.js"></script>
+  <style>
+    .ar-main {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 20px clamp(16px, 4vw, 48px) 40px;
+      max-width: 1100px;
+      margin: 0 auto;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .ar-stage {
+      position: relative;
+      border-radius: 18px;
+      overflow: hidden;
+      background:
+        radial-gradient(600px 300px at 50% 0%, rgba(201, 154, 46, 0.14), transparent 65%),
+        var(--night);
+      border: 1px solid rgba(201, 154, 46, 0.35);
+    }
+    model-viewer {
+      width: 100%;
+      height: min(62vh, 560px);
+      background: transparent;
+      --poster-color: transparent;
+    }
+    .ar-stage .ar-badge {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      z-index: 2;
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      color: var(--gold);
+      border: 1px solid rgba(201, 154, 46, 0.5);
+      border-radius: 999px;
+      padding: 4px 12px;
+      background: rgba(20, 22, 28, 0.55);
+      backdrop-filter: blur(6px);
+    }
+    .ar-enter-btn {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: none;
+      border-radius: 999px;
+      padding: 12px 26px;
+      font-size: 15px;
+      font-weight: 600;
+      color: #fffaf0;
+      background: linear-gradient(135deg, var(--accent), #a52a20);
+      box-shadow: 0 10px 26px rgba(211, 56, 47, 0.4);
+      cursor: pointer;
+    }
+    .ar-story-card {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 14px;
+      align-items: start;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px 20px;
+      box-shadow: var(--shadow);
+    }
+    .ar-story-card .ar-story-emoji { font-size: 34px; line-height: 1; }
+    .ar-story-card h2 { margin: 0 0 2px; font-size: 20px; }
+    .ar-story-card .ar-story-category { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
+    .ar-story-card p.ar-story-text { margin: 0; font-size: 14px; line-height: 1.8; color: var(--ink); }
+    .ar-craft-strip {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding: 4px 2px 10px;
+      scrollbar-width: thin;
+    }
+    .ar-craft-chip {
+      flex: 0 0 auto;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel);
+      padding: 8px 16px;
+      font-size: 14px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+    .ar-craft-chip.active {
+      border-color: var(--accent);
+      color: #fffaf0;
+      background: var(--accent);
+      box-shadow: 0 6px 16px rgba(211, 56, 47, 0.35);
+    }
+    .ar-tips {
+      font-size: 12.5px;
+      color: var(--muted);
+      line-height: 1.8;
+      border-left: 3px solid var(--gold);
+      padding-left: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="logo">
+        <div class="logo-icon">
+          <span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <div>
+          <h1>非遗造物局</h1>
+          <p>AI 非遗文创与手作方案生成平台</p>
+        </div>
+      </div>
+      <nav class="nav">
+        <a href="index.html" class="nav-link">首页</a>
+        <a href="crafts.html" class="nav-link">非遗技艺</a>
+        <a href="generator.html" class="nav-link">创意生成</a>
+        <a href="ar.html" class="nav-link active">AR 体验</a>
+      </nav>
+    </header>
+
+    <main class="ar-main">
+      <div class="ar-stage">
+        <span class="ar-badge">AR · 让文物走出展柜</span>
+        <model-viewer
+          id="ar-viewer"
+          ar
+          ar-modes="webxr scene-viewer quick-look"
+          ar-scale="auto"
+          camera-controls
+          auto-rotate
+          auto-rotate-delay="1500"
+          rotation-per-second="24deg"
+          interaction-prompt="auto"
+          shadow-intensity="1"
+          exposure="1.05"
+          loading="eager"
+          alt="非遗展品三维模型">
+          <button slot="ar-button" class="ar-enter-btn" type="button">📱 把它放进你的房间</button>
+        </model-viewer>
+      </div>
+
+      <div id="ar-craft-strip" class="ar-craft-strip" role="tablist" aria-label="选择非遗技艺"></div>
+
+      <div class="ar-story-card">
+        <span id="ar-story-emoji" class="ar-story-emoji">🏺</span>
+        <div>
+          <h2 id="ar-craft-name">加载中…</h2>
+          <p id="ar-craft-category" class="ar-story-category"></p>
+          <p id="ar-craft-story" class="ar-story-text"></p>
+        </div>
+      </div>
+
+      <p class="ar-tips">
+        📖 用法：手机打开本页，点击「把它放进你的房间」，对准桌面或地面即可以真实尺寸摆放文物，可环绕观看、放大细节。
+        安卓（含鸿蒙）用 Chrome / 系统浏览器体验最佳；iOS 的 AR Quick Look 需 USDZ 模型（规划中），当前提供 3D 环绕预览。
+        电脑端可拖拽旋转、滚轮缩放。
+      </p>
+    </main>
+  </div>
+
+  <script type="module" src="ar.js"></script>
+</body>
+</html>

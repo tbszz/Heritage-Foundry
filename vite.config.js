@@ -22,7 +22,8 @@ export default defineConfig({
       input: {
         index: './src/index.html',
         crafts: './src/crafts.html',
-        generator: './src/generator.html'
+        generator: './src/generator.html',
+        ar: './src/ar.html'
       },
       output: {
         manualChunks: {
