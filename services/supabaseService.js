@@ -64,15 +64,65 @@ function normalizeCreation(payload = {}) {
   };
 }
 
+const STORAGE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'heritage-creations';
+
+function parseImageDataUrl(dataUrl) {
+  const match = /^data:(image\/[a-z0-9+.-]+);base64,(.+)$/i.exec(dataUrl || '');
+  if (!match) {
+    return null;
+  }
+  return {
+    mimeType: match[1],
+    buffer: Buffer.from(match[2], 'base64')
+  };
+}
+
+// 把 base64 图片上传到 Storage 桶，成功返回公开 URL，失败返回 null
+// （报告 4.3 P4：base64 直接写 image_url 文本列会让作品列表越来越慢）
+async function uploadImageToStorage(client, dataUrl) {
+  const parsed = parseImageDataUrl(dataUrl);
+  if (!parsed) {
+    return null;
+  }
+
+  const extension = (parsed.mimeType.split('/')[1] || 'png')
+    .replace('jpeg', 'jpg')
+    .replace(/[^a-z0-9]/gi, '');
+  const filePath = `creations/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${extension}`;
+
+  const { error } = await client.storage
+    .from(STORAGE_BUCKET)
+    .upload(filePath, parsed.buffer, {
+      contentType: parsed.mimeType,
+      upsert: false
+    });
+
+  if (error) {
+    console.warn('Supabase Storage 上传失败，回退 base64 入库:', error.message || error);
+    return null;
+  }
+
+  const { data } = client.storage.from(STORAGE_BUCKET).getPublicUrl(filePath);
+  return data?.publicUrl || null;
+}
+
 async function saveCreation(payload) {
   const client = getClient();
   if (!client) {
     return disabledResult();
   }
 
+  const record = normalizeCreation(payload);
+  if (typeof record.image_url === 'string' && record.image_url.startsWith('data:')) {
+    const publicUrl = await uploadImageToStorage(client, record.image_url);
+    if (publicUrl) {
+      record.image_url = publicUrl;
+    }
+  }
+
   const { data, error } = await client
     .from('heritage_creations')
-    .insert(normalizeCreation(payload))
+    .insert(record)
     .select()
     .single();
 
@@ -116,5 +166,7 @@ module.exports = {
   saveCreation,
   listCreations,
   getCreation,
-  normalizeCreation
+  normalizeCreation,
+  parseImageDataUrl,
+  uploadImageToStorage
 };

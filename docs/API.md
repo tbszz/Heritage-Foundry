@@ -85,6 +85,12 @@ Persists a generated work.
 }
 ```
 
+`imageUrl` accepts either a base64 data URL or a plain URL. Base64 images are
+uploaded to the Supabase Storage bucket `heritage-creations` (see
+`supabase/migrations/202607170001_create_creations_storage.sql`) and the
+stored `image_url` becomes the bucket's public URL; if the upload fails the
+base64 string is stored as-is (legacy behavior).
+
 If Supabase is not configured, this endpoint returns:
 
 ```json
