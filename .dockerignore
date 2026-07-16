@@ -1,0 +1,10 @@
+node_modules
+dist
+assets-src
+.git
+.env
+.trae
+docs
+tests
+*.md
+非遗造物局.html
