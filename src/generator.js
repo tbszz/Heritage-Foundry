@@ -62,12 +62,19 @@ function applyUrlParams() {
 
   if (craft) {
     const craftSelect = document.getElementById('craft');
-    if (craftSelect) craftSelect.value = craft;
+    if (craftSelect) {
+      craftSelect.value = craft;
+      // 触发 change 让 enhanceSelects 生成的章片同步高亮
+      craftSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    }
   }
 
   if (carrier) {
     const carrierSelect = document.getElementById('carrier');
-    if (carrierSelect) carrierSelect.value = carrier;
+    if (carrierSelect) {
+      carrierSelect.value = carrier;
+      carrierSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    }
   }
 }
 

@@ -58,11 +58,16 @@ function selectInitialCraft() {
 
 function selectCraft(craft) {
   currentCraft = craft;
-  
+
   document.querySelectorAll('.craft-sidebar-item').forEach(item => {
     item.classList.remove('active');
   });
   document.querySelector(`.craft-sidebar-item[data-id="${craft.id}"]`)?.classList.add('active');
+
+  const arLink = document.getElementById('ar-view-link');
+  if (arLink) {
+    arLink.href = `ar.html?craft=${encodeURIComponent(craft.id)}`;
+  }
 
   initCraftThreeScene();
 
