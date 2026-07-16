@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { createGLTFLoader } from '../utils/modelLoader.js';
 import { Easing, Tween, update as updateTweens } from '@tweenjs/tween.js/dist/tween.esm.js';
 
 const GOLD = new THREE.Color('#c99a2e');
@@ -42,7 +42,7 @@ export class ParticleMorphScene {
     this.particleMaterial = null;
     this.particles = null;
     this.backgroundParticles = null;
-    this.loader = new GLTFLoader();
+    this.loader = createGLTFLoader();
     this.animationId = null;
     this.currentModelUrl = null;
     this.solidModel = null;

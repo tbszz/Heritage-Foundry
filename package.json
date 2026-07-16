@@ -21,7 +21,12 @@
     "three": "^0.160.0"
   },
   "devDependencies": {
+    "@gltf-transform/core": "^4.4.1",
+    "@gltf-transform/extensions": "^4.4.1",
+    "@gltf-transform/functions": "^4.4.1",
     "concurrently": "^10.0.3",
+    "draco3dgltf": "^1.5.7",
+    "sharp": "^0.35.3",
     "supertest": "^7.2.2",
     "vite": "^6.0.0",
     "vitest": "^4.1.9"

@@ -1,5 +1,6 @@
 import { CRAFTS_DATA, getGeneratorCraftId } from './utils/craftData.js';
 import { ParticleMorphScene } from './components/ParticleMorphScene.js';
+import { prefetchModels } from './utils/modelLoader.js';
 
 let homeScene = null;
 let currentCraft = null;
@@ -92,6 +93,13 @@ function initHomePage() {
   const params = new URLSearchParams(window.location.search);
   const initialCraft = getInitialHomepageCraft(params.get('craft'), homeTourStops);
   selectCraft(initialCraft);
+
+  // 首屏只加载当前展品，其余模型空闲时预取进 HTTP 缓存（报告 4.3 P3）
+  prefetchModels(
+    homeTourStops
+      .map((craft) => craft.modelUrl)
+      .filter((url) => url && url !== initialCraft?.modelUrl)
+  );
 }
 
 function renderCraftSelector(selector, crafts) {

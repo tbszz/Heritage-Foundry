@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { createGLTFLoader } from '../utils/modelLoader.js';
 
 export function getCraftRenderMode(craft) {
   return craft?.modelUrl ? 'glb' : 'default';
@@ -18,7 +18,7 @@ export class ThreeScene {
     this.texture = null;
     this.currentCraft = null;
     this.animationId = null;
-    this.gltfLoader = new GLTFLoader();
+    this.gltfLoader = createGLTFLoader();
     this.loadingModel = false;
     this.currentModelUrl = null;
     this.currentCarrier = 'keychain';
