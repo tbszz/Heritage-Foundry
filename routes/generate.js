@@ -43,10 +43,11 @@ router.post('/generate-image', async (req, res) => {
     });
   } catch (error) {
     console.error('Generate image error:', error);
-    res.status(500).json({
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({
       success: false,
       error: error.message || '生成图片失败',
-      code: 500
+      code: statusCode
     });
   }
 });
@@ -86,10 +87,11 @@ router.post('/edit-image', async (req, res) => {
     });
   } catch (error) {
     console.error('Edit image error:', error);
-    res.status(500).json({
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({
       success: false,
       error: error.message || '编辑图片失败',
-      code: 500
+      code: statusCode
     });
   }
 });
