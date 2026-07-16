@@ -1,5 +1,5 @@
 import { ThreeScene } from './components/ThreeScene.js';
-import { CRAFTS_DATA, getCraftById } from './utils/craftData.js';
+import { CRAFTS_DATA, getCraftById, getGeneratorCraftId } from './utils/craftData.js';
 
 let craftThreeScene = null;
 let currentCraft = null;
@@ -125,39 +125,12 @@ function bindEvents() {
   });
 }
 
+const VALID_CARRIERS = ['keychain', 'bag', 'phone', 'sticker', 'magnet'];
+
 function handleCreateProduct(product) {
-  const carrierMap = {
-    keychain: 'keychain',
-    bag: 'bag',
-    phone: 'phone',
-    sticker: 'sticker',
-    magnet: 'magnet'
-  };
-  
-  const craftMap = {
-    'tiger-head': 'papercut',
-    'papercut': 'papercut',
-    'shadow': 'shadow',
-    'embroidery': 'embroidery',
-    'tie-dye': 'tie-dye',
-    'porcelain': 'porcelain',
-    'calligraphy': 'calligraphy',
-    'seal': 'seal',
-    'brocade': 'brocade',
-    'clay': 'clay',
-    'tea': 'tea',
-    'kites': 'papercut',
-    'lanterns': 'papercut',
-    'wood-carving': 'papercut',
-    'stone-carving': 'papercut',
-    'new-year': 'new-year',
-    'tangka': 'tangka',
-    'jade': 'papercut'
-  };
-  
-  const carrier = carrierMap[product] || 'keychain';
-  const craft = craftMap[currentCraft?.id] || 'papercut';
-  
+  const carrier = VALID_CARRIERS.includes(product) ? product : 'keychain';
+  const craft = getGeneratorCraftId(currentCraft?.id);
+
   window.location.href = `generator.html?craft=${craft}&carrier=${carrier}`;
 }
 

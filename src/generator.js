@@ -18,7 +18,7 @@ import {
   downloadPatternImage,
   downloadPatternCSV
 } from './utils/patternGenerator.js';
-import { getCraftById } from './utils/craftData.js';
+import { getCraftById, getGeneratorCrafts } from './utils/craftData.js';
 import { PALETTE_COLORS, getColorKeyByHex, setActiveColorSystem } from './utils/colorSystem.js';
 
 const PATTERN_WIDTH = 18;
@@ -33,6 +33,7 @@ let currentStats = null;
 let currentPrompt = '';
 
 function init() {
+  populateCraftOptions();
   bindEvents();
   enhanceSelects();
   applyUrlParams();
@@ -40,6 +41,18 @@ function init() {
   updateStory();
   updateDownloadState();
   loadRecentCreations();
+}
+
+function populateCraftOptions() {
+  const craftSelect = document.getElementById('craft');
+  if (!craftSelect || craftSelect.options.length > 0) return;
+
+  getGeneratorCrafts().forEach((craft) => {
+    const option = document.createElement('option');
+    option.value = craft.id;
+    option.textContent = `${craft.name} - ${craft.blurb || craft.description}`;
+    craftSelect.appendChild(option);
+  });
 }
 
 function applyUrlParams() {

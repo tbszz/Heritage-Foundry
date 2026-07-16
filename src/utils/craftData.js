@@ -1,185 +1,8 @@
-export const CRAFTS_DATA = [
-  {
-    id: 'tiger-head',
-    name: '布老虎',
-    category: '传统布艺',
-    description: '布老虎是中国传统民间工艺品，以棉布为原料，用针线缝制而成的老虎形象。它既是儿童玩具，又是吉祥之物，象征着驱邪避灾、保佑平安。',
-    story: '布老虎起源于上古时期的虎图腾崇拜。在古代，老虎被视为百兽之王，具有镇宅辟邪、保佑平安的寓意。端午节给孩子佩戴布老虎是中国各地的传统习俗，人们相信它能保佑孩子健康成长，远离疾病和灾难。布老虎的制作工艺讲究，不同地区有不同的风格，如陕西的粗犷质朴、山东的细腻精巧等。',
-    emoji: '🐯',
-    color: '#d3382f',
-    modelUrl: '/models/embroidered-tiger.glb'
-  },
-  {
-    id: 'papercut',
-    name: '剪纸',
-    category: '传统美术',
-    description: '剪纸是中国最古老的民间艺术之一，以剪刀或刻刀在纸上剪刻花纹，用于装点生活或配合其他民俗活动。',
-    story: '剪纸是中国最古老的民间艺术之一，距今已有1500多年历史。剪纸艺术通过一把剪刀、一张红纸，就能创造出形态各异的图案，表达人们对美好生活的向往和祝福。2009年被列入联合国人类非物质文化遗产代表作名录。',
-    emoji: '✂️',
-    color: '#d3382f',
-    modelUrl: '/models/red-papercut.glb'
-  },
-  {
-    id: 'shadow',
-    name: '皮影',
-    category: '传统戏剧',
-    description: '皮影戏是中国民间古老的传统艺术，又称"影子戏"或"灯影戏"，用兽皮或纸板做成的人物剪影以表演故事。',
-    story: '皮影戏是中国民间古老的传统艺术，又称"影子戏"或"灯影戏"。表演者在白色幕布后面，一边操纵影人，一边用当地流行的曲调讲述故事，同时配以乐器伴奏。皮影戏是世界上最早的动画形式之一。',
-    emoji: '🧑',
-    color: '#c99a2e',
-    modelUrl: '/models/archer-figure.glb'
-  },
-  {
-    id: 'embroidery',
-    name: '苗绣',
-    category: '传统刺绣',
-    description: '苗绣是苗族妇女世代传承的传统技艺，被誉为"穿在身上的史诗"，色彩鲜艳，纹样繁复。',
-    story: '苗绣是苗族妇女世代传承的传统技艺，被誉为"穿在身上的史诗"。苗绣以其色彩鲜艳、纹样繁复、针法多样而著称，每一件作品都蕴含着苗族人民的历史记忆和文化信仰。',
-    emoji: '🪡',
-    color: '#1f7a6d',
-    modelUrl: '/models/embroidered-hoop.glb'
-  },
-  {
-    id: 'tie-dye',
-    name: '扎染',
-    category: '传统印染',
-    description: '扎染是中国传统的手工染色技艺，通过纱、线、绳等工具，对织物进行扎、缝、缚、缀、夹等多种形式组合后进行染色。',
-    story: '扎染是中国传统的手工染色技艺，通过纱、线、绳等工具，对织物进行扎、缝、缚、缀、夹等多种形式组合后进行染色。扎染作品色彩斑斓、图案独特，每一件都是独一无二的艺术品。',
-    emoji: '🎨',
-    color: '#2f5f9f',
-    modelUrl: '/models/blue-scarf.glb'
-  },
-  {
-    id: 'porcelain',
-    name: '景德镇陶瓷',
-    category: '传统陶瓷',
-    description: '景德镇陶瓷享誉千年，素有"白如玉、明如镜、薄如纸、声如磬"的千古美誉。',
-    story: '景德镇陶瓷享誉千年，素有"白如玉、明如镜、薄如纸、声如磬"的千古美誉。从汉代原始青瓷起步，经唐宋发展、明清鼎盛，景德镇成为独步世界的东方瓷器名片。一器之成，历经七十二道工序。',
-    emoji: '🏺',
-    color: '#e8d5b7',
-    modelUrl: '/models/porcelain-vase.glb'
-  },
-  {
-    id: 'calligraphy',
-    name: '中国书法',
-    category: '传统书法',
-    description: '中国书法通过汉字书写，在完成信息交流实用功能的同时，以特有的造型符号和笔墨韵律，融入人们对自然、社会、生命的思考。',
-    story: '中国书法通过汉字书写，在完成信息交流实用功能的同时，以特有的造型符号和笔墨韵律，融入人们对自然、社会、生命的思考，从而表现出中国人特有的思维方式、人格精神与性情志趣。2009年被列入联合国人类非物质文化遗产代表作名录。',
-    emoji: '✍️',
-    color: '#1f2328',
-    modelUrl: '/models/calligraphy-brush.glb'
-  },
-  {
-    id: 'seal',
-    name: '中国篆刻',
-    category: '传统篆刻',
-    description: '中国篆刻是以石材为主要材料，以刻刀为工具，以汉字为表象的一门独特的镌刻艺术。',
-    story: '中国篆刻是以石材为主要材料，以刻刀为工具，以汉字为表象的一门独特的镌刻艺术。它由中国古代的印章制作技艺发展而来，至今已有3000多年的历史。2009年被列入联合国人类非物质文化遗产代表作名录。',
-    emoji: '🖋️',
-    color: '#4a5568',
-    modelUrl: '/models/red-seal.glb'
-  },
-  {
-    id: 'brocade',
-    name: '南京云锦',
-    category: '传统织锦',
-    description: '南京云锦织造技艺存续着中国皇家织造的传统，是中国织锦技艺最高水平的代表。',
-    story: '南京云锦织造技艺存续着中国皇家织造的传统，是中国织锦技艺最高水平的代表。它将"通经断纬"等核心技术运用在构造复杂的大型织机上，由上下两人手工操作，是人类非凡创造力的见证。2009年被列入联合国人类非物质文化遗产代表作名录。',
-    emoji: '🧶',
-    color: '#c99a2e',
-    modelUrl: '/models/dragon-tapestry.glb'
-  },
-  {
-    id: 'clay',
-    name: '泥塑',
-    category: '传统雕塑',
-    description: '泥塑是中国民间传统艺术之一，以黏土为原料塑造各种形象。',
-    story: '泥塑是中国民间传统艺术之一，以黏土为原料塑造各种形象。泥塑艺术历史悠久，早在新石器时代就已出现。著名的天津泥人张、无锡惠山泥人等都是中国泥塑艺术的杰出代表。',
-    emoji: '🏺',
-    color: '#c99a2e',
-    modelUrl: '/models/laughing-buddha.glb'
-  },
-  {
-    id: 'tea',
-    name: '制茶技艺',
-    category: '传统技艺',
-    description: '中国是茶的故乡，制茶技艺历史悠久，包括采摘、萎凋、杀青、揉捻等多道工序。',
-    story: '中国是茶的故乡，制茶技艺历史悠久。从采摘、萎凋、杀青到揉捻、成型，繁复的工序里蕴含着每一个茶匠孜孜不倦的追求与心血。2022年"中国传统制茶技艺及其相关习俗"被列入联合国人类非物质文化遗产代表作名录。',
-    emoji: '🍵',
-    color: '#1f7a6d',
-    modelUrl: '/models/teapot.glb'
-  },
-  {
-    id: 'kites',
-    name: '风筝',
-    category: '传统工艺',
-    description: '风筝是中国古代劳动人民发明的一种传统工艺品，至今已有2000多年历史。',
-    story: '风筝起源于中国东周春秋时期，至今已2000多年。相传墨翟以木头制成木鸟，研制三年而成，是人类最早的风筝起源。后来鲁班用竹子，改进墨翟的风筝材质。直至东汉期间，蔡伦改进造纸术后，坊间才开始以纸做风筝，称为"纸鸢"。',
-    emoji: '🪁',
-    color: '#2f5f9f',
-    modelUrl: '/models/ornate-kite.glb'
-  },
-  {
-    id: 'lanterns',
-    name: '花灯',
-    category: '传统工艺',
-    description: '花灯是中国传统民俗工艺品，常用于节日庆典，如元宵节、中秋节等场合。',
-    story: '花灯起源于汉代，盛于唐代，到了宋代遍及民间。中国历代花灯的制作十分讲究，品种繁多。如明朝画家唐寅有诗云："有灯无月不娱人，有月无灯不算春，春到人间人似玉，灯烧月下月如银。"',
-    emoji: '🏮',
-    color: '#d3382f',
-    modelUrl: '/models/ornate-lantern.glb'
-  },
-  {
-    id: 'wood-carving',
-    name: '木雕',
-    category: '传统雕刻',
-    description: '木雕是中国传统雕刻艺术之一，以木材为原料，通过雕刻技法制作各种艺术品。',
-    story: '木雕是中国传统雕刻艺术之一，历史悠久，技法多样。木雕作品题材广泛，包括人物、动物、花卉等，常用于建筑装饰、家具雕刻和工艺品制作。中国木雕流派众多，如东阳木雕、黄杨木雕、龙眼木雕等都是著名的木雕流派。',
-    emoji: '🪵',
-    color: '#8b5a2b',
-    modelUrl: '/models/wood-carving.glb'
-  },
-  {
-    id: 'stone-carving',
-    name: '石刻',
-    category: '传统雕刻',
-    description: '石刻是中国传统雕刻艺术之一，以石材为原料，通过雕刻技法制作各种艺术品和纪念碑。',
-    story: '石刻是中国传统雕刻艺术之一，历史悠久。古代石刻作品包括碑碣、摩崖、造像等，具有重要的历史和艺术价值。著名的敦煌莫高窟、云冈石窟、龙门石窟等都是中国石刻艺术的杰出代表。',
-    emoji: '🗿',
-    color: '#696969',
-    modelUrl: '/models/buddha-relief.glb'
-  },
-  {
-    id: 'new-year',
-    name: '木版年画',
-    category: '传统美术',
-    description: '木版年画是中国民间美术中一个重要的门类，始于汉代，发展于唐宋，盛行于明清。',
-    story: '木版年画是中国民间美术中一个重要的门类，始于汉代，发展于唐宋，盛行于明清。木版年画以其线条粗犷、色彩鲜明、题材丰富而深受人们喜爱，是春节期间重要的装饰艺术品。',
-    emoji: '🏮',
-    color: '#d3382f',
-    modelUrl: '/models/woodcut-newyear.glb'
-  },
-  {
-    id: 'tangka',
-    name: '唐卡',
-    category: '传统绘画',
-    description: '唐卡是藏族文化中一种独具特色的绘画艺术形式，具有鲜明的民族特点、浓郁的宗教色彩和独特的艺术风格。',
-    story: '唐卡是藏族文化中一种独具特色的绘画艺术形式，具有鲜明的民族特点、浓郁的宗教色彩和独特的艺术风格。唐卡题材内容涉及藏族的历史、政治、文化和社会生活等诸多领域。',
-    emoji: '🖼️',
-    color: '#d3382f',
-    modelUrl: '/models/thangka-deity.glb'
-  },
-  {
-    id: 'jade',
-    name: '玉雕',
-    category: '传统工艺',
-    description: '玉雕是中国最古老的雕刻品种之一，以玉石为原料，通过雕刻、琢磨等工艺制作艺术品。',
-    story: '玉雕是中国最古老的雕刻品种之一。早在新石器时代晚期，中华民族就有了玉制工具。商周时期，制玉成为一种专业，玉器成了礼仪用具和装饰佩件。玉石历来被人们当作珍宝，在中国古代，玉被当作美好品物的标志和君子风范的象征。',
-    emoji: '💎',
-    color: '#1f7a6d',
-    modelUrl: '/models/jade-dragon.glb'
-  }
-];
+// 唯一数据源是 src/data/crafts.json（前端 Vite 与后端 Node 均可直接读取）。
+// 本模块只做派生与查询，请勿在这里再写死任何技艺数据。
+import craftsJson from '../data/crafts.json';
+
+export const CRAFTS_DATA = craftsJson;
 
 export function getCraftById(id) {
   return CRAFTS_DATA.find(craft => craft.id === id);
@@ -192,4 +15,15 @@ export function getCraftCategories() {
 
 export function getCraftsByCategory(category) {
   return CRAFTS_DATA.filter(craft => craft.category === category);
+}
+
+// 造物工作台（generator 页）直接支持的技艺：generatorId 指向自身的条目
+export function getGeneratorCrafts() {
+  return CRAFTS_DATA.filter(craft => craft.generatorId === craft.id);
+}
+
+// 任意技艺 id → 工作台可用的技艺 id（不支持的技艺回退到剪纸）
+export function getGeneratorCraftId(craftId) {
+  const craft = getCraftById(craftId);
+  return craft?.generatorId || 'papercut';
 }

@@ -1,80 +1,15 @@
-const CRAFT_LIBRARY = {
-  papercut: {
-    name: '剪纸',
-    language: '镂空红纸、对称窗花、连绵云纹、利落剪影边缘',
-    twist: '把角色轮廓拆成会发光的纸雕星门'
-  },
-  shadow: {
-    name: '皮影',
-    language: '半透明牛皮质感、戏台光幕、铆钉关节、强烈侧光',
-    twist: '让角色像从影幕里跳出的未来戏偶'
-  },
-  embroidery: {
-    name: '苗绣',
-    language: '密集针脚、银饰反光、蝴蝶妈妈纹、几何彩线',
-    twist: '把角色服装织成会流动的史诗地图'
-  },
-  'tie-dye': {
-    name: '扎染',
-    language: '蓝白晕染、旋涡纹、手工布料肌理、自然渐变',
-    twist: '让角色站在扎染星云和海潮之间'
-  },
-  'new-year': {
-    name: '木版年画',
-    language: '门神配色、套色版印、粗黑线、年节祥瑞纹',
-    twist: '把角色重塑成开年好运守护者'
-  },
-  porcelain: {
-    name: '景德镇陶瓷',
-    language: '青花蓝、釉面高光、瓷片花纹、温润白胎',
-    twist: '让角色像从瓷器裂纹里复活的蓝白精灵'
-  },
-  calligraphy: {
-    name: '中国书法',
-    language: '飞白笔触、墨色层次、宣纸肌理、行草动势',
-    twist: '让角色由一笔巨大的墨痕变形成形'
-  },
-  seal: {
-    name: '中国篆刻',
-    language: '朱文白文、石章肌理、篆字边框、刀刻痕迹',
-    twist: '把角色压缩成一枚会跃出的印章图腾'
-  },
-  brocade: {
-    name: '南京云锦',
-    language: '金线织锦、团花纹、皇家织造光泽、层叠纹样',
-    twist: '让角色披着像星河一样展开的云锦披风'
-  },
-  tangka: {
-    name: '唐卡',
-    language: '矿物颜料、宝石色、金线勾勒、庄严对称坛城、细密装饰纹样',
-    twist: '把角色放进会旋转的赛博坛城和祥云轨道'
-  },
-  clay: {
-    name: '泥塑',
-    language: '手捏泥土纹、圆润体块、彩塑高光、民间庙会色彩',
-    twist: '让角色像刚从神奇泥土里醒来的守护偶'
-  },
-  tea: {
-    name: '制茶技艺',
-    language: '茶山曲线、蒸汽、竹匾、茶汤琥珀光、手作器具',
-    twist: '把角色变成一杯茶香升起的奇幻形象'
-  },
-  jade: {
-    name: '玉雕',
-    language: '温润半透明玉质、瑞兽纹、浅浮雕层次、柔和冷光',
-    twist: '让角色像从玉石内核里透光出现'
-  },
-  'wood-carving': {
-    name: '木雕',
-    language: '刀刻纹理、木质年轮、浮雕层次、古建纹样',
-    twist: '把角色刻成会动的木作机关挂件'
-  },
-  'stone-carving': {
-    name: '石刻',
-    language: '岩石颗粒、浮雕阴影、碑刻边缘、厚重灰调',
-    twist: '让角色像从古老石壁中破壁而出'
-  }
-};
+// 技艺提示词语料统一来自 src/data/crafts.json（唯一数据源），此处仅做派生
+const craftsData = require('../src/data/crafts.json');
+
+const CRAFT_LIBRARY = Object.fromEntries(
+  craftsData
+    .filter((craft) => craft.promptLanguage)
+    .map((craft) => [craft.id, {
+      name: craft.name,
+      language: craft.promptLanguage,
+      twist: craft.promptTwist
+    }])
+);
 
 const IP_LIBRARY = {
   doraemon: {

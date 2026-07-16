@@ -1,47 +1,5 @@
-import { CRAFTS_DATA } from './utils/craftData.js';
+import { CRAFTS_DATA, getGeneratorCraftId } from './utils/craftData.js';
 import { ParticleMorphScene } from './components/ParticleMorphScene.js';
-
-const GENERATOR_CRAFT_MAP = {
-  'tiger-head': 'papercut',
-  papercut: 'papercut',
-  shadow: 'shadow',
-  embroidery: 'embroidery',
-  'tie-dye': 'tie-dye',
-  porcelain: 'porcelain',
-  calligraphy: 'calligraphy',
-  seal: 'seal',
-  brocade: 'brocade',
-  clay: 'clay',
-  tea: 'tea',
-  kites: 'papercut',
-  lanterns: 'papercut',
-  'wood-carving': 'papercut',
-  'stone-carving': 'papercut',
-  'new-year': 'new-year',
-  tangka: 'tangka',
-  jade: 'papercut'
-};
-
-const MUSEUM_LINES = {
-  'tiger-head': '虎纹守岁，布上生威，针线藏着平安愿。',
-  papercut: '一剪见天地，红纸映万象，窗花开出人间喜。',
-  shadow: '光幕后有乾坤，皮影起落，千年戏声未歇。',
-  embroidery: '银针穿云，彩线织史，苗绣把族群记忆穿在身上。',
-  'tie-dye': '青蓝入布，云纹自生，每一次晕染都不可复制。',
-  porcelain: '白如玉、明如镜、薄如纸、声如磬，千年窑火不熄。',
-  calligraphy: '笔走龙蛇，墨分五色，字里行间见山河气象。',
-  seal: '方寸之间藏金石，刀锋落处见篆意精神。',
-  brocade: '寸锦寸金，云霞入机，经纬之间织就皇家气象。',
-  clay: '泥土有灵，塑成人间百态，烟火里见匠心。',
-  tea: '一叶入盏，山水回甘，制茶工序凝成东方日常。',
-  kites: '竹骨承风，纸鸢上青云，牵线处是童年与远方。',
-  lanterns: '灯火映春，彩扎成梦，花灯点亮团圆夜。',
-  'wood-carving': '木纹随刀醒来，层层雕刻里藏山川人物。',
-  'stone-carving': '石上留痕，刀凿成史，沉默处有千年回响。',
-  'new-year': '木版拓春，朱墨纳福，年画把吉庆贴进门庭。',
-  tangka: '矿彩绘净土，线条持庄严，唐卡展开信仰宇宙。',
-  jade: '琢玉成器，温润有光，方寸雕纹寄君子之德。'
-};
 
 let homeScene = null;
 let currentCraft = null;
@@ -79,7 +37,7 @@ export function getInitialHomepageCraft(requestedId, crafts = CRAFTS_DATA) {
 }
 
 export function getHomepageCraftLinks(craftId) {
-  const generatorCraftId = GENERATOR_CRAFT_MAP[craftId] || 'papercut';
+  const generatorCraftId = getGeneratorCraftId(craftId);
   return {
     craftHref: `crafts.html?craft=${encodeURIComponent(craftId)}`,
     generatorHref: `generator.html?craft=${encodeURIComponent(generatorCraftId)}`
@@ -97,7 +55,7 @@ export function getMuseumTourStops(crafts = CRAFTS_DATA) {
       assetKey: craft.id,
       stopLabel: String(index + 1).padStart(2, '0'),
       iconUrl: `/assets/generated/craft-icons/${craft.id}.png`,
-      museumLine: MUSEUM_LINES[craft.id] || craft.story,
+      museumLine: craft.museumLine || craft.story,
       camera: {
         x: Number((Math.cos(angle) * radius).toFixed(3)),
         y: 1.74,

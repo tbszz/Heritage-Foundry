@@ -1,32 +1,4 @@
-const CRAFT_MAP = {
-  papercut: '剪纸艺术',
-  shadow: '皮影艺术',
-  embroidery: '苗绣艺术',
-  'tie-dye': '扎染艺术',
-  'new-year': '木版年画',
-  porcelain: '景德镇陶瓷',
-  calligraphy: '中国书法',
-  seal: '中国篆刻',
-  brocade: '南京云锦',
-  tangka: '唐卡艺术',
-  clay: '泥塑艺术',
-  tea: '制茶技艺'
-};
-
-const CRAFT_DETAIL_MAP = {
-  papercut: '镂空红纸、对称窗花、连绵云纹、利落剪影边缘',
-  shadow: '半透明皮影、戏台光幕、铆钉关节、强烈侧光',
-  embroidery: '苗绣针脚、银饰反光、蝴蝶妈妈纹、几何彩线',
-  'tie-dye': '蓝白扎染、旋涡纹、手工布料肌理、自然渐变',
-  'new-year': '木版年画、门神配色、套色版印、粗黑线',
-  porcelain: '青花瓷、釉面高光、瓷片花纹、温润白胎',
-  calligraphy: '飞白笔触、墨色层次、宣纸肌理、行草动势',
-  seal: '朱文白文、石章肌理、篆刻边框、刀刻痕迹',
-  brocade: '南京云锦、金线织锦、团花纹、皇家织造光泽',
-  tangka: '唐卡矿物颜料、宝石色、金线勾勒、庄严对称坛城',
-  clay: '手捏泥塑、圆润体块、彩塑高光、庙会色彩',
-  tea: '茶山曲线、竹匾、茶汤琥珀光、手作器具'
-};
+import { getCraftById } from './craftData.js';
 
 const IP_MAP = {
   doraemon: '哆啦A梦',
@@ -58,8 +30,9 @@ const CARRIER_MAP = {
 };
 
 export function generatePrompt(craft, ip, style, carrier = 'keychain') {
-  const craftName = CRAFT_MAP[craft] || craft;
-  const craftDetail = CRAFT_DETAIL_MAP[craft] || `${craftName}的传统纹样与材质`;
+  const craftData = getCraftById(craft);
+  const craftName = craftData?.promptTitle || craftData?.name || craft;
+  const craftDetail = craftData?.promptLanguage || `${craftName}的传统纹样与材质`;
   const ipName = IP_MAP[ip] || ip;
   const styleName = STYLE_MAP[style] || style;
   const carrierName = CARRIER_MAP[carrier] || carrier;
@@ -276,70 +249,15 @@ function generateMockImage() {
 }
 
 export function getCraftInfo(craft) {
-  const info = {
-    papercut: {
-      name: '剪纸',
-      description: '中国传统民间艺术，以剪刀或刻刀在纸上剪刻花纹',
-      story: '剪纸是中国最古老的民间艺术之一，距今已有1500多年历史。剪纸艺术通过一把剪刀、一张红纸，就能创造出形态各异的图案，表达人们对美好生活的向往和祝福。2009年被列入联合国人类非物质文化遗产代表作名录。'
-    },
-    shadow: {
-      name: '皮影',
-      description: '用兽皮或纸板做成的人物剪影以表演故事的民间戏剧',
-      story: '皮影戏是中国民间古老的传统艺术，又称"影子戏"或"灯影戏"。表演者在白色幕布后面，一边操纵影人，一边用当地流行的曲调讲述故事，同时配以乐器伴奏。皮影戏是世界上最早的动画形式之一。'
-    },
-    embroidery: {
-      name: '苗绣',
-      description: '苗族民间刺绣，色彩鲜艳，纹样繁复',
-      story: '苗绣是苗族妇女世代传承的传统技艺，被誉为"穿在身上的史诗"。苗绣以其色彩鲜艳、纹样繁复、针法多样而著称，每一件作品都蕴含着苗族人民的历史记忆和文化信仰。'
-    },
-    'tie-dye': {
-      name: '扎染',
-      description: '中国民间传统而独特的染色工艺',
-      story: '扎染是中国传统的手工染色技艺，通过纱、线、绳等工具，对织物进行扎、缝、缚、缀、夹等多种形式组合后进行染色。扎染作品色彩斑斓、图案独特，每一件都是独一无二的艺术品。'
-    },
-    'new-year': {
-      name: '木版年画',
-      description: '用木版印刷的年画，线条粗犷，色彩鲜明',
-      story: '木版年画是中国民间美术中一个重要的门类，始于汉代，发展于唐宋，盛行于明清。木版年画以其线条粗犷、色彩鲜明、题材丰富而深受人们喜爱，是春节期间重要的装饰艺术品。'
-    },
-    porcelain: {
-      name: '景德镇陶瓷',
-      description: '中国著名的瓷器制作技艺，白如玉、明如镜、薄如纸、声如磬',
-      story: '景德镇陶瓷享誉千年，素有"白如玉、明如镜、薄如纸、声如磬"的千古美誉。从汉代原始青瓷起步，经唐宋发展、明清鼎盛，景德镇成为独步世界的东方瓷器名片。一器之成，历经七十二道工序。'
-    },
-    calligraphy: {
-      name: '中国书法',
-      description: '以汉字为表象的书写艺术，具有独特的造型符号和笔墨韵律',
-      story: '中国书法通过汉字书写，在完成信息交流实用功能的同时，以特有的造型符号和笔墨韵律，融入人们对自然、社会、生命的思考，从而表现出中国人特有的思维方式、人格精神与性情志趣。2009年被列入联合国人类非物质文化遗产代表作名录。'
-    },
-    seal: {
-      name: '中国篆刻',
-      description: '以石材为主要材料，以刻刀为工具，以汉字为表象的镌刻艺术',
-      story: '中国篆刻是以石材为主要材料，以刻刀为工具，以汉字为表象的一门独特的镌刻艺术。它由中国古代的印章制作技艺发展而来，至今已有3000多年的历史。2009年被列入联合国人类非物质文化遗产代表作名录。'
-    },
-    brocade: {
-      name: '南京云锦',
-      description: '中国织锦技艺最高水平的代表，存续着皇家织造传统',
-      story: '南京云锦织造技艺存续着中国皇家织造的传统，是中国织锦技艺最高水平的代表。它将"通经断纬"等核心技术运用在构造复杂的大型织机上，由上下两人手工操作，是人类非凡创造力的见证。2009年被列入联合国人类非物质文化遗产代表作名录。'
-    },
-    tangka: {
-      name: '唐卡',
-      description: '藏族传统绘画艺术，色彩鲜艳，内容丰富',
-      story: '唐卡是藏族文化中一种独具特色的绘画艺术形式，具有鲜明的民族特点、浓郁的宗教色彩和独特的艺术风格。唐卡题材内容涉及藏族的历史、政治、文化和社会生活等诸多领域。'
-    },
-    clay: {
-      name: '泥塑',
-      description: '以黏土为原料塑造各种形象的传统民间艺术',
-      story: '泥塑是中国民间传统艺术之一，以黏土为原料塑造各种形象。泥塑艺术历史悠久，早在新石器时代就已出现。著名的天津泥人张、无锡惠山泥人等都是中国泥塑艺术的杰出代表。'
-    },
-    tea: {
-      name: '制茶技艺',
-      description: '中国传统制茶工艺，包括采摘、萎凋、杀青、揉捻等多道工序',
-      story: '中国是茶的故乡，制茶技艺历史悠久。从采摘、萎凋、杀青到揉捻、成型，繁复的工序里蕴含着每一个茶匠孜孜不倦的追求与心血。2022年"中国传统制茶技艺及其相关习俗"被列入联合国人类非物质文化遗产代表作名录。'
-    }
+  const craftData = getCraftById(craft);
+  if (!craftData) {
+    return { name: craft, description: '', story: '' };
+  }
+  return {
+    name: craftData.name,
+    description: craftData.blurb || craftData.description,
+    story: craftData.story
   };
-  
-  return info[craft] || { name: craft, description: '', story: '' };
 }
 
 export function getIPInfo(ip) {
