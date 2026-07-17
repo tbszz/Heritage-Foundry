@@ -16,13 +16,12 @@ export function getInitialArCraft(search = '') {
   );
 }
 
-function configureDracoDecoder() {
+async function configureDracoDecoder() {
   // public/models/ 下的 GLB 都是 Draco 压缩的，把解码器指向自托管路径，
-  // 否则 model-viewer 会去请求 Google CDN，离线演示会挂
-  const ModelViewerElement = customElements.get('model-viewer');
-  if (ModelViewerElement) {
-    ModelViewerElement.dracoDecoderLocation = '/draco/';
-  }
+  // 否则 model-viewer 会去请求 Google CDN，离线演示会挂。
+  // 慢网络下 vendor 脚本可能晚于本模块执行，所以等自定义元素注册完成
+  await customElements.whenDefined('model-viewer');
+  customElements.get('model-viewer').dracoDecoderLocation = '/draco/';
 }
 
 function renderCraftStrip(strip, activeCraftId, onSelect) {
@@ -70,14 +69,13 @@ function showCraft(craft) {
 }
 
 function initArPage() {
-  configureDracoDecoder();
-
   const strip = document.getElementById('ar-craft-strip');
   const initialCraft = getInitialArCraft(window.location.search);
   if (strip) {
     renderCraftStrip(strip, initialCraft?.id, showCraft);
   }
-  showCraft(initialCraft);
+  // 文案先展示；模型 src 等解码器路径配置完成后再设置，避免与 CDN 默认值竞态
+  configureDracoDecoder().then(() => showCraft(initialCraft));
 }
 
 if (typeof document !== 'undefined') {
