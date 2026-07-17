@@ -8,7 +8,36 @@ import { Easing, Tween, update as updateTweens } from '@tweenjs/tween.js/dist/tw
 const INK = 0x05070c;
 const GOLD = 0xc99a2e;
 const GOLD_LIGHT = 0xf8e5b8;
-const RED = 0x8e2420;
+
+const TEXTURE_BASE = '/assets/textures/';
+const textureLoader = new THREE.TextureLoader();
+
+// 展台静态件共享几何体/材质(18 个展台复用,减少内存与 draw call 状态切换)
+let sharedStandAssets = null;
+
+function getSharedStandAssets() {
+  if (!sharedStandAssets) {
+    sharedStandAssets = {
+      pedestalGeometry: new THREE.CylinderGeometry(0.55, 0.66, 1.1, 24),
+      pedestalMaterial: new THREE.MeshStandardMaterial({ color: 0x1a2029, roughness: 0.65, metalness: 0.2 }),
+      rimGeometry: new THREE.TorusGeometry(0.56, 0.03, 10, 40),
+      rimMaterial: new THREE.MeshStandardMaterial({ color: GOLD, roughness: 0.3, metalness: 0.8 }),
+      ringGeometry: new THREE.TorusGeometry(1.05, 0.012, 8, 64),
+      ringMaterial: new THREE.MeshBasicMaterial({
+        color: GOLD_LIGHT,
+        transparent: true,
+        opacity: 0.4,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      })
+    };
+  }
+  return sharedStandAssets;
+}
+
+// 主循环复用的临时向量(避免逐帧分配产生 GC 抖动)
+const tmpForward = new THREE.Vector3();
+const tmpTargetVelocity = new THREE.Vector3();
 
 export const HALL = {
   width: 14,           // 走廊总宽（墙在 x=±7）
@@ -122,10 +151,31 @@ export class MuseumScene {
     layout.forEach((standLayout) => this.buildStand(standLayout));
     this.bindEvents();
 
+    // 性能预热:一次性编译全部 shader + 上传 Canvas 纹理,
+    // 避免冲刺进门首次看到馆内时的编译/上传卡顿
+    this.renderer.compile(this.scene, this.camera);
+    this.textTextures.forEach(({ texture }) => this.renderer.initTexture(texture));
+
+    // 用户在牌匾前停留时,提前解码最近两排的模型(Draco worker 同步暖好)
+    window.setTimeout(() => {
+      if (this.disposed) return;
+      this.stands.slice(0, 4).forEach((stand) => {
+        this.loadCraftModel(stand.craft.modelUrl).catch(() => {});
+      });
+    }, 1200);
+
     // 字体加载完成后重绘牌匾 / 名牌纹理（@font-face 在 style.css 中声明）
     if (document.fonts?.ready) {
       document.fonts.ready.then(() => this.refreshTextTextures()).catch(() => {});
     }
+
+    // 挂幅绢底贴图就绪后重绘全部 Canvas 纹理
+    const silk = new Image();
+    silk.onload = () => {
+      this.silkImage = silk;
+      this.refreshTextTextures();
+    };
+    silk.src = `${TEXTURE_BASE}banner-silk.webp`;
 
     this.animate();
   }
@@ -139,14 +189,14 @@ export class MuseumScene {
     moonLight.position.set(-6, 12, 18);
     this.scene.add(moonLight);
 
-    const doorGlow = new THREE.PointLight(0xffd28a, 6, 16, 1.6);
+    const doorGlow = new THREE.PointLight(0xffd28a, 3.5, 9, 1.8);
     doorGlow.position.set(0, 3.0, 1.6);
     this.scene.add(doorGlow);
 
     // 馆内沿走廊三盏暖光，其余氛围靠自发光材质
     [-14, -32, -50].forEach((z) => {
-      const light = new THREE.PointLight(0xffd9a0, 10, 22, 1.8);
-      light.position.set(0, 4.6, z);
+      const light = new THREE.PointLight(0xffd9a0, 5, 22, 1.8);
+      light.position.set(0, 3.4, z);
       this.scene.add(light);
     });
   }
@@ -171,17 +221,26 @@ export class MuseumScene {
     );
     this.scene.add(stars);
 
-    // 广场地面
+    // 广场地面(深色石材贴图,压暗融入夜色;下沉 3cm 避免与馆内地板 z-fighting)
     const plaza = new THREE.Mesh(
       new THREE.PlaneGeometry(80, 60),
-      new THREE.MeshStandardMaterial({ color: 0x0b0f16, roughness: 0.95, metalness: 0.05 })
+      new THREE.MeshStandardMaterial({
+        map: this.loadSceneTexture('floor-stone', { repeat: [10, 8] }),
+        color: 0x39404a,
+        roughness: 0.95,
+        metalness: 0.05
+      })
     );
     plaza.rotation.x = -Math.PI / 2;
-    plaza.position.set(0, 0, 26);
+    plaza.position.set(0, -0.03, 26);
     this.scene.add(plaza);
 
-    // 门楼：两侧围墙 + 立柱 + 门楣 + 牌匾 + 双开红门
-    const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x151a22, roughness: 0.85 });
+    // 门楼:两侧围墙 + 立柱 + 门楣 + 牌匾 + 双开红门
+    const wallMaterial = new THREE.MeshStandardMaterial({
+      map: this.loadSceneTexture('brick-gate', { repeat: [1.6, 1.5] }),
+      color: 0x9aa2ac,
+      roughness: 0.85
+    });
     const gateWallL = new THREE.Mesh(new THREE.BoxGeometry(4.7, 4.4, 0.4), wallMaterial);
     gateWallL.position.set(-4.65, 2.2, HALL.doorZ);
     const gateWallR = gateWallL.clone();
@@ -190,7 +249,12 @@ export class MuseumScene {
     lintel.position.set(0, 4.0, HALL.doorZ);
     this.scene.add(gateWallL, gateWallR, lintel);
 
-    const columnMaterial = new THREE.MeshStandardMaterial({ color: RED, roughness: 0.55, metalness: 0.1 });
+    const columnMaterial = new THREE.MeshStandardMaterial({
+      map: this.loadSceneTexture('red-lacquer', { repeat: [2, 3] }),
+      color: 0xd8b8b0,
+      roughness: 0.55,
+      metalness: 0.1
+    });
     [-3.15, 3.15].forEach((x) => {
       const column = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.36, 4.4, 20), columnMaterial);
       column.position.set(x, 2.2, 0.45);
@@ -199,14 +263,22 @@ export class MuseumScene {
 
     const beam = new THREE.Mesh(
       new THREE.BoxGeometry(9.6, 0.55, 1.1),
-      new THREE.MeshStandardMaterial({ color: 0x1f130d, roughness: 0.7 })
+      new THREE.MeshStandardMaterial({
+        map: this.loadSceneTexture('wood-beam', { repeat: [4, 1] }),
+        color: 0x6a5a4e,
+        roughness: 0.7
+      })
     );
     beam.position.set(0, 4.75, 0.45);
     this.scene.add(beam);
 
     const roof = new THREE.Mesh(
       new THREE.BoxGeometry(10.6, 0.35, 2.0),
-      new THREE.MeshStandardMaterial({ color: 0x101318, roughness: 0.9 })
+      new THREE.MeshStandardMaterial({
+        map: this.loadSceneTexture('roof-tiles', { repeat: [3, 1] }),
+        color: 0x6a7078,
+        roughness: 0.85
+      })
     );
     roof.position.set(0, 5.2, 0.45);
     this.scene.add(roof);
@@ -227,8 +299,12 @@ export class MuseumScene {
     plaque.position.set(0, 4.0, 0.62);
     this.scene.add(plaque);
 
-    // 双开红门（铰链在两侧，进场时向内旋开）
-    const doorMaterial = new THREE.MeshStandardMaterial({ color: RED, roughness: 0.5, metalness: 0.15 });
+    // 双开红门(朱漆贴面,铰链在两侧,进场时向内旋开)
+    const doorMaterial = new THREE.MeshStandardMaterial({
+      map: this.loadSceneTexture('red-lacquer', { repeat: [1, 1] }),
+      roughness: 0.5,
+      metalness: 0.15
+    });
     const doorStudMaterial = new THREE.MeshStandardMaterial({ color: GOLD, roughness: 0.35, metalness: 0.7 });
     [
       { hingeX: -2.3, panelX: 1.12, openAngle: -Math.PI * 0.56 },
@@ -272,102 +348,137 @@ export class MuseumScene {
   }
 
   buildInterior() {
-    const hallLength = Math.abs(HALL.firstRowZ - 8 * HALL.rowSpacing) + HALL.endMargin + 6;
-    const hallCenterZ = 4 - hallLength / 2;
-    const endZ = 4 - hallLength;
+    // 馆内地板/墙面/顶面止于门槛内侧(z=0.2),不再伸出大门:
+    // 伸出的地板会在门口形成过亮平面,并与广场地面 z-fighting
+    const hallStartZ = 0.2;
+    const endZ = HALL.firstRowZ - 8 * HALL.rowSpacing - HALL.endMargin - 2;
+    const hallLength = hallStartZ - endZ;
+    const hallCenterZ = (hallStartZ + endZ) / 2;
 
-    // 地板（深色石砖 + 金色中线）
-    const floorTexture = this.makeFloorTexture();
-    floorTexture.wrapS = THREE.RepeatWrapping;
-    floorTexture.wrapT = THREE.RepeatWrapping;
-    floorTexture.repeat.set(4, Math.ceil(hallLength / 4));
+    // 地板(AI 石材贴图)+ 朱红织金地毯沿中轴铺开
     const floor = new THREE.Mesh(
       new THREE.PlaneGeometry(HALL.width, hallLength),
-      new THREE.MeshStandardMaterial({ map: floorTexture, roughness: 0.55, metalness: 0.25 })
+      new THREE.MeshStandardMaterial({
+        map: this.loadSceneTexture('floor-stone', { repeat: [3.5, Math.ceil(hallLength / 4)] }),
+        roughness: 0.72,
+        metalness: 0.05,
+        envMapIntensity: 0.35
+      })
     );
     floor.rotation.x = -Math.PI / 2;
     floor.position.set(0, 0, hallCenterZ);
     this.scene.add(floor);
 
-    const centerLine = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.16, hallLength - 4),
-      new THREE.MeshBasicMaterial({ color: GOLD, transparent: true, opacity: 0.35 })
+    const carpet = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.7, hallLength - 6),
+      new THREE.MeshStandardMaterial({
+        map: this.loadSceneTexture('carpet-runner', { repeat: [1, Math.ceil((hallLength - 6) / 3)] }),
+        roughness: 0.9,
+        metalness: 0
+      })
     );
-    centerLine.rotation.x = -Math.PI / 2;
-    centerLine.position.set(0, 0.012, hallCenterZ);
-    this.scene.add(centerLine);
+    carpet.rotation.x = -Math.PI / 2;
+    carpet.position.set(0, 0.012, hallCenterZ);
+    this.scene.add(carpet);
 
-    // 墙面与立柱
-    const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x11161f, roughness: 0.9 });
+    // 墙面(祥云暗纹贴图)与立柱(共享几何体)
+    const wallMaterial = new THREE.MeshStandardMaterial({
+      map: this.loadSceneTexture('wall-cloud', { repeat: [12, 1] }),
+      roughness: 0.9
+    });
+    const wallGeometry = new THREE.BoxGeometry(0.4, HALL.height, hallLength);
     [-HALL.width / 2, HALL.width / 2].forEach((x) => {
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(0.4, HALL.height, hallLength), wallMaterial);
+      const wall = new THREE.Mesh(wallGeometry, wallMaterial);
       wall.position.set(x, HALL.height / 2, hallCenterZ);
       this.scene.add(wall);
     });
-    const pilasterMaterial = new THREE.MeshStandardMaterial({ color: 0x1a2230, roughness: 0.75 });
+    const pilasterMaterial = new THREE.MeshStandardMaterial({
+      map: this.loadSceneTexture('wall-cloud', { repeat: [1, 3] }),
+      color: 0x39414a,
+      roughness: 0.75
+    });
+    const pilasterGeometry = new THREE.BoxGeometry(0.5, HALL.height, 0.5);
     for (let row = -1; row <= 9; row += 1) {
       const z = HALL.firstRowZ - row * HALL.rowSpacing + HALL.rowSpacing / 2;
       [-HALL.width / 2 + 0.45, HALL.width / 2 - 0.45].forEach((x) => {
-        const pilaster = new THREE.Mesh(new THREE.BoxGeometry(0.5, HALL.height, 0.5), pilasterMaterial);
+        const pilaster = new THREE.Mesh(pilasterGeometry, pilasterMaterial);
         pilaster.position.set(x, HALL.height / 2, z);
         this.scene.add(pilaster);
       });
     }
 
-    // 顶面与横梁
+    // 顶面(藻井铜纹贴图)与横梁
     const ceiling = new THREE.Mesh(
       new THREE.PlaneGeometry(HALL.width, hallLength),
-      new THREE.MeshStandardMaterial({ color: 0x0a0d13, roughness: 0.95 })
+      new THREE.MeshStandardMaterial({
+        map: this.loadSceneTexture('ceiling-coffer', { repeat: [1.25, 6] }),
+        color: 0x9a938a,
+        roughness: 0.85
+      })
     );
     ceiling.rotation.x = Math.PI / 2;
     ceiling.position.set(0, HALL.height, hallCenterZ);
     this.scene.add(ceiling);
 
-    const beamMaterial = new THREE.MeshStandardMaterial({ color: 0x241812, roughness: 0.7 });
+    // 横梁(漆面木纹贴图,共享几何体)
+    const beamMaterial = new THREE.MeshStandardMaterial({
+      map: this.loadSceneTexture('wood-beam', { repeat: [8, 1] }),
+      color: 0x6a5a4e,
+      roughness: 0.85,
+      envMapIntensity: 0.3
+    });
+    const beamGeometry = new THREE.BoxGeometry(HALL.width, 0.28, 0.36);
     for (let row = -1; row <= 9; row += 1) {
       const z = HALL.firstRowZ - row * HALL.rowSpacing + HALL.rowSpacing / 2;
-      const beam = new THREE.Mesh(new THREE.BoxGeometry(HALL.width, 0.28, 0.36), beamMaterial);
+      const beam = new THREE.Mesh(beamGeometry, beamMaterial);
       beam.position.set(0, HALL.height - 0.14, z);
       this.scene.add(beam);
     }
 
-    // 走廊吊灯（自发光，不额外开光源）
+    // 走廊吊灯(自发光,不额外开光源;共享几何体与材质)
+    const lanternGeometry = new THREE.SphereGeometry(0.26, 14, 10);
+    const lanternMaterial = new THREE.MeshStandardMaterial({
+      color: 0xd3382f,
+      emissive: 0xff7a4a,
+      emissiveIntensity: 1.6,
+      roughness: 0.4
+    });
+    const cordGeometry = new THREE.CylinderGeometry(0.015, 0.015, 0.7, 6);
+    const cordMaterial = new THREE.MeshBasicMaterial({ color: 0x33221a });
     for (let row = 0; row < 9; row += 2) {
       const z = HALL.firstRowZ - row * HALL.rowSpacing - HALL.rowSpacing / 2;
-      const lantern = new THREE.Mesh(
-        new THREE.SphereGeometry(0.26, 14, 10),
-        new THREE.MeshStandardMaterial({
-          color: 0xd3382f,
-          emissive: 0xff7a4a,
-          emissiveIntensity: 1.6,
-          roughness: 0.4
-        })
-      );
+      const lantern = new THREE.Mesh(lanternGeometry, lanternMaterial);
       lantern.scale.y = 0.8;
       lantern.position.set(0, HALL.height - 0.9, z);
       this.scene.add(lantern);
-      const cord = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.015, 0.015, 0.7, 6),
-        new THREE.MeshBasicMaterial({ color: 0x33221a })
-      );
+      const cord = new THREE.Mesh(cordGeometry, cordMaterial);
       cord.position.set(0, HALL.height - 0.35, z);
       this.scene.add(cord);
     }
 
-    // 尽头影壁 + 印章标志
-    const endWall = new THREE.Mesh(new THREE.BoxGeometry(HALL.width, HALL.height, 0.4), wallMaterial);
+    // 尽头影壁:凤凰仙鹤金剪贴图 + 暖光洗墙(墙面用更疏的纹样重复,避免细条纹)
+    const endWallMaterial = new THREE.MeshStandardMaterial({
+      map: this.loadSceneTexture('wall-cloud', { repeat: [2.5, 1] }),
+      color: 0x8b939c,
+      roughness: 0.9
+    });
+    const endWall = new THREE.Mesh(new THREE.BoxGeometry(HALL.width, HALL.height, 0.4), endWallMaterial);
     endWall.position.set(0, HALL.height / 2, endZ);
     this.scene.add(endWall);
 
-    new THREE.TextureLoader().load('/assets/generated/seal-mark.webp', (texture) => {
-      texture.colorSpace = THREE.SRGBColorSpace;
-      const emblem = new THREE.Mesh(
-        new THREE.PlaneGeometry(2.6, 2.6),
-        new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0.92 })
-      );
-      emblem.position.set(0, 2.7, endZ + 0.25);
-      this.scene.add(emblem);
-    });
+    const featurePanel = new THREE.Mesh(
+      new THREE.PlaneGeometry(5.9, 4.85),
+      new THREE.MeshStandardMaterial({
+        map: this.loadSceneTexture('feature-wall', { repeat: [1, 1] }),
+        roughness: 0.75
+      })
+    );
+    featurePanel.position.set(0, 2.75, endZ + 0.25);
+    this.scene.add(featurePanel);
+
+    const featureLight = new THREE.PointLight(0xffd9a0, 8, 14, 1.8);
+    featureLight.position.set(0, 3.2, endZ + 3.5);
+    this.scene.add(featureLight);
   }
 
   buildStand(layout) {
@@ -377,18 +488,18 @@ export class MuseumScene {
 
     const craftColor = new THREE.Color(layout.craft.color || '#c99a2e');
 
-    // 石质基座 + 金色顶圈
-    const pedestal = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.55, 0.66, 1.1, 24),
-      new THREE.MeshStandardMaterial({ color: 0x1a2029, roughness: 0.65, metalness: 0.2 })
-    );
+    // 石质基座 + 金色顶圈(几何体/材质全场共享;玄武岩贴图只挂一次)
+    const shared = getSharedStandAssets();
+    if (!shared.pedestalMaterial.map) {
+      shared.pedestalMaterial.map = this.loadSceneTexture('pedestal-stone', { repeat: [1.5, 1] });
+      shared.pedestalMaterial.color.set(0xb8c0c8);
+      shared.pedestalMaterial.needsUpdate = true;
+    }
+    const pedestal = new THREE.Mesh(shared.pedestalGeometry, shared.pedestalMaterial);
     pedestal.position.y = 0.55;
     group.add(pedestal);
 
-    const rim = new THREE.Mesh(
-      new THREE.TorusGeometry(0.56, 0.03, 10, 40),
-      new THREE.MeshStandardMaterial({ color: GOLD, roughness: 0.3, metalness: 0.8 })
-    );
+    const rim = new THREE.Mesh(shared.rimGeometry, shared.rimMaterial);
     rim.rotation.x = Math.PI / 2;
     rim.position.y = 1.1;
     group.add(rim);
@@ -408,17 +519,8 @@ export class MuseumScene {
     glow.position.y = 0.15;
     group.add(glow);
 
-    // 悬浮环（低于视高，从上方看呈环绕模型的光环）
-    const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(1.05, 0.012, 8, 64),
-      new THREE.MeshBasicMaterial({
-        color: GOLD_LIGHT,
-        transparent: true,
-        opacity: 0.4,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false
-      })
-    );
+    // 悬浮环（低于视高，从上方看呈环绕模型的光环；材质按展台独立以驱动高亮）
+    const ring = new THREE.Mesh(shared.ringGeometry, shared.ringMaterial.clone());
     ring.rotation.x = Math.PI / 2;
     ring.position.y = 1.2;
     group.add(ring);
@@ -467,6 +569,19 @@ export class MuseumScene {
   }
 
   // ---------- Canvas 纹理 ----------
+
+  // 加载 AI 生成的无缝贴图;就绪后立刻上传 GPU(initTexture),避免走进视野时才解码卡顿
+  loadSceneTexture(name, { repeat = [1, 1], anisotropy = 8 } = {}) {
+    const texture = textureLoader.load(`${TEXTURE_BASE}${name}.webp`, (loaded) => {
+      this.renderer?.initTexture(loaded);
+    });
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(repeat[0], repeat[1]);
+    texture.anisotropy = anisotropy;
+    return texture;
+  }
 
   registerTextTexture(canvas, draw) {
     const texture = new THREE.CanvasTexture(canvas);
@@ -552,13 +667,25 @@ export class MuseumScene {
     canvas.height = 512;
     const color = stand.craft.color || '#c99a2e';
     const draw = (ctx) => {
-      const gradient = ctx.createLinearGradient(0, 0, 0, 512);
-      gradient.addColorStop(0, color);
-      gradient.addColorStop(1, 'rgba(5, 8, 12, 0.12)');
-      ctx.fillStyle = gradient;
-      ctx.globalAlpha = 0.85;
-      ctx.fillRect(0, 0, 256, 512);
-      ctx.globalAlpha = 1;
+      if (this.silkImage) {
+        // 绢布底 + 技艺色渐变罩染
+        ctx.drawImage(this.silkImage, 0, 0, 256, 512);
+        const gradient = ctx.createLinearGradient(0, 0, 0, 512);
+        gradient.addColorStop(0, color);
+        gradient.addColorStop(1, 'rgba(5, 8, 12, 0.25)');
+        ctx.fillStyle = gradient;
+        ctx.globalAlpha = 0.55;
+        ctx.fillRect(0, 0, 256, 512);
+        ctx.globalAlpha = 1;
+      } else {
+        const gradient = ctx.createLinearGradient(0, 0, 0, 512);
+        gradient.addColorStop(0, color);
+        gradient.addColorStop(1, 'rgba(5, 8, 12, 0.12)');
+        ctx.fillStyle = gradient;
+        ctx.globalAlpha = 0.85;
+        ctx.fillRect(0, 0, 256, 512);
+        ctx.globalAlpha = 1;
+      }
       ctx.font = '120px system-ui, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(stand.craft.emoji || '✦', 128, 170);
@@ -570,33 +697,6 @@ export class MuseumScene {
     };
     draw(canvas.getContext('2d'));
     return this.registerTextTexture(canvas, draw);
-  }
-
-  makeFloorTexture() {
-    if (this.floorTexture) return this.floorTexture;
-    const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 256;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#10151d';
-    ctx.fillRect(0, 0, 256, 256);
-    ctx.strokeStyle = '#1d2632';
-    ctx.lineWidth = 3;
-    for (let i = 0; i <= 256; i += 64) {
-      ctx.beginPath();
-      ctx.moveTo(i, 0);
-      ctx.lineTo(i, 256);
-      ctx.moveTo(0, i);
-      ctx.lineTo(256, i);
-      ctx.stroke();
-    }
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.025)';
-    for (let i = 0; i < 120; i += 1) {
-      ctx.fillRect(Math.random() * 256, Math.random() * 256, 2, 2);
-    }
-    this.floorTexture = new THREE.CanvasTexture(canvas);
-    this.floorTexture.colorSpace = THREE.SRGBColorSpace;
-    return this.floorTexture;
   }
 
   makeGlowTexture() {
@@ -938,23 +1038,32 @@ export class MuseumScene {
       return;
     }
 
-    const forward = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
-    const right = new THREE.Vector3(-forward.z, 0, forward.x);
+    // 用标量前向/右向,避免逐帧分配 Vector3
+    const forwardX = -Math.sin(this.yaw);
+    const forwardZ = -Math.cos(this.yaw);
+    const rightX = -forwardZ;
+    const rightZ = forwardX;
 
-    const move = new THREE.Vector3();
-    if (this.keys.has('KeyW') || this.keys.has('ArrowUp')) move.add(forward);
-    if (this.keys.has('KeyS') || this.keys.has('ArrowDown')) move.sub(forward);
-    if (this.keys.has('KeyD') || this.keys.has('ArrowRight')) move.add(right);
-    if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) move.sub(right);
+    let moveX = 0;
+    let moveZ = 0;
+    if (this.keys.has('KeyW') || this.keys.has('ArrowUp')) { moveX += forwardX; moveZ += forwardZ; }
+    if (this.keys.has('KeyS') || this.keys.has('ArrowDown')) { moveX -= forwardX; moveZ -= forwardZ; }
+    if (this.keys.has('KeyD') || this.keys.has('ArrowRight')) { moveX += rightX; moveZ += rightZ; }
+    if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) { moveX -= rightX; moveZ -= rightZ; }
     if (this.joystick.active) {
-      move.addScaledVector(forward, -this.joystick.y);
-      move.addScaledVector(right, this.joystick.x);
+      moveX += forwardX * -this.joystick.y + rightX * this.joystick.x;
+      moveZ += forwardZ * -this.joystick.y + rightZ * this.joystick.x;
     }
 
     const running = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
     const speed = running ? 5.6 : 3.2;
-    const targetVelocity = move.lengthSq() > 0 ? move.normalize().multiplyScalar(speed) : move;
-    this.velocity.lerp(targetVelocity, Math.min(1, dt * 10));
+    const moveLength = Math.hypot(moveX, moveZ);
+    if (moveLength > 0) {
+      tmpTargetVelocity.set((moveX / moveLength) * speed, 0, (moveZ / moveLength) * speed);
+    } else {
+      tmpTargetVelocity.set(0, 0, 0);
+    }
+    this.velocity.lerp(tmpTargetVelocity, Math.min(1, dt * 10));
     this.camera.position.addScaledVector(this.velocity, dt);
     this.camera.position.y = 1.7;
     this.camera.rotation.set(this.pitch, this.yaw, 0);
@@ -982,20 +1091,19 @@ export class MuseumScene {
   }
 
   updateFocus() {
-    const forward = new THREE.Vector3();
-    this.camera.getWorldDirection(forward);
+    this.camera.getWorldDirection(tmpForward);
+    const flatLength = Math.hypot(tmpForward.x, tmpForward.z) || 1;
+    const facingX = tmpForward.x / flatLength;
+    const facingZ = tmpForward.z / flatLength;
 
     let nearest = null;
     let nearestDistance = Infinity;
     this.stands.forEach((stand) => {
-      const toStand = new THREE.Vector3(
-        stand.group.position.x - this.camera.position.x,
-        0,
-        stand.group.position.z - this.camera.position.z
-      );
-      const distance = toStand.length();
-      if (distance < 4.2 && distance < nearestDistance) {
-        const facing = toStand.normalize().dot(new THREE.Vector3(forward.x, 0, forward.z).normalize());
+      const dx = stand.group.position.x - this.camera.position.x;
+      const dz = stand.group.position.z - this.camera.position.z;
+      const distance = Math.hypot(dx, dz);
+      if (distance < 4.2 && distance < nearestDistance && distance > 0.0001) {
+        const facing = (dx / distance) * facingX + (dz / distance) * facingZ;
         if (facing > 0.25) {
           nearest = stand;
           nearestDistance = distance;
