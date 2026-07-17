@@ -1,11 +1,12 @@
 import { CRAFTS_DATA, getGeneratorCraftId } from './utils/craftData.js';
-import { ParticleMorphScene } from './components/ParticleMorphScene.js';
+import { MuseumScene, getStandLayout } from './components/MuseumScene.js';
+import { initCreationPanel } from './components/creationPanel.js';
 import { prefetchModels } from './utils/modelLoader.js';
 
-let homeScene = null;
-let currentCraft = null;
-let selectionVersion = 0;
-let homeTourStops = [];
+let museumScene = null;
+let creationApi = null;
+let focusedStand = null;
+let panelHideTimer = null;
 
 export function getHomepageCrafts(crafts = CRAFTS_DATA) {
   return crafts.filter((craft) => Boolean(craft.modelUrl));
@@ -78,131 +79,129 @@ export function resolveHomepageSelection(current, requested) {
   };
 }
 
+// ---------- 3D 博物馆首页 ----------
+
 function initHomePage() {
-  const selector = document.getElementById('heritage-selector');
-  const stage = document.getElementById('home-particle-stage');
-  if (!selector || !stage) return;
+  const container = document.getElementById('museum-container');
+  if (!container) return;
 
-  const crafts = getHomepageCrafts();
-  homeTourStops = getMuseumTourStops(crafts);
-  renderCraftSelector(selector, homeTourStops);
+  const layout = getStandLayout(getHomepageCrafts());
 
-  homeScene = new ParticleMorphScene(stage);
-  homeScene.init();
-
-  const params = new URLSearchParams(window.location.search);
-  const initialCraft = getInitialHomepageCraft(params.get('craft'), homeTourStops);
-  selectCraft(initialCraft);
-
-  // 首屏只加载当前展品，其余模型空闲时预取进 HTTP 缓存（报告 4.3 P3）
-  prefetchModels(
-    homeTourStops
-      .map((craft) => craft.modelUrl)
-      .filter((url) => url && url !== initialCraft?.modelUrl)
-  );
-}
-
-function renderCraftSelector(selector, crafts) {
-  const tourStops = crafts.every((craft) => typeof craft.index === 'number')
-    ? crafts
-    : getMuseumTourStops(crafts);
-  selector.innerHTML = tourStops.map((craft) => `
-    <button class="heritage-chip" type="button" data-craft-id="${craft.id}" aria-pressed="false">
-      <span class="chip-frame" aria-hidden="true"></span>
-      <img class="chip-icon" src="${craft.iconUrl}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'), { className: 'chip-mark', textContent: '${craft.emoji}' }))">
-      <span class="chip-name">${craft.name}</span>
-      <small>${craft.stopLabel} · ${craft.category}</small>
-    </button>
-  `).join('');
-
-  selector.querySelectorAll('.heritage-chip').forEach((button) => {
-    button.addEventListener('click', () => {
-      const craft = tourStops.find((item) => item.id === button.dataset.craftId);
-      selectCraft(craft);
-    });
-  });
-}
-
-function selectCraft(craft) {
-  const selection = resolveHomepageSelection(currentCraft, craft);
-  if (!selection.shouldUpdate) return;
-
-  const version = selectionVersion + 1;
-  selectionVersion = version;
-  craft = selection.nextCraft;
-  currentCraft = craft;
-
-  const tourCraft = getTourCraft(craft);
-  setCopyTransition(true);
-  setSelectorBusy(true);
-  window.setTimeout(() => {
-    if (version !== selectionVersion) return;
-    updateCraftCopy(tourCraft);
-    requestAnimationFrame(() => setCopyTransition(false));
-  }, 180);
-
-  document.querySelectorAll('.heritage-chip').forEach((button) => {
-    const isActive = button.dataset.craftId === tourCraft.id;
-    button.classList.toggle('active', isActive);
-    button.setAttribute('aria-pressed', String(isActive));
+  museumScene = new MuseumScene(container);
+  museumScene.init({
+    layout,
+    onStateChange: handleStateChange,
+    onFocusStand: handleFocusStand,
+    onSelectStand: openCraftPanel
   });
 
-  document.querySelector('.home-hero')?.setAttribute('data-active-craft', tourCraft.id);
+  // 调试/自动化测试句柄
+  window.__museum = museumScene;
 
-  const links = getHomepageCraftLinks(tourCraft.id);
-  const craftLink = document.getElementById('home-craft-link');
-  if (craftLink) {
-    craftLink.href = links.craftHref;
+  const panel = document.getElementById('craft-panel');
+  if (panel) {
+    creationApi = initCreationPanel(panel);
   }
 
-  const generatorLink = document.getElementById('home-generator-link');
-  if (generatorLink) {
-    generatorLink.href = links.generatorHref;
+  document.getElementById('craft-panel-close')?.addEventListener('click', closeCraftPanel);
+  window.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeCraftPanel();
+  });
+
+  // 其余模型空闲时预取进 HTTP 缓存，走近展台时解码更快
+  prefetchModels(layout.map((stand) => stand.craft.modelUrl));
+}
+
+function handleStateChange(state) {
+  const gateHint = document.getElementById('gate-hint');
+  const hud = document.getElementById('museum-hud');
+
+  if (state === 'entering') {
+    gateHint?.classList.add('is-hidden');
   }
 
-  const transition = homeScene?.setCraft(tourCraft);
-  if (transition?.finally) {
-    transition.finally(() => {
-      if (version === selectionVersion) setSelectorBusy(false);
-    });
+  if (state === 'explore') {
+    if (gateHint) {
+      gateHint.classList.add('is-hidden');
+      window.setTimeout(() => { gateHint.style.display = 'none'; }, 700);
+    }
+    if (hud) hud.hidden = false;
+
+    // ?craft= 深链：进场后直接打开对应展台卡片
+    const params = new URLSearchParams(window.location.search);
+    const requestedId = params.get('craft');
+    if (requestedId && museumScene) {
+      const stand = museumScene.getStandById(requestedId);
+      if (stand) {
+        window.setTimeout(() => openCraftPanel(stand), 350);
+      }
+    }
+  }
+}
+
+function handleFocusStand(stand) {
+  focusedStand = stand;
+  const tip = document.getElementById('hud-focus-tip');
+  if (!tip) return;
+
+  if (stand) {
+    tip.innerHTML = `<kbd>E</kbd> 查看 ${stand.craft.name} · 非遗创造`;
+    tip.classList.add('is-active');
   } else {
-    window.setTimeout(() => {
-      if (version === selectionVersion) setSelectorBusy(false);
-    }, 650);
+    tip.innerHTML = '<kbd>E</kbd> 与展台互动';
+    tip.classList.remove('is-active');
   }
+}
+
+function openCraftPanel(stand) {
+  const panel = document.getElementById('craft-panel');
+  if (!panel || !stand) return;
+
+  const { craft } = stand;
+  const intro = getHomepageCraftIntro(craft);
+
+  setText('panel-craft-name', intro.name);
+  setText('panel-craft-category', `${stand.stopLabel} · ${intro.category}`);
+  setText('panel-craft-story', craft.museumLine || intro.story);
+
+  const icon = document.getElementById('panel-craft-icon');
+  if (icon) {
+    icon.src = `/assets/generated/craft-icons/${craft.id}.png`;
+    icon.alt = intro.name;
+  }
+
+  const links = getHomepageCraftLinks(craft.id);
+  const craftLink = document.getElementById('panel-craft-link');
+  if (craftLink) craftLink.href = links.craftHref;
+
+  // 创造面板同步到当前展台的技艺（映射到工作台支持的技艺）
+  creationApi?.setCraft(getGeneratorCraftId(craft.id));
+
+  if (panelHideTimer) {
+    window.clearTimeout(panelHideTimer);
+    panelHideTimer = null;
+  }
+  panel.hidden = false;
+  requestAnimationFrame(() => panel.classList.add('open'));
+  museumScene?.setInputEnabled(false);
+}
+
+function closeCraftPanel() {
+  const panel = document.getElementById('craft-panel');
+  if (!panel || panel.hidden) return;
+
+  panel.classList.remove('open');
+  museumScene?.setInputEnabled(true);
+
+  if (panelHideTimer) window.clearTimeout(panelHideTimer);
+  panelHideTimer = window.setTimeout(() => {
+    panel.hidden = true;
+  }, 480);
 }
 
 function setText(id, text) {
   const node = document.getElementById(id);
   if (node) node.textContent = text || '';
-}
-
-function updateCraftCopy(craft) {
-  const intro = getHomepageCraftIntro(craft);
-  setText('home-craft-name', intro.name);
-  setText('home-craft-category', intro.category);
-  setText('home-description', '选择一项技艺，数字粒子即刻聚合成它的三维形态。');
-  setText('home-craft-story', craft.museumLine || intro.story);
-  const icon = document.getElementById('home-craft-icon');
-  if (icon) {
-    icon.src = craft.iconUrl || `/assets/generated/craft-icons/${craft.id}.png`;
-  }
-}
-
-function setSelectorBusy(isBusy) {
-  document.querySelectorAll('.heritage-chip').forEach((button) => {
-    button.classList.toggle('is-busy', isBusy);
-  });
-}
-
-function getTourCraft(craft) {
-  if (!craft) return craft;
-  return homeTourStops.find((item) => item.id === craft.id) || craft;
-}
-
-function setCopyTransition(isTransitioning) {
-  document.getElementById('home-copy-panel')?.classList.toggle('is-switching', isTransitioning);
-  document.querySelector('.heritage-info-rail')?.classList.toggle('is-switching', isTransitioning);
 }
 
 if (typeof document !== 'undefined') {

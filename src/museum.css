@@ -1,0 +1,436 @@
+/* 3D 博物馆首页覆盖层样式：画布全屏，UI 悬浮其上（不拦截画布的拖拽/滚轮） */
+
+.museum-shell {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #05070c;
+  color: #f8e5b8;
+  touch-action: none;
+}
+
+#museum-container {
+  position: absolute;
+  inset: 0;
+}
+
+#museum-container canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+#museum-container canvas:active {
+  cursor: grabbing;
+}
+
+.museum-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  font-family: "Source Han Serif Local", "Microsoft YaHei", serif;
+}
+
+/* ---------- 顶部导航 ---------- */
+
+.museum-nav {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(5, 8, 12, 0.62);
+  border: 1px solid rgba(201, 154, 46, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  pointer-events: auto;
+  white-space: nowrap;
+}
+
+.museum-nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 900;
+  font-size: 15px;
+  letter-spacing: 2px;
+  color: #f8e5b8;
+}
+
+.museum-nav-brand img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.museum-nav-links {
+  display: flex;
+  gap: 4px;
+}
+
+.museum-nav-links a {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  color: rgba(248, 229, 184, 0.72);
+  text-decoration: none;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.museum-nav-links a:hover {
+  color: #f8e5b8;
+  background: rgba(201, 154, 46, 0.16);
+}
+
+.museum-nav-links a.active {
+  color: #05070c;
+  background: #c99a2e;
+  font-weight: 700;
+}
+
+/* ---------- 开场提示 ---------- */
+
+.gate-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 12vh;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #f8e5b8;
+  text-align: center;
+  letter-spacing: 3px;
+  pointer-events: none;
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.gate-hint strong {
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.gate-hint span:last-child {
+  font-size: 14px;
+  opacity: 0.75;
+  letter-spacing: 6px;
+}
+
+.gate-hint-ring {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 2px solid rgba(201, 154, 46, 0.9);
+  position: relative;
+  animation: gate-hint-pulse 1.8s ease-out infinite;
+}
+
+.gate-hint-ring::after {
+  content: '';
+  position: absolute;
+  inset: 12px;
+  border-radius: 50%;
+  background: rgba(201, 154, 46, 0.85);
+}
+
+@keyframes gate-hint-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(201, 154, 46, 0.55); }
+  100% { box-shadow: 0 0 0 22px rgba(201, 154, 46, 0); }
+}
+
+.gate-hint.is-hidden {
+  opacity: 0;
+  transform: translateX(-50%) translateY(20px);
+}
+
+/* ---------- 馆内 HUD ---------- */
+
+.museum-hud {
+  position: absolute;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 18px;
+  border-radius: 999px;
+  background: rgba(5, 8, 12, 0.62);
+  border: 1px solid rgba(201, 154, 46, 0.3);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font-size: 13px;
+  color: rgba(248, 229, 184, 0.85);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.museum-hud[hidden] {
+  display: none;
+}
+
+.museum-hud kbd {
+  display: inline-block;
+  min-width: 18px;
+  padding: 1px 5px;
+  margin: 0 1px;
+  border-radius: 4px;
+  border: 1px solid rgba(201, 154, 46, 0.55);
+  background: rgba(201, 154, 46, 0.14);
+  font-family: inherit;
+  font-size: 12px;
+  text-align: center;
+  color: #f8e5b8;
+}
+
+.hud-divider {
+  width: 1px;
+  height: 14px;
+  background: rgba(201, 154, 46, 0.35);
+}
+
+#hud-focus-tip {
+  color: #c99a2e;
+  font-weight: 700;
+  transition: color 0.2s ease;
+}
+
+#hud-focus-tip.is-active {
+  color: #ffd97a;
+  text-shadow: 0 0 12px rgba(201, 154, 46, 0.6);
+}
+
+/* ---------- 展台卡片（右滑出面板） ---------- */
+
+.craft-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(430px, 94vw);
+  padding: 22px 22px 40px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: rgba(7, 10, 15, 0.92);
+  border-left: 1px solid rgba(201, 154, 46, 0.4);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: -24px 0 60px rgba(0, 0, 0, 0.55);
+  transform: translateX(106%);
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: auto;
+  color: #e8e2d4;
+  font-family: "Source Han Serif Local", "Microsoft YaHei", serif;
+}
+
+.craft-panel.open {
+  transform: translateX(0);
+}
+
+.craft-panel-close {
+  position: sticky;
+  top: 0;
+  float: right;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(201, 154, 46, 0.5);
+  background: rgba(201, 154, 46, 0.12);
+  color: #f8e5b8;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 2;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.craft-panel-close:hover {
+  background: rgba(201, 154, 46, 0.3);
+  transform: rotate(90deg);
+}
+
+.craft-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.craft-panel-header img {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  object-fit: cover;
+  border: 1px solid rgba(201, 154, 46, 0.45);
+  background: rgba(201, 154, 46, 0.08);
+}
+
+.craft-panel-header h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #f8e5b8;
+}
+
+.craft-panel-header p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #c99a2e;
+  letter-spacing: 1px;
+}
+
+.craft-panel-story {
+  margin: 0 0 14px;
+  font-size: 14px;
+  line-height: 1.8;
+  color: rgba(232, 226, 212, 0.85);
+}
+
+.craft-panel-links {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.craft-panel-links a {
+  flex: 1;
+  text-align: center;
+  padding: 8px 0;
+  border-radius: 10px;
+  border: 1px solid rgba(201, 154, 46, 0.4);
+  color: #f8e5b8;
+  font-size: 13px;
+  text-decoration: none;
+  transition: background 0.2s ease;
+}
+
+.craft-panel-links a:hover {
+  background: rgba(201, 154, 46, 0.16);
+}
+
+.craft-panel-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0 14px;
+  color: #c99a2e;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 4px;
+}
+
+.craft-panel-divider::before,
+.craft-panel-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(201, 154, 46, 0.55), transparent);
+}
+
+/* ---------- 面板内创造区紧凑适配 ---------- */
+
+.panel-creation .workflow-rail {
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.panel-creation .control-panel {
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.panel-creation .choice-switch {
+  max-height: 132px;
+  overflow-y: auto;
+}
+
+.panel-creation .button-group {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.panel-creation .button-group .btn {
+  flex: 1 1 30%;
+  padding: 10px 8px;
+  font-size: 13px;
+}
+
+.panel-creation .preview-section {
+  margin-bottom: 14px;
+}
+
+.panel-creation .preview-container {
+  grid-template-columns: 1fr;
+  min-height: 220px;
+}
+
+.panel-creation .image-preview {
+  min-height: 220px;
+}
+
+.panel-creation .pattern-section,
+.panel-creation .product-section,
+.panel-creation .recent-section {
+  margin-bottom: 14px;
+}
+
+/* 深色玻璃面板内提亮 generator 组件的卡片底色 */
+.panel-creation .control-panel,
+.panel-creation .product-card,
+.panel-creation .material-list,
+.panel-creation .stats,
+.panel-creation .pattern-container {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(201, 154, 46, 0.28);
+}
+
+.panel-creation h3,
+.panel-creation h4,
+.panel-creation h5 {
+  color: #f8e5b8;
+}
+
+/* ---------- 响应式 ---------- */
+
+@media (max-width: 640px) {
+  .museum-nav {
+    gap: 8px;
+    padding: 6px 10px;
+    max-width: 96vw;
+    overflow-x: auto;
+  }
+
+  .museum-nav-brand span {
+    display: none;
+  }
+
+  .museum-hud {
+    font-size: 11px;
+    gap: 7px;
+    padding: 7px 12px;
+    bottom: 14px;
+  }
+
+  .craft-panel {
+    width: 100vw;
+    border-left: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gate-hint-ring {
+    animation: none;
+  }
+
+  .craft-panel {
+    transition: none;
+  }
+}
