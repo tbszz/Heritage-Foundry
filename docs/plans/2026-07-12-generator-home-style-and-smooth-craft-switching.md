@@ -1,5 +1,4 @@
 # Generator Home Style and Smooth Craft Switching Implementation Plan
-
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Unify the creative generator with the homepage museum aesthetic and make rapid craft switching continuous and responsive.
@@ -44,4 +43,3 @@
 2. Run `npm run build`.
 3. Start the Vite app and inspect homepage rapid switching plus generator desktop/mobile layouts.
 4. Fix any observed issue and repeat the smallest relevant checks.
-

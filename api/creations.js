@@ -29,7 +29,7 @@ module.exports = async (req, res) => {
 
   if (req.method === 'GET') {
     const creationId = req.query.id;
-    
+
     try {
       if (creationId) {
         const result = await supabaseService.getCreation(creationId);

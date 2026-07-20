@@ -1,5 +1,4 @@
 # True 3D Cultural Products Implementation Plan
-
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Replace box-like image mockups with realistic product carriers and add a real asynchronous image-to-3D GLB workflow for figurines.
@@ -96,4 +95,3 @@
 5. Run a Visual Ralph verdict against the approved dark-ink reference direction and persist the structured score/differences.
 6. Request architect verification; fix any rejection and repeat tests/build/browser evidence.
 7. Run the changed-files deslop pass, then repeat `npm test` and `npm run build` before claiming completion.
-

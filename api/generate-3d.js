@@ -61,7 +61,7 @@ module.exports = async (req, res) => {
 
   if (req.method === 'GET') {
     const taskId = req.query.id || req.query.task_id;
-    
+
     if (!taskId) {
       return res.status(400).json({
         success: false,
