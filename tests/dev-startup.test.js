@@ -7,8 +7,8 @@ const packageJson = JSON.parse(
   fs.readFileSync(path.resolve('package.json'), 'utf8')
 );
 const readme = fs.readFileSync(path.resolve('README.md'), 'utf8');
-const deployWorkflow = fs.readFileSync(
-  path.resolve('.github/workflows/deploy-pages.yml'),
+const ciWorkflow = fs.readFileSync(
+  path.resolve('.github/workflows/ci.yml'),
   'utf8'
 );
 
@@ -50,6 +50,7 @@ describe('development startup contract', () => {
     expect(packageJson.scripts.predev).toBe('npm run check:node');
     expect(packageJson.scripts['predev:api']).toBe('npm run check:node');
     expect(readme).toContain('Node.js 22.21+');
-    expect(deployWorkflow).toMatch(/node-version:\s*['"]?22(?:\.21\.0)?['"]?/);
+    expect(ciWorkflow).toMatch(/node-version:\s*['"]?22(?:\.21\.0)?['"]?/);
+    expect(fs.existsSync(path.resolve('.github/workflows/deploy-pages.yml'))).toBe(false);
   });
 });
