@@ -1,6 +1,7 @@
 import {
   PALETTE_COLORS,
   hexToRgb,
+  colorDistance,
   findClosestPaletteColor,
   getColorKeyByHex,
   getActiveColorSystem
@@ -14,6 +15,51 @@ export const PALETTE = {
 };
 
 export const COLOR_CLASSES = ['r', 'g', 'y', 'b'];
+
+export const DEFAULT_PATTERN_SIZE = 96;
+
+export function getPatternDetailProfile(width, height) {
+  const largestDimension = Math.max(Number(width) || 0, Number(height) || 0);
+  if (largestDimension >= 128) {
+    return {
+      sourceDecodeLimit: 1024,
+      maxColors: 20,
+      minComponentSize: 2,
+      minimumForegroundCoverage: 0.08
+    };
+  }
+  if (largestDimension >= 96) {
+    return {
+      sourceDecodeLimit: 768,
+      maxColors: 16,
+      minComponentSize: 2,
+      minimumForegroundCoverage: 0.1
+    };
+  }
+  if (largestDimension >= 64) {
+    return {
+      sourceDecodeLimit: 512,
+      maxColors: 16,
+      minComponentSize: 2,
+      minimumForegroundCoverage: 0.12
+    };
+  }
+  return {
+    sourceDecodeLimit: 512,
+    maxColors: 12,
+    minComponentSize: 2,
+    minimumForegroundCoverage: 0.14
+  };
+}
+
+function createExternalCell() {
+  return {
+    key: '',
+    name: '外部背景',
+    hex: '#FFFFFF',
+    isExternal: true
+  };
+}
 
 export function buildPattern(width, height, seed = 1) {
   const center = (width - 1) / 2;
@@ -64,48 +110,77 @@ function getSummaryColorCount(summary) {
   return Object.values(summary).filter((value) => getSummaryCount(value) > 0).length;
 }
 
+function escapeAttribute(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('"', '&quot;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;');
+}
+
 export function renderPatternHTML(pattern, width) {
   const rows = [];
+  const cellSize = width <= 29 ? 14 : width <= 48 ? 10 : width <= 64 ? 8 : width <= 96 ? 6 : 5;
+  const cellGap = width <= 64 ? 1 : width <= 96 ? 0.75 : 0.5;
+  const cellBorder = width <= 64 ? 1 : width <= 96 ? 0.75 : 0.5;
+  const cellHole = width <= 64 ? 30 : width <= 96 ? 26 : 22;
   for (let y = 0; y < Math.ceil(pattern.length / width); y++) {
     const rowCells = [];
     for (let x = 0; x < width; x++) {
       const idx = y * width + x;
       const colorClass = pattern[idx];
-      let bgColor = '#fff8e9';
-      let textColor = 'rgba(31, 35, 40, 0.5)';
+      let bgColor = 'transparent';
       let dataKey = '';
+      let colorName = '空位';
+      let isExternal = !colorClass || colorClass?.isExternal;
       
       if (typeof colorClass === 'string' && PALETTE[colorClass]) {
         bgColor = PALETTE[colorClass].color;
-        textColor = '#fff';
         dataKey = PALETTE[colorClass].key;
+        colorName = PALETTE[colorClass].name;
+        isExternal = false;
       } else if (typeof colorClass === 'object' && colorClass.hex && !colorClass.isExternal) {
         bgColor = colorClass.hex;
         dataKey = colorClass.key || '';
-        const rgb = hexToRgb(bgColor);
-        if (rgb) {
-          const luma = (0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b) / 255;
-          textColor = luma > 0.5 ? '#000' : '#fff';
-        }
+        colorName = colorClass.name || '拼豆色';
+        isExternal = false;
       }
-      
-      rowCells.push(`<div class="bead-cell" style="background: ${bgColor}; color: ${textColor}" data-key="${dataKey}">${dataKey}</div>`);
+
+      const classes = `bead-cell${isExternal ? ' is-external' : ''}`;
+      const label = isExternal ? `第 ${y + 1} 行，第 ${x + 1} 列，空位` : `${dataKey} · ${colorName}`;
+      const title = isExternal ? '' : `${dataKey} · ${colorName}`;
+      rowCells.push(
+        `<div class="${classes}" style="--bead-color: ${escapeAttribute(bgColor)}" data-index="${idx}" data-key="${escapeAttribute(dataKey)}" aria-label="${escapeAttribute(label)}"${title ? ` title="${escapeAttribute(title)}" tabindex="0"` : ''}></div>`
+      );
     }
     rows.push(`<div class="bead-row">${rowCells.join('')}</div>`);
   }
-  return `<div class="bead-grid">${rows.join('')}</div>`;
+  return `<div class="bead-grid" style="--bead-size: ${cellSize}px; --bead-gap: ${cellGap}px; --bead-border: ${cellBorder}px; --bead-hole: ${cellHole}%">${rows.join('')}</div>`;
 }
 
 export function calculateStats(summary) {
   const beadCount = Object.values(summary).reduce((sum, count) => sum + getSummaryCount(count), 0);
   const colorCount = getSummaryColorCount(summary);
-  const timeCost = beadCount > 180 ? '90 分钟' : beadCount > 95 ? '45 分钟' : '30 分钟';
-  const difficulty = beadCount > 180 ? '高阶' : beadCount > 105 ? '进阶' : '入门';
+  const timeCost = beadCount > 600
+    ? `约 ${Math.max(2, Math.ceil(beadCount / 600))} 小时`
+    : beadCount > 180 ? '90 分钟' : beadCount > 95 ? '45 分钟' : '30 分钟';
+  const difficulty = beadCount > 6000
+    ? '大师级'
+    : beadCount > 2000 ? '高阶' : beadCount > 105 ? '进阶' : '入门';
   
   return { beadCount, colorCount, timeCost, difficulty };
 }
 
-function getCellRepresentativeColor(imageData, startX, startY, width, height, mode) {
+function getCellRepresentativeColor(
+  imageData,
+  startX,
+  startY,
+  endX,
+  endY,
+  mode,
+  backgroundMask,
+  minimumForegroundCoverage
+) {
   const { data, width: imageWidth } = imageData;
   const colorCounts = new Map();
   let maxCount = 0;
@@ -114,13 +189,21 @@ function getCellRepresentativeColor(imageData, startX, startY, width, height, mo
   let totalG = 0;
   let totalB = 0;
   let totalPixels = 0;
+  let sampledPixels = 0;
 
-  for (let y = startY; y < startY + height; y++) {
-    for (let x = startX; x < startX + width; x++) {
+  const minX = Math.max(0, Math.floor(startX));
+  const minY = Math.max(0, Math.floor(startY));
+  const maxX = Math.min(imageData.width, Math.max(minX + 1, Math.ceil(endX)));
+  const maxY = Math.min(imageData.height, Math.max(minY + 1, Math.ceil(endY)));
+
+  for (let y = minY; y < maxY; y += 1) {
+    for (let x = minX; x < maxX; x += 1) {
       const offset = (y * imageWidth + x) * 4;
       const alpha = data[offset + 3];
+      const pixelIndex = y * imageWidth + x;
+      sampledPixels += 1;
 
-      if (alpha < 128) {
+      if (alpha < 128 || backgroundMask[pixelIndex]) {
         continue;
       }
 
@@ -145,7 +228,7 @@ function getCellRepresentativeColor(imageData, startX, startY, width, height, mo
     }
   }
 
-  if (totalPixels === 0) {
+  if (totalPixels === 0 || totalPixels / Math.max(1, sampledPixels) < minimumForegroundCoverage) {
     return null;
   }
 
@@ -160,88 +243,359 @@ function getCellRepresentativeColor(imageData, startX, startY, width, height, mo
   return dominantColor;
 }
 
-function isNearPaperColor(cell) {
-  if (!cell || cell.isExternal || !cell.hex) return true;
-  const rgb = hexToRgb(cell.hex);
-  if (!rgb) return false;
-
-  const max = Math.max(rgb.r, rgb.g, rgb.b);
-  const min = Math.min(rgb.r, rgb.g, rgb.b);
-  return max > 238 && max - min < 24;
+function getPixelRgb(imageData, index) {
+  const offset = index * 4;
+  return {
+    r: imageData.data[offset],
+    g: imageData.data[offset + 1],
+    b: imageData.data[offset + 2]
+  };
 }
 
-function markExternalBackground(pattern, width, height) {
-  const result = pattern.map((cell) => ({ ...cell }));
-  const visited = new Set();
-  const stack = [];
-
+function getBorderIndices(width, height) {
+  const border = new Set();
   for (let x = 0; x < width; x += 1) {
-    stack.push(x, (height - 1) * width + x);
+    border.add(x);
+    border.add((height - 1) * width + x);
   }
   for (let y = 0; y < height; y += 1) {
-    stack.push(y * width, y * width + width - 1);
+    border.add(y * width);
+    border.add(y * width + width - 1);
+  }
+  return [...border];
+}
+
+function median(values) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2
+    ? sorted[middle]
+    : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+function estimateEdgeBackgroundColor(imageData) {
+  const neutralSamples = [];
+  let opaqueBorderPixels = 0;
+  for (const index of getBorderIndices(imageData.width, imageData.height)) {
+    const offset = index * 4;
+    if (imageData.data[offset + 3] < 128) continue;
+    opaqueBorderPixels += 1;
+    const rgb = getPixelRgb(imageData, index);
+    const channelRange = Math.max(rgb.r, rgb.g, rgb.b) - Math.min(rgb.r, rgb.g, rgb.b);
+    if (channelRange <= 48) neutralSamples.push(rgb);
+  }
+
+  // Generated references are requested on neutral paper. A robust median keeps
+  // JPEG texture/noise from splitting that paper into many unrelated color bins,
+  // while the neutral-coverage gate protects saturated full-frame artwork.
+  if (!neutralSamples.length || neutralSamples.length / Math.max(1, opaqueBorderPixels) < 0.6) return null;
+  const color = {
+    r: Math.round(median(neutralSamples.map((sample) => sample.r))),
+    g: Math.round(median(neutralSamples.map((sample) => sample.g))),
+    b: Math.round(median(neutralSamples.map((sample) => sample.b)))
+  };
+  const distances = neutralSamples
+    .map((sample) => colorDistance(sample, color))
+    .sort((a, b) => a - b);
+  const maximumEdgeDistance = distances[distances.length - 1] || 0;
+  return {
+    color,
+    adaptiveTolerance: Math.min(14, maximumEdgeDistance + 0.75)
+  };
+}
+
+function isBackgroundCandidate(imageData, index, backgroundColor, tolerance) {
+  const offset = index * 4;
+  if (imageData.data[offset + 3] < 128) return true;
+  if (!backgroundColor) return false;
+
+  const rgb = getPixelRgb(imageData, index);
+  return colorDistance(rgb, backgroundColor) <= tolerance;
+}
+
+function markEnclosedBackgroundRegions(imageData, mask, backgroundColor, tolerance, minimumSize) {
+  if (!backgroundColor) return;
+  const visited = new Uint8Array(mask.length);
+
+  for (let start = 0; start < mask.length; start += 1) {
+    if (mask[start] || visited[start] || !isBackgroundCandidate(imageData, start, backgroundColor, tolerance)) continue;
+    const component = [];
+    const stack = [start];
+    visited[start] = 1;
+
+    while (stack.length) {
+      const index = stack.pop();
+      component.push(index);
+      const x = index % imageData.width;
+      const y = Math.floor(index / imageData.width);
+      const neighbors = [];
+      if (x > 0) neighbors.push(index - 1);
+      if (x < imageData.width - 1) neighbors.push(index + 1);
+      if (y > 0) neighbors.push(index - imageData.width);
+      if (y < imageData.height - 1) neighbors.push(index + imageData.width);
+      for (const neighbor of neighbors) {
+        if (
+          !mask[neighbor]
+          && !visited[neighbor]
+          && isBackgroundCandidate(imageData, neighbor, backgroundColor, tolerance)
+        ) {
+          visited[neighbor] = 1;
+          stack.push(neighbor);
+        }
+      }
+    }
+
+    if (component.length >= minimumSize) {
+      for (const index of component) mask[index] = 1;
+    }
+  }
+}
+
+function createBackgroundMask(imageData, removeBackground, tolerance, targetWidth, targetHeight) {
+  const pixelCount = imageData.width * imageData.height;
+  const mask = new Uint8Array(pixelCount);
+
+  for (let index = 0; index < pixelCount; index += 1) {
+    if (imageData.data[index * 4 + 3] < 128) mask[index] = 1;
+  }
+
+  if (!removeBackground) return mask;
+
+  const backgroundEstimate = estimateEdgeBackgroundColor(imageData);
+  const backgroundColor = backgroundEstimate?.color || null;
+  const effectiveTolerance = Math.max(tolerance, backgroundEstimate?.adaptiveTolerance || 0);
+  const stack = [];
+  for (const index of getBorderIndices(imageData.width, imageData.height)) {
+    if (isBackgroundCandidate(imageData, index, backgroundColor, effectiveTolerance)) stack.push(index);
   }
 
   while (stack.length > 0) {
     const index = stack.pop();
-    if (index < 0 || index >= result.length || visited.has(index)) continue;
-    visited.add(index);
+    if (index < 0 || index >= pixelCount || mask[index] === 2) continue;
+    if (!isBackgroundCandidate(imageData, index, backgroundColor, effectiveTolerance)) continue;
+    mask[index] = 2;
 
-    const cell = result[index];
-    if (!cell?.isExternal && !isNearPaperColor(cell)) continue;
-
-    result[index] = {
-      ...cell,
-      key: '',
-      name: '外部背景',
-      hex: '#FFFFFF',
-      isExternal: true
-    };
-
-    const x = index % width;
-    const y = Math.floor(index / width);
+    const x = index % imageData.width;
+    const y = Math.floor(index / imageData.width);
     if (x > 0) stack.push(index - 1);
-    if (x < width - 1) stack.push(index + 1);
-    if (y > 0) stack.push(index - width);
-    if (y < height - 1) stack.push(index + width);
+    if (x < imageData.width - 1) stack.push(index + 1);
+    if (y > 0) stack.push(index - imageData.width);
+    if (y < imageData.height - 1) stack.push(index + imageData.width);
+  }
+
+  for (let index = 0; index < pixelCount; index += 1) {
+    mask[index] = mask[index] ? 1 : 0;
+  }
+  const sourcePixelsPerBead = pixelCount / Math.max(1, targetWidth * targetHeight);
+  markEnclosedBackgroundRegions(
+    imageData,
+    mask,
+    backgroundColor,
+    effectiveTolerance,
+    Math.max(4, Math.round(sourcePixelsPerBead * 0.5))
+  );
+  return mask;
+}
+
+function getForegroundBounds(imageData, backgroundMask) {
+  let minX = imageData.width;
+  let minY = imageData.height;
+  let maxX = -1;
+  let maxY = -1;
+
+  for (let y = 0; y < imageData.height; y += 1) {
+    for (let x = 0; x < imageData.width; x += 1) {
+      if (backgroundMask[y * imageData.width + x]) continue;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+    }
+  }
+
+  if (maxX < minX || maxY < minY) return null;
+  return { minX, minY, maxX, maxY, width: maxX - minX + 1, height: maxY - minY + 1 };
+}
+
+function getSamplingLayout(imageData, foregroundBounds, width, height, fitSubject, subjectPadding) {
+  if (!fitSubject) {
+    return {
+      source: { minX: 0, minY: 0, width: imageData.width, height: imageData.height },
+      target: { x: 0, y: 0, width, height }
+    };
+  }
+
+  const margin = Math.min(
+    Math.floor((Math.min(width, height) - 1) / 2),
+    Math.max(width >= 10 && height >= 10 ? 1 : 0, Math.round(Math.min(width, height) * subjectPadding))
+  );
+  const availableWidth = Math.max(1, width - margin * 2);
+  const availableHeight = Math.max(1, height - margin * 2);
+  const scale = Math.min(availableWidth / foregroundBounds.width, availableHeight / foregroundBounds.height);
+  const targetWidth = Math.max(1, Math.min(availableWidth, Math.round(foregroundBounds.width * scale)));
+  const targetHeight = Math.max(1, Math.min(availableHeight, Math.round(foregroundBounds.height * scale)));
+
+  return {
+    source: foregroundBounds,
+    target: {
+      x: Math.floor((width - targetWidth) / 2),
+      y: Math.floor((height - targetHeight) / 2),
+      width: targetWidth,
+      height: targetHeight
+    }
+  };
+}
+
+function removeSmallComponents(pattern, width, height, minimumSize) {
+  if (minimumSize <= 1) return pattern;
+  const result = pattern.map((cell) => ({ ...cell }));
+  const visited = new Uint8Array(result.length);
+
+  for (let start = 0; start < result.length; start += 1) {
+    if (visited[start] || result[start]?.isExternal) continue;
+    const component = [];
+    const stack = [start];
+    visited[start] = 1;
+
+    while (stack.length) {
+      const index = stack.pop();
+      component.push(index);
+      const x = index % width;
+      const y = Math.floor(index / width);
+      const neighbors = [];
+      if (x > 0) neighbors.push(index - 1);
+      if (x < width - 1) neighbors.push(index + 1);
+      if (y > 0) neighbors.push(index - width);
+      if (y < height - 1) neighbors.push(index + width);
+      for (const neighbor of neighbors) {
+        if (!visited[neighbor] && result[neighbor] && !result[neighbor].isExternal) {
+          visited[neighbor] = 1;
+          stack.push(neighbor);
+        }
+      }
+    }
+
+    if (component.length < minimumSize) {
+      for (const index of component) result[index] = createExternalCell();
+    }
   }
 
   return result;
 }
 
-export function createPatternFromImageData(imageData, width = 18, height = 12, options = {}) {
+function limitPatternColors(pattern, maxColors, colorSystem) {
+  if (!Number.isFinite(maxColors) || maxColors <= 0) return pattern;
+  const counts = new Map();
+  const colorByHex = new Map();
+  for (const cell of pattern) {
+    if (!cell || cell.isExternal || !cell.hex) continue;
+    const hex = cell.hex.toUpperCase();
+    counts.set(hex, (counts.get(hex) || 0) + 1);
+    colorByHex.set(hex, cell);
+  }
+
+  if (counts.size <= maxColors) return pattern;
+  const candidates = [...counts.entries()]
+    .map(([hex, count]) => ({ hex, count, rgb: hexToRgb(hex) }))
+    .sort((a, b) => (b.count - a.count) || a.hex.localeCompare(b.hex));
+  const retainedHexes = [candidates[0].hex];
+  const retainedSet = new Set(retainedHexes);
+  const maxCount = candidates[0].count;
+
+  while (retainedHexes.length < Math.min(Math.floor(maxColors), candidates.length)) {
+    let best = null;
+    for (const candidate of candidates) {
+      if (retainedSet.has(candidate.hex)) continue;
+      const nearestDistance = Math.min(...retainedHexes.map((hex) => (
+        colorDistance(candidate.rgb, hexToRgb(hex))
+      )));
+      const frequencyWeight = 0.55 + 0.45 * Math.sqrt(candidate.count / maxCount);
+      const score = nearestDistance * frequencyWeight;
+      if (!best || score > best.score) best = { candidate, score };
+    }
+    if (!best) break;
+    retainedHexes.push(best.candidate.hex);
+    retainedSet.add(best.candidate.hex);
+  }
+  const retained = retainedHexes.map((hex) => colorByHex.get(hex));
+
+  return pattern.map((cell) => {
+    if (!cell || cell.isExternal || retainedSet.has(cell.hex.toUpperCase())) return cell;
+    const sourceRgb = hexToRgb(cell.hex);
+    const closest = retained.reduce((best, candidate) => {
+      const distance = colorDistance(sourceRgb, hexToRgb(candidate.hex));
+      return !best || distance < best.distance ? { candidate, distance } : best;
+    }, null)?.candidate;
+    if (!closest) return cell;
+    return {
+      key: getColorKeyByHex(closest.hex, colorSystem),
+      name: closest.name,
+      hex: closest.hex.toUpperCase(),
+      isExternal: false
+    };
+  });
+}
+
+export function createPatternFromImageData(
+  imageData,
+  width = DEFAULT_PATTERN_SIZE,
+  height = DEFAULT_PATTERN_SIZE,
+  options = {}
+) {
+  const detailProfile = getPatternDetailProfile(width, height);
   const {
     mode = 'dominant',
     colorSystem = getActiveColorSystem(),
-    removeBackground = true
+    removeBackground = true,
+    fitSubject = true,
+    subjectPadding = 0.08,
+    minComponentSize = detailProfile.minComponentSize,
+    maxColors = detailProfile.maxColors,
+    minimumForegroundCoverage = detailProfile.minimumForegroundCoverage,
+    backgroundTolerance = 3.8
   } = options;
 
-  const cellWidth = imageData.width / width;
-  const cellHeight = imageData.height / height;
+  const backgroundMask = createBackgroundMask(
+    imageData,
+    removeBackground,
+    backgroundTolerance,
+    width,
+    height
+  );
+  const foregroundBounds = getForegroundBounds(imageData, backgroundMask);
+  if (!foregroundBounds) {
+    return Array.from({ length: width * height }, createExternalCell);
+  }
+  const layout = getSamplingLayout(imageData, foregroundBounds, width, height, fitSubject, subjectPadding);
   const pattern = [];
 
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
-      const startX = Math.floor(x * cellWidth);
-      const startY = Math.floor(y * cellHeight);
-      const endX = Math.min(imageData.width, Math.ceil((x + 1) * cellWidth));
-      const endY = Math.min(imageData.height, Math.ceil((y + 1) * cellHeight));
+      const targetX = x - layout.target.x;
+      const targetY = y - layout.target.y;
+      if (targetX < 0 || targetY < 0 || targetX >= layout.target.width || targetY >= layout.target.height) {
+        pattern.push(createExternalCell());
+        continue;
+      }
+
+      const startX = layout.source.minX + (targetX / layout.target.width) * layout.source.width;
+      const startY = layout.source.minY + (targetY / layout.target.height) * layout.source.height;
+      const endX = layout.source.minX + ((targetX + 1) / layout.target.width) * layout.source.width;
+      const endY = layout.source.minY + ((targetY + 1) / layout.target.height) * layout.source.height;
       const representative = getCellRepresentativeColor(
         imageData,
         startX,
         startY,
-        Math.max(1, endX - startX),
-        Math.max(1, endY - startY),
-        mode
+        endX,
+        endY,
+        mode,
+        backgroundMask,
+        minimumForegroundCoverage
       );
 
       if (!representative) {
-        pattern.push({
-          key: '',
-          name: '外部背景',
-          hex: '#FFFFFF',
-          isExternal: true
-        });
+        pattern.push(createExternalCell());
         continue;
       }
 
@@ -255,27 +609,42 @@ export function createPatternFromImageData(imageData, width = 18, height = 12, o
     }
   }
 
-  return removeBackground ? markExternalBackground(pattern, width, height) : pattern;
+  const cleanedPattern = removeSmallComponents(pattern, width, height, minComponentSize);
+  return limitPatternColors(cleanedPattern, maxColors, colorSystem);
 }
 
-export async function imageToPattern(imageUrl, width = 18, height = 12) {
-  return new Promise((resolve) => {
+export async function imageToPattern(
+  imageUrl,
+  width = DEFAULT_PATTERN_SIZE,
+  height = DEFAULT_PATTERN_SIZE,
+  options = {}
+) {
+  return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, width, height);
-      
-      const imageData = ctx.getImageData(0, 0, width, height);
-      resolve(createPatternFromImageData(imageData, width, height));
+      try {
+        const detailProfile = getPatternDetailProfile(width, height);
+        const sourceDecodeLimit = options.sourceDecodeLimit || detailProfile.sourceDecodeLimit;
+        const canvas = document.createElement('canvas');
+        const sourceWidth = img.naturalWidth || img.width;
+        const sourceHeight = img.naturalHeight || img.height;
+        const scale = Math.min(1, sourceDecodeLimit / Math.max(sourceWidth, sourceHeight));
+        canvas.width = Math.max(1, Math.round(sourceWidth * scale));
+        canvas.height = Math.max(1, Math.round(sourceHeight * scale));
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('浏览器无法创建图像画布');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        resolve(createPatternFromImageData(imageData, width, height, options));
+      } catch (error) {
+        reject(error instanceof Error ? error : new Error('拼豆图像解码失败'));
+      }
     };
     
     img.onerror = () => {
-      console.warn('Failed to load image, using generated pattern');
-      resolve(buildPattern(width, height, Math.random() * 100));
+      reject(new Error('无法读取生成图，未创建伪造拼豆图纸'));
     };
     
     img.src = imageUrl;
@@ -312,15 +681,34 @@ export function generateColorCounts(pattern) {
   return colorCounts;
 }
 
-export function downloadPatternImage(pattern, width, height, colorSystem = 'MARD') {
-  const downloadCellSize = 30;
+export function getPatternExportLayout(width, height) {
   const axisLabelSize = 30;
   const extraMargin = 20;
-  
+  const largestDimension = Math.max(1, width, height);
+  const downloadCellSize = Math.max(12, Math.min(30, Math.floor(3000 / largestDimension)));
   const gridWidth = width * downloadCellSize;
   const gridHeight = height * downloadCellSize;
-  const downloadWidth = gridWidth + axisLabelSize * 2 + extraMargin * 2;
-  const downloadHeight = gridHeight + axisLabelSize * 2 + extraMargin * 2 + 100;
+  return {
+    downloadCellSize,
+    axisLabelSize,
+    extraMargin,
+    gridWidth,
+    gridHeight,
+    downloadWidth: gridWidth + axisLabelSize * 2 + extraMargin * 2,
+    downloadHeight: gridHeight + axisLabelSize * 2 + extraMargin * 2 + 100
+  };
+}
+
+export function downloadPatternImage(pattern, width, height, colorSystem = 'MARD') {
+  const {
+    downloadCellSize,
+    axisLabelSize,
+    extraMargin,
+    gridWidth,
+    gridHeight,
+    downloadWidth,
+    downloadHeight
+  } = getPatternExportLayout(width, height);
   
   const canvas = document.createElement('canvas');
   canvas.width = downloadWidth;
@@ -374,7 +762,7 @@ export function downloadPatternImage(pattern, width, height, colorSystem = 'MARD
   ctx.lineWidth = 1;
   ctx.strokeRect(startX, startY, gridWidth, gridHeight);
   
-  ctx.font = 'bold 10px sans-serif';
+  ctx.font = `bold ${Math.max(6, Math.min(10, Math.floor(downloadCellSize * 0.32)))}px sans-serif`;
   
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -387,9 +775,9 @@ export function downloadPatternImage(pattern, width, height, colorSystem = 'MARD
       let textColor = '#000000';
       let cellKey = '';
       
-      if (typeof cell === 'object' && cell.hex) {
+      if (typeof cell === 'object' && cell.hex && !cell.isExternal) {
         bgColor = cell.hex;
-        cellKey = cell.key || '';
+        cellKey = getColorKeyByHex(cell.hex, colorSystem);
         const rgb = hexToRgb(bgColor);
         if (rgb) {
           const luma = (0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b) / 255;
@@ -419,48 +807,84 @@ export function downloadPatternImage(pattern, width, height, colorSystem = 'MARD
   ctx.lineWidth = 1.5;
   ctx.strokeRect(startX + 0.5, startY + 0.5, gridWidth, gridHeight);
   
-  const dataURL = canvas.toDataURL('image/png');
-  const link = document.createElement('a');
-  link.download = `bead-pattern-${width}x${height}-${colorSystem}.png`;
-  link.href = dataURL;
-  document.body.appendChild(link);
-  link.click();
-  window.setTimeout(() => {
-    document.body.removeChild(link);
-  }, 0);
+  canvas.toBlob((blob) => {
+    if (!blob) {
+      console.error('拼豆图纸导出失败：浏览器未能编码 PNG');
+      return;
+    }
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = `bead-pattern-${width}x${height}-${colorSystem}.png`;
+    link.href = objectUrl;
+    document.body.appendChild(link);
+    link.click();
+    window.setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(objectUrl);
+    }, 0);
+  }, 'image/png');
 }
 
-export function downloadPatternCSV(pattern, width, height) {
-  const lines = [];
-  for (let y = 0; y < height; y++) {
-    const row = [];
-    for (let x = 0; x < width; x++) {
-      const idx = y * width + x;
-      const cell = pattern[idx];
-      if (typeof cell === 'object' && cell.hex && !cell.isExternal) {
-        row.push(cell.hex);
-      } else if (typeof cell === 'string' && cell && PALETTE[cell]) {
-        row.push(PALETTE[cell].color);
-      } else {
-        row.push('');
-      }
-    }
-    lines.push(row.join(','));
-  }
-  
-  const csvContent = lines.join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+export function downloadPatternCSV(pattern, width, height, colorSystem = getActiveColorSystem()) {
+  const csvContent = serializePatternCSV(pattern, width, height, colorSystem);
+  const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   const url = URL.createObjectURL(blob);
-  
+
   link.setAttribute('href', url);
-  link.setAttribute('download', `bead-pattern-${width}x${height}.csv`);
+  link.setAttribute('download', `bead-pattern-${width}x${height}-${colorSystem}.csv`);
   link.style.visibility = 'hidden';
-  
+
   document.body.appendChild(link);
   link.click();
   window.setTimeout(() => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   }, 0);
+}
+
+function escapeCsvCell(value) {
+  const text = String(value ?? '');
+  return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+export function serializePatternCSV(pattern, width, height, colorSystem = getActiveColorSystem()) {
+  const lines = [];
+  lines.push('非遗造物局拼豆图纸');
+  lines.push(`色号体系,${escapeCsvCell(colorSystem)}`);
+  lines.push(`图纸尺寸,${width}x${height}`);
+  lines.push('');
+  lines.push('色号矩阵');
+  for (let y = 0; y < height; y++) {
+    const row = [];
+    for (let x = 0; x < width; x++) {
+      const idx = y * width + x;
+      const cell = pattern[idx];
+      if (typeof cell === 'object' && cell.hex && !cell.isExternal) {
+        row.push(escapeCsvCell(getColorKeyByHex(cell.hex, colorSystem)));
+      } else if (typeof cell === 'string' && cell && PALETTE[cell]) {
+        row.push(escapeCsvCell(PALETTE[cell].key));
+      } else {
+        row.push('');
+      }
+    }
+    lines.push(row.join(','));
+  }
+
+  const summary = Object.values(summarizePattern(pattern))
+    .sort((a, b) => b.count - a.count);
+  lines.push('');
+  lines.push('材料清单');
+  lines.push('色号,名称,HEX,准确用量,建议备料');
+  for (const item of summary) {
+    lines.push([
+      getColorKeyByHex(item.color, colorSystem),
+      item.name,
+      item.color,
+      item.count,
+      Math.ceil(item.count * 1.05)
+    ].map(escapeCsvCell).join(','));
+  }
+
+  return lines.join('\n');
 }

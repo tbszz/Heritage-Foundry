@@ -1,3 +1,5 @@
+import { BEAD_COLOR_MAPPINGS } from './beadColorMappings.js';
+
 export const COLOR_SYSTEMS = ['MARD', 'COCO', '漫漫', '盼盼', '咪小窝'];
 
 export const COLOR_SYSTEM_LABELS = {
@@ -134,6 +136,7 @@ function rgbToOklab(rgb) {
 }
 
 const oklabCache = new Map();
+const MAX_OKLAB_CACHE_SIZE = 4096;
 
 function getOklabColor(rgb) {
   const cacheKey = `${rgb.r},${rgb.g},${rgb.b}`;
@@ -143,7 +146,7 @@ function getOklabColor(rgb) {
   }
 
   const oklab = rgbToOklab(rgb);
-  oklabCache.set(cacheKey, oklab);
+  if (oklabCache.size < MAX_OKLAB_CACHE_SIZE) oklabCache.set(cacheKey, oklab);
   return oklab;
 }
 
@@ -182,22 +185,9 @@ export function findClosestPaletteColor(targetRgb) {
 
 export function getColorKeyByHex(hexValue, colorSystem) {
   const normalizedHex = hexValue.toUpperCase();
-  const paletteIndex = PALETTE_COLORS.findIndex((color) => color.hex.toUpperCase() === normalizedHex);
-
-  if (paletteIndex === -1) {
-    return '?';
-  }
-
-  const prefixes = {
-    MARD: 'M',
-    COCO: 'C',
-    '漫漫': 'MM',
-    '盼盼': 'PP',
-    '咪小窝': 'MX'
-  };
-  const prefix = prefixes[colorSystem] || prefixes[activeColorSystem] || 'M';
-
-  return `${prefix}-${String(paletteIndex + 1).padStart(3, '0')}`;
+  const mapping = BEAD_COLOR_MAPPINGS[normalizedHex];
+  if (!mapping) return '?';
+  return mapping[colorSystem] || mapping[activeColorSystem] || '?';
 }
 
 export function sortColorsByHue(colors) {

@@ -6,19 +6,13 @@
   <title>非遗技艺 - 非遗造物局</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="crafts-shell">
   <div class="app">
     <header class="header">
       <div class="logo">
-        <div class="logo-icon">
-          <span></span><span></span><span></span><span></span>
-          <span></span><span></span><span></span><span></span>
-          <span></span><span></span><span></span><span></span>
-          <span></span><span></span><span></span><span></span>
-        </div>
+        <img class="logo-seal" src="assets/generated/seal-mark.png" alt="" aria-hidden="true">
         <div>
           <h1>非遗造物局</h1>
-          <p>AI 非遗文创与手作方案生成平台</p>
         </div>
       </div>
       <nav class="nav">
@@ -29,14 +23,19 @@
       </nav>
     </header>
 
-    <main class="main">
+    <main class="main crafts-main" data-component="CraftsMuseum">
+      <div class="crafts-page-intro">
+        <span>HERITAGE ARCHIVE · 非遗数字典藏</span>
+        <h2>循着匠心，遇见千年技艺</h2>
+        <p>选择一项非遗，在数字展台中观察它的形与神，并把灵感带入你的下一件作品。</p>
+      </div>
       <div id="crafts-page" class="page active">
         <aside class="sidebar">
           <div class="sidebar-header">
             <h3>非遗技艺</h3>
             <p>探索中国传统文化瑰宝</p>
           </div>
-          <div id="craft-sidebar-list" class="craft-sidebar-list"></div>
+          <div id="craft-sidebar-list" class="craft-sidebar-list" data-component="CraftDiscoveryGrid"></div>
         </aside>
 
         <div class="content-center">
