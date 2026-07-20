@@ -2,8 +2,14 @@ const express = require('express');
 const router = express.Router();
 const geminiService = require('../services/geminiService');
 const { buildEnhancedPrompt } = require('../services/promptService');
+const { createRateLimiter, readPositiveInteger } = require('../middleware/apiGuardrails');
 
-router.post('/generate-image', async (req, res) => {
+const imageGenerationLimiter = createRateLimiter({
+  max: readPositiveInteger(process.env.IMAGE_RATE_LIMIT_MAX, 12),
+  windowMs: readPositiveInteger(process.env.IMAGE_RATE_LIMIT_WINDOW_MS, 10 * 60 * 1000)
+});
+
+router.post('/generate-image', imageGenerationLimiter, async (req, res) => {
   try {
     const {
       prompt,
@@ -43,16 +49,15 @@ router.post('/generate-image', async (req, res) => {
     });
   } catch (error) {
     console.error('Generate image error:', error);
-    const statusCode = error.statusCode || 500;
-    res.status(statusCode).json({
+    res.status(error.statusCode || 500).json({
       success: false,
       error: error.message || '生成图片失败',
-      code: statusCode
+      code: error.code || error.statusCode || 500
     });
   }
 });
 
-router.post('/edit-image', async (req, res) => {
+router.post('/edit-image', imageGenerationLimiter, async (req, res) => {
   try {
     const { image, prompt, aspect_ratio = '1:1', mime_type = 'image/jpeg' } = req.body;
 
@@ -87,11 +92,10 @@ router.post('/edit-image', async (req, res) => {
     });
   } catch (error) {
     console.error('Edit image error:', error);
-    const statusCode = error.statusCode || 500;
-    res.status(statusCode).json({
+    res.status(error.statusCode || 500).json({
       success: false,
       error: error.message || '编辑图片失败',
-      code: statusCode
+      code: error.code || error.statusCode || 500
     });
   }
 });

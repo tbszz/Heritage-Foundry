@@ -9,11 +9,7 @@ const generateRoutes = require('./routes/generate');
 const generate3DRoutes = require('./routes/generate3d');
 const creationRoutes = require('./routes/creations');
 const errorHandler = require('./middleware/errorHandler');
-const {
-  createCorsOptions,
-  createRateLimiter,
-  readPositiveInteger
-} = require('./middleware/apiGuardrails');
+const { createCorsOptions } = require('./middleware/apiGuardrails');
 
 const PORT = process.env.PORT || 3000;
 
@@ -32,24 +28,11 @@ function createApp() {
   if (trustProxy) app.set('trust proxy', trustProxy);
 
   app.use(cors((req, callback) => callback(null, createCorsOptions({ request: req }))));
-  app.use(express.json({ limit: process.env.API_JSON_BODY_LIMIT || '50mb' }));
+  app.use(express.json({ limit: process.env.API_JSON_BODY_LIMIT || '15mb' }));
   app.use(express.urlencoded({
     extended: true,
-    limit: process.env.API_FORM_BODY_LIMIT || '50mb'
+    limit: process.env.API_FORM_BODY_LIMIT || '1mb'
   }));
-
-  const generateLimiter = createRateLimiter({
-    windowMs: readPositiveInteger(
-      process.env.IMAGE_RATE_LIMIT_WINDOW_MS || process.env.GENERATE_RATE_WINDOW_MS,
-      60_000
-    ),
-    max: readPositiveInteger(
-      process.env.IMAGE_RATE_LIMIT_MAX || process.env.GENERATE_RATE_MAX,
-      10
-    )
-  });
-  app.use('/api/generate-image', generateLimiter);
-  app.use('/api/edit-image', generateLimiter);
 
   app.use('/api', generateRoutes);
   app.use('/api', generate3DRoutes);
