@@ -6,6 +6,7 @@ const cors = require('cors');
 const path = require('path');
 
 const generateRoutes = require('./routes/generate');
+const generate3DRoutes = require('./routes/generate3d');
 const creationRoutes = require('./routes/creations');
 const errorHandler = require('./middleware/errorHandler');
 const {
@@ -51,6 +52,7 @@ function createApp() {
   app.use('/api/edit-image', generateLimiter);
 
   app.use('/api', generateRoutes);
+  app.use('/api', generate3DRoutes);
   app.use('/api/creations', creationRoutes);
 
   app.get('/api/health', (req, res) => {

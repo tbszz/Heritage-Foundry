@@ -9,6 +9,26 @@ afterEach(() => {
 });
 
 describe('shared Express guardrails', () => {
+  it('mounts the provider-neutral 3D capability route', async () => {
+    process.env.NODE_ENV = 'test';
+    process.env.THREE_D_PROVIDER = 'meshy';
+    delete process.env.MESHY_API_KEY;
+    const serverModule = await import('../server.js');
+    const app = serverModule.createApp();
+
+    const response = await request(app).get('/api/3d-capabilities');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      success: true,
+      capabilities: {
+        provider: 'meshy',
+        configured: false,
+        ready: false
+      }
+    });
+  });
+
   it('allows same-origin production requests when no explicit allowlist is configured', async () => {
     process.env.NODE_ENV = 'production';
     delete process.env.CORS_ALLOWED_ORIGINS;
