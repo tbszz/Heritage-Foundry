@@ -1,13 +1,24 @@
 require('dotenv').config();
 
-const threeDService = require('../services/threeDService');
 const { getServerless3DPolicy } = require('./runtime-policy');
+const { createServerlessGuard } = require('./serverless-guardrails');
+
+const createGuard = createServerlessGuard({
+  max: process.env.THREE_D_RATE_LIMIT_MAX || 4,
+  windowMs: process.env.THREE_D_RATE_LIMIT_WINDOW_MS || 900_000
+});
+
+function loadThreeDService() {
+  try {
+    return require('../services/threeDService');
+  } catch (error) {
+    if (error?.code === 'MODULE_NOT_FOUND' && error.message.includes('services/threeDService')) return null;
+    throw error;
+  }
+}
 
 function sendError(res, error) {
   const status = error?.statusCode || 500;
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   return res.status(status).json({
     success: false,
     error: error?.message || '3D 模型生成失败',
@@ -19,12 +30,8 @@ function sendError(res, error) {
 }
 
 module.exports = async (req, res) => {
-  if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, GET');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    return res.status(200).end();
-  }
+  const guarded = await createGuard(req, res);
+  if (guarded.handled) return guarded.result;
 
   const policy = getServerless3DPolicy();
   if (!policy.allowed) {
@@ -34,6 +41,16 @@ module.exports = async (req, res) => {
       code: policy.code,
       provider: policy.provider,
       retryable: false
+    });
+  }
+  const threeDService = loadThreeDService();
+  if (!threeDService) {
+    return res.status(503).json({
+      success: false,
+      error: '3D 服务暂不可用',
+      code: 'THREE_D_SERVICE_UNAVAILABLE',
+      provider: policy.provider,
+      retryable: true
     });
   }
 
@@ -58,7 +75,6 @@ module.exports = async (req, res) => {
         return res.send(artifact.bytes);
       }
       const task = await threeDService.getImageTo3DTask(taskId);
-      res.setHeader('Access-Control-Allow-Origin', '*');
       return res.json({
         success: true,
         task
@@ -79,7 +95,6 @@ module.exports = async (req, res) => {
   const imageUrl = req.body?.image_url || req.body?.image;
 
   if (typeof imageUrl !== 'string' || imageUrl.trim().length === 0) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(400).json({
       success: false,
       error: 'image_url 不能为空',
@@ -98,10 +113,6 @@ module.exports = async (req, res) => {
       pose_mode: req.body?.pose_mode,
       target_formats: ['glb']
     });
-
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
     return res.status(202).json({
       success: true,

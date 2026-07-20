@@ -1,11 +1,24 @@
 require('dotenv').config();
 
-const threeDService = require('../services/threeDService');
 const { getServerless3DPolicy } = require('./runtime-policy');
+const { createServerlessGuard } = require('./serverless-guardrails');
+
+const guard = createServerlessGuard({
+  max: process.env.THREE_D_CAPABILITY_RATE_LIMIT_MAX || 30,
+  windowMs: process.env.THREE_D_CAPABILITY_RATE_LIMIT_WINDOW_MS || 60_000
+});
+
+function loadThreeDService() {
+  try {
+    return require('../services/threeDService');
+  } catch (error) {
+    if (error?.code === 'MODULE_NOT_FOUND' && error.message.includes('services/threeDService')) return null;
+    throw error;
+  }
+}
 
 function sendError(res, error) {
   const status = error?.statusCode || 500;
-  res.setHeader('Access-Control-Allow-Origin', '*');
   return res.status(status).json({
     success: false,
     error: error?.message || '3D 服务查询失败',
@@ -17,6 +30,9 @@ function sendError(res, error) {
 }
 
 module.exports = async (req, res) => {
+  const guarded = await guard(req, res);
+  if (guarded.handled) return guarded.result;
+
   if (req.method !== 'GET') {
     return res.status(405).json({
       success: false,
@@ -26,7 +42,6 @@ module.exports = async (req, res) => {
   }
 
   try {
-    res.setHeader('Access-Control-Allow-Origin', '*');
     const policy = getServerless3DPolicy();
     if (!policy.allowed) {
       return res.status(policy.statusCode).json({
@@ -39,6 +54,16 @@ module.exports = async (req, res) => {
         },
         error: policy.message,
         code: policy.code
+      });
+    }
+    const threeDService = loadThreeDService();
+    if (!threeDService) {
+      return res.status(503).json({
+        success: false,
+        error: '3D 服务暂不可用',
+        code: 'THREE_D_SERVICE_UNAVAILABLE',
+        provider: policy.provider,
+        retryable: true
       });
     }
     return res.json({

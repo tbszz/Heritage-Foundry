@@ -46,7 +46,7 @@
     },
     {
       "src": "/api/creations/(.*)",
-      "dest": "/api/creations.js"
+      "dest": "/api/creations.js?id=$1"
     },
     {
       "src": "/(.*)",

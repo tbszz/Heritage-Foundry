@@ -2,8 +2,14 @@ require('dotenv').config();
 
 const geminiService = require('../services/geminiService');
 const { buildEnhancedPrompt } = require('../services/promptService');
+const { createServerlessGuard, imageGuardrailConfig } = require('./serverless-guardrails');
+
+const guard = createServerlessGuard(imageGuardrailConfig());
 
 module.exports = async (req, res) => {
+  const guarded = await guard(req, res);
+  if (guarded.handled) return guarded.result;
+
   if (req.method !== 'POST') {
     return res.status(405).json({
       success: false,
@@ -40,10 +46,6 @@ module.exports = async (req, res) => {
       mime_type
     });
 
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
     res.json({
       success: true,
       image: result.base64Image,
@@ -55,7 +57,6 @@ module.exports = async (req, res) => {
     });
   } catch (error) {
     console.error('Generate image error:', error);
-    res.setHeader('Access-Control-Allow-Origin', '*');
     res.status(error.statusCode || 500).json({
       success: false,
       error: error.message || '生成图片失败',

@@ -32,4 +32,17 @@ describe('serverless 3D runtime policy', () => {
     process.env.THREE_D_PROVIDER = 'local';
     expect(getServerless3DPolicy()).toMatchObject({ allowed: true, provider: 'local' });
   });
+
+  it('rejects unknown providers on Vercel', async () => {
+    process.env.VERCEL = '1';
+    process.env.THREE_D_PROVIDER = 'experimental';
+    const { getServerless3DPolicy } = await import('./runtime-policy.js');
+
+    expect(getServerless3DPolicy()).toMatchObject({
+      allowed: false,
+      provider: 'experimental',
+      statusCode: 503,
+      code: 'THREE_D_PROVIDER_UNAVAILABLE_ON_VERCEL'
+    });
+  });
 });
