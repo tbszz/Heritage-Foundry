@@ -120,6 +120,11 @@ function escapeAttribute(value) {
 
 export function renderPatternHTML(pattern, width) {
   const rows = [];
+  const firstInteractiveIndex = pattern.findIndex((cell) => (
+    typeof cell === 'string'
+      ? Boolean(PALETTE[cell])
+      : Boolean(cell?.hex && !cell.isExternal)
+  ));
   const cellSize = width <= 29 ? 14 : width <= 48 ? 10 : width <= 64 ? 8 : width <= 96 ? 6 : 5;
   const cellGap = width <= 64 ? 1 : width <= 96 ? 0.75 : 0.5;
   const cellBorder = width <= 64 ? 1 : width <= 96 ? 0.75 : 0.5;
@@ -150,7 +155,7 @@ export function renderPatternHTML(pattern, width) {
       const label = isExternal ? `第 ${y + 1} 行，第 ${x + 1} 列，空位` : `${dataKey} · ${colorName}`;
       const title = isExternal ? '' : `${dataKey} · ${colorName}`;
       rowCells.push(
-        `<div class="${classes}" style="--bead-color: ${escapeAttribute(bgColor)}" data-index="${idx}" data-key="${escapeAttribute(dataKey)}" aria-label="${escapeAttribute(label)}"${title ? ` title="${escapeAttribute(title)}" tabindex="0"` : ''}></div>`
+        `<div class="${classes}" style="--bead-color: ${escapeAttribute(bgColor)}" data-index="${idx}" data-key="${escapeAttribute(dataKey)}" aria-label="${escapeAttribute(label)}" tabindex="${idx === firstInteractiveIndex ? '0' : '-1'}"${title ? ` title="${escapeAttribute(title)}"` : ''}></div>`
       );
     }
     rows.push(`<div class="bead-row">${rowCells.join('')}</div>`);
@@ -298,10 +303,13 @@ function estimateEdgeBackgroundColor(imageData) {
   const distances = neutralSamples
     .map((sample) => colorDistance(sample, color))
     .sort((a, b) => a - b);
-  const maximumEdgeDistance = distances[distances.length - 1] || 0;
+  // Ignore a single isolated border outlier without losing legitimate paper
+  // texture that occupies a meaningful part of the frame edge.
+  const robustEdgeIndex = Math.max(0, distances.length - 2);
+  const robustEdgeDistance = distances[Math.max(0, robustEdgeIndex)] || 0;
   return {
     color,
-    adaptiveTolerance: Math.min(14, maximumEdgeDistance + 0.75)
+    adaptiveTolerance: Math.min(14, robustEdgeDistance + 0.75)
   };
 }
 

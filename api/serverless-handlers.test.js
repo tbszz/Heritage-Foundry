@@ -153,7 +153,7 @@ describe('Vercel paid endpoint guardrails', () => {
 });
 
 describe('3D serverless service availability', () => {
-  it('returns a normalized 503 when Meshy service code has not landed yet', async () => {
+  it('reports Meshy as unconfigured after the provider service lands', async () => {
     process.env.VERCEL = '1';
     process.env.THREE_D_PROVIDER = 'meshy';
     process.env.NODE_ENV = 'production';
@@ -162,12 +162,14 @@ describe('3D serverless service availability', () => {
 
     await handler({ method: 'GET', headers: {}, ip: '198.51.100.4' }, res);
 
-    expect(res.statusCode).toBe(503);
+    expect(res.statusCode).toBe(200);
     expect(res.body).toMatchObject({
-      success: false,
-      code: 'THREE_D_SERVICE_UNAVAILABLE',
-      provider: 'meshy',
-      retryable: true
+      success: true,
+      capabilities: {
+        provider: 'meshy',
+        configured: false,
+        ready: false
+      }
     });
   });
 
