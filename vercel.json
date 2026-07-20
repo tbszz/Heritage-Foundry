@@ -1,0 +1,59 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "@vercel/node@3.4.4"
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/generate-image",
+      "dest": "/api/generate-image.js"
+    },
+    {
+      "src": "/api/edit-image",
+      "dest": "/api/edit-image.js"
+    },
+    {
+      "src": "/api/styles",
+      "dest": "/api/styles.js"
+    },
+    {
+      "src": "/api/health",
+      "dest": "/api/health.js"
+    },
+    {
+      "src": "/api/generate-3d",
+      "dest": "/api/generate-3d.js"
+    },
+    {
+      "src": "/api/generate-3d/([^/]+)/artifacts/model\\.glb",
+      "dest": "/api/generate-3d.js?id=$1&artifact=model.glb"
+    },
+    {
+      "src": "/api/generate-3d/([^/]+)",
+      "dest": "/api/generate-3d.js?id=$1"
+    },
+    {
+      "src": "/api/3d-capabilities",
+      "dest": "/api/3d-capabilities.js"
+    },
+    {
+      "src": "/api/creations",
+      "dest": "/api/creations.js"
+    },
+    {
+      "src": "/api/creations/(.*)",
+      "dest": "/api/creations.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
+}

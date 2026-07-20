@@ -2,13 +2,22 @@
   "name": "heritage-foundry",
   "version": "1.0.0",
   "description": "AI非遗文创与手作方案生成平台",
+  "engines": {
+    "node": ">=22.21.0"
+  },
   "scripts": {
-    "dev": "vite",
+    "check:node": "node scripts/check-node-runtime.js",
+    "predev": "npm run check:node",
+    "dev": "concurrently --kill-others-on-fail --names WEB,API \"npm run dev:web\" \"npm run dev:api\"",
+    "dev:web": "vite",
+    "predev:api": "npm run check:node",
+    "dev:api": "node --use-env-proxy server.js",
     "build": "vite build",
     "preview": "vite preview",
-    "server": "node --use-env-proxy server.js",
+    "server": "npm run dev:api",
     "test": "vitest --root . run",
-    "start": "concurrently \"npm run dev\" \"npm run server\""
+    "start": "npm run dev",
+    "vercel-build": "npm run build"
   },
   "dependencies": {
     "@google/genai": "^2.10.0",
