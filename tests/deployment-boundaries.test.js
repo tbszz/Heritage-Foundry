@@ -14,6 +14,12 @@ describe('Vercel deployment boundaries', () => {
     expect(sources.indexOf('/api/generate-3d/([^/]+)/artifacts/model\\.glb')).toBeLessThan(fallbackIndex);
   });
 
+  it('lets Vercel select its supported Node runtime for serverless functions', () => {
+    const config = JSON.parse(fs.readFileSync(path.resolve('vercel.json'), 'utf8'));
+
+    expect(config.functions?.['api/**/*.js']?.runtime).toBeUndefined();
+  });
+
   it('keeps the local Python runtime and heavyweight source assets out of Vercel uploads', () => {
     const ignored = fs.readFileSync(path.resolve('.vercelignore'), 'utf8');
 
