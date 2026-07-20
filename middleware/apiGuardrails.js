@@ -1,4 +1,5 @@
 const DEFAULT_RATE_LIMIT_MESSAGE = '请求过于频繁，请稍后再试';
+const { isIP } = require('net');
 
 function readPositiveInteger(value, fallback) {
   const parsed = Number.parseInt(value, 10);
@@ -21,9 +22,34 @@ function isLocalDevelopmentOrigin(origin, nodeEnv) {
   }
 }
 
+function readHeader(req, name) {
+  if (typeof req?.get === 'function') return req.get(name);
+  return req?.headers?.[name.toLowerCase()];
+}
+
+function isSameRequestOrigin(origin, req) {
+  if (!origin || !req) return false;
+
+  try {
+    const originUrl = new URL(origin);
+    const host = String(readHeader(req, 'host') || readHeader(req, 'x-forwarded-host') || '')
+      .split(',')[0]
+      .trim();
+    const forwardedProto = String(readHeader(req, 'x-forwarded-proto') || '')
+      .split(',')[0]
+      .trim()
+      .replace(/:$/, '');
+    const protocol = forwardedProto || (req.secure ? 'https' : String(req.protocol || 'http').replace(/:$/, ''));
+    return Boolean(host) && normalizeOrigin(originUrl.origin) === normalizeOrigin(`${protocol}://${host}`);
+  } catch {
+    return false;
+  }
+}
+
 function createCorsOptions({
   allowedOrigins = process.env.CORS_ALLOWED_ORIGINS || process.env.ALLOWED_ORIGINS || '',
-  nodeEnv = process.env.NODE_ENV || 'development'
+  nodeEnv = process.env.NODE_ENV || 'development',
+  request
 } = {}) {
   const allowlist = new Set(
     String(allowedOrigins)
@@ -39,7 +65,11 @@ function createCorsOptions({
       }
 
       const normalizedOrigin = normalizeOrigin(origin);
-      if (allowlist.has(normalizedOrigin) || isLocalDevelopmentOrigin(normalizedOrigin, nodeEnv)) {
+      if (
+        allowlist.has(normalizedOrigin)
+        || isLocalDevelopmentOrigin(normalizedOrigin, nodeEnv)
+        || (allowlist.size === 0 && isSameRequestOrigin(normalizedOrigin, request))
+      ) {
         return callback(null, true);
       }
 
@@ -51,11 +81,31 @@ function createCorsOptions({
   };
 }
 
+function normalizeIp(value) {
+  const candidate = String(value || '').trim().replace(/^\[|\]$/g, '');
+  return isIP(candidate) ? candidate : null;
+}
+
+function getClientIp(req, { trustForwarded = false } = {}) {
+  if (trustForwarded) {
+    const forwarded = String(readHeader(req, 'x-forwarded-for') || '')
+      .split(',')
+      .map(normalizeIp)
+      .find(Boolean);
+    if (forwarded) return forwarded;
+
+    const realIp = normalizeIp(readHeader(req, 'x-real-ip'));
+    if (realIp) return realIp;
+  }
+
+  return normalizeIp(req?.ip) || normalizeIp(req?.socket?.remoteAddress) || 'unknown';
+}
+
 function createRateLimiter({
   max = 60,
   windowMs = 60_000,
   maxEntries = 10_000,
-  keyGenerator = (req) => req.ip || req.socket?.remoteAddress || 'unknown'
+  keyGenerator = (req) => getClientIp(req)
 } = {}) {
   const requestLimit = readPositiveInteger(max, 60);
   const durationMs = readPositiveInteger(windowMs, 60_000);
@@ -109,5 +159,7 @@ function createRateLimiter({
 module.exports = {
   createCorsOptions,
   createRateLimiter,
+  getClientIp,
+  isSameRequestOrigin,
   readPositiveInteger
 };

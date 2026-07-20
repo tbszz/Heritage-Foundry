@@ -7,7 +7,7 @@ function errorHandler(err, req, res, next) {
   res.status(statusCode).json({
     success: false,
     error: message,
-    code: statusCode,
+    code: err.code || statusCode,
     timestamp: new Date().toISOString()
   });
 }

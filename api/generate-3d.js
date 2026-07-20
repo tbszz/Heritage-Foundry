@@ -7,6 +7,10 @@ const createGuard = createServerlessGuard({
   max: process.env.THREE_D_RATE_LIMIT_MAX || 4,
   windowMs: process.env.THREE_D_RATE_LIMIT_WINDOW_MS || 900_000
 });
+const statusGuard = createServerlessGuard({
+  max: process.env.THREE_D_STATUS_RATE_LIMIT_MAX || 120,
+  windowMs: process.env.THREE_D_STATUS_RATE_LIMIT_WINDOW_MS || 60_000
+});
 
 function loadThreeDService() {
   try {
@@ -30,7 +34,8 @@ function sendError(res, error) {
 }
 
 module.exports = async (req, res) => {
-  const guarded = await createGuard(req, res);
+  const guard = req.method === 'GET' ? statusGuard : createGuard;
+  const guarded = await guard(req, res);
   if (guarded.handled) return guarded.result;
 
   const policy = getServerless3DPolicy();

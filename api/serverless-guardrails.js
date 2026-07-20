@@ -1,11 +1,20 @@
-const { createCorsOptions, createRateLimiter, readPositiveInteger } = require('../middleware/apiGuardrails');
+const {
+  createCorsOptions,
+  createRateLimiter,
+  getClientIp,
+  readPositiveInteger
+} = require('../middleware/apiGuardrails');
 
 function createServerlessGuard({ max, windowMs } = {}) {
-  const corsOptions = createCorsOptions();
-  const limiter = createRateLimiter({ max, windowMs });
+  const limiter = createRateLimiter({
+    max,
+    windowMs,
+    keyGenerator: (req) => getClientIp(req, { trustForwarded: true })
+  });
 
   return async function guard(req, res) {
     const origin = req.headers?.origin;
+    const corsOptions = createCorsOptions({ request: req });
     const corsResult = await new Promise((resolve) => {
       corsOptions.origin(origin, (error, allowed) => resolve({ error, allowed }));
     });

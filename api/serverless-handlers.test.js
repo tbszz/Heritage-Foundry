@@ -102,6 +102,54 @@ describe('Vercel paid endpoint guardrails', () => {
     expect(second.statusCode).toBe(429);
     expect(second.body).toMatchObject({ success: false, code: 'RATE_LIMITED' });
   });
+
+  it('allows an unconfigured production deployment to call its own origin', async () => {
+    process.env.NODE_ENV = 'production';
+    delete process.env.CORS_ALLOWED_ORIGINS;
+    delete process.env.ALLOWED_ORIGINS;
+    const handler = await loadHandler('./generate-image.js');
+    const res = createResponse();
+
+    await handler({
+      method: 'POST',
+      headers: {
+        origin: 'https://heritage.vercel.app',
+        host: 'heritage.vercel.app',
+        'x-forwarded-proto': 'https'
+      },
+      body: {}
+    }, res);
+
+    expect(res.statusCode).toBe(400);
+    expect(res.headers['access-control-allow-origin']).toBe('https://heritage.vercel.app');
+  });
+
+  it('uses forwarded client addresses without collapsing separate users into one bucket', async () => {
+    process.env.NODE_ENV = 'production';
+    process.env.CORS_ALLOWED_ORIGINS = 'https://heritage.example';
+    process.env.IMAGE_RATE_LIMIT_MAX = '1';
+    process.env.IMAGE_RATE_LIMIT_WINDOW_MS = '60000';
+    const handler = await loadHandler('./generate-image.js');
+    const buildRequest = (forwardedFor) => ({
+      method: 'POST',
+      headers: {
+        origin: 'https://heritage.example',
+        'x-forwarded-for': forwardedFor
+      },
+      body: {}
+    });
+
+    const first = createResponse();
+    await handler(buildRequest('198.51.100.10, 10.0.0.1'), first);
+    const blocked = createResponse();
+    await handler(buildRequest('198.51.100.10, 10.0.0.2'), blocked);
+    const otherClient = createResponse();
+    await handler(buildRequest('198.51.100.11, 10.0.0.1'), otherClient);
+
+    expect(first.statusCode).toBe(400);
+    expect(blocked.statusCode).toBe(429);
+    expect(otherClient.statusCode).toBe(400);
+  });
 });
 
 describe('3D serverless service availability', () => {
@@ -121,5 +169,27 @@ describe('3D serverless service availability', () => {
       provider: 'meshy',
       retryable: true
     });
+  });
+
+  it('does not spend the creation quota while polling task status', async () => {
+    process.env.VERCEL = '1';
+    process.env.THREE_D_PROVIDER = 'meshy';
+    process.env.NODE_ENV = 'production';
+    process.env.THREE_D_RATE_LIMIT_MAX = '1';
+    process.env.THREE_D_STATUS_RATE_LIMIT_MAX = '8';
+    process.env.THREE_D_STATUS_RATE_LIMIT_WINDOW_MS = '60000';
+    const handler = await loadHandler('./generate-3d.js');
+    const requestBase = { headers: {}, ip: '198.51.100.20' };
+
+    const createResult = createResponse();
+    await handler({ ...requestBase, method: 'POST', body: { image_url: 'https://example.com/input.png' } }, createResult);
+    expect(createResult.statusCode).toBe(503);
+
+    for (let index = 0; index < 6; index += 1) {
+      const pollResult = createResponse();
+      await handler({ ...requestBase, method: 'GET', query: { id: 'task-1' } }, pollResult);
+      expect(pollResult.statusCode).toBe(503);
+      expect(pollResult.body.code).not.toBe('RATE_LIMITED');
+    }
   });
 });
