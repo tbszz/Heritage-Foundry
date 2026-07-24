@@ -1,4 +1,5 @@
 import { getCraftById } from './craftData.js';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const IP_MAP = {
   doraemon: '哆啦A梦',
@@ -26,7 +27,17 @@ const CARRIER_MAP = {
   bag: '帆布包',
   phone: '手机壳',
   sticker: '贴纸套组',
-  magnet: '冰箱贴'
+  magnet: '冰箱贴',
+  figurine: '3D手办'
+};
+
+const CARRIER_PROMPT_MAP = {
+  keychain: '必须适合转译成 96x96 高密度拼豆图纸和拼豆挂件，主体占画面约 88%，轮廓清晰并保留眼睛、纹样转折等中等细节，使用 16–20 色且颜色分区明确，使用纯白或浅灰的纯色背景且不要投影',
+  bag: '输出可直接印在帆布包正面的独立印花图案，完整构图，不要商品展示图，不要场景 mockup',
+  phone: '输出适合手机壳背面的竖版独立印花图案，避开镜头区域，不要商品展示图，不要场景 mockup',
+  sticker: '输出一组轮廓完整、留有白边的独立贴纸图案，不要商品展示图，不要场景 mockup',
+  magnet: '输出适合做浅浮雕冰箱贴的独立图案，主体轮廓闭合、层级清楚，不要商品展示图，不要场景 mockup',
+  figurine: '用于图生3D的3D手办参考图：完整主体从头到脚全部入镜，三分之四正面视角，无遮挡，干净纯色背景，单一角色，不要底座以外的场景道具'
 };
 
 export function generatePrompt(craft, ip, style, carrier = 'keychain') {
@@ -36,18 +47,25 @@ export function generatePrompt(craft, ip, style, carrier = 'keychain') {
   const ipName = IP_MAP[ip] || ip;
   const styleName = STYLE_MAP[style] || style;
   const carrierName = CARRIER_MAP[carrier] || carrier;
+  const carrierConstraint = CARRIER_PROMPT_MAP[carrier] || CARRIER_PROMPT_MAP.keychain;
   
   return [
     `脑洞大开的非遗 × 流行 IP 跨界设计：${craftName} × ${ipName} × ${carrierName}`,
     `把${ipName}的可识别轮廓与${craftDetail}融合，${styleName}，奇思妙想但主体清晰`,
-    '单个主体居中，高对比色块，粗轮廓，干净背景，无文字，无水印',
-    '必须适合转译成 18x12 拼豆图纸和拼豆挂件，边缘不要过碎，颜色数量克制'
+    '单个主体居中，高对比色块，清晰轮廓，保留中等细节，干净纯色背景，无文字，无水印',
+    carrierConstraint
   ].join('，');
 }
 
 async function fetchJsonWithTimeout(url, options = {}, timeoutMs = 15000) {
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+  const externalSignal = options.signal;
+  const forwardAbort = () => controller.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) controller.abort();
+    else externalSignal.addEventListener('abort', forwardAbort, { once: true });
+  }
 
   try {
     const response = await fetch(url, {
@@ -58,6 +76,7 @@ async function fetchJsonWithTimeout(url, options = {}, timeoutMs = 15000) {
     return { response, data };
   } finally {
     window.clearTimeout(timeoutId);
+    externalSignal?.removeEventListener('abort', forwardAbort);
   }
 }
 
@@ -71,10 +90,11 @@ export async function generateImage(prompt, options = {}) {
       craft_type,
       ip,
       carrier,
-      timeoutMs = 90000
+      signal,
+      timeoutMs = 135000
     } = options;
 
-    const { response, data } = await fetchJsonWithTimeout('/api/generate-image', {
+    const { response, data } = await fetchJsonWithTimeout(`${API_BASE_URL}/generate-image`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -88,7 +108,8 @@ export async function generateImage(prompt, options = {}) {
         craft_type,
         ip,
         carrier
-      })
+      }),
+      signal
     }, timeoutMs);
     
     if (data.success && data.image) {
@@ -100,19 +121,99 @@ export async function generateImage(prompt, options = {}) {
     
     throw new Error(data.error || '生成图片失败');
   } catch (error) {
-    console.warn('Image generation fallback:', error);
-    return {
-      imageUrl: generateMockImage(),
-      message: error.name === 'AbortError' ? 'AI生成超时，已使用本地模拟图像' : error.message || '生成失败，使用模拟图像'
-    };
+    console.warn('Image generation failed:', error);
+    const message = error.name === 'AbortError'
+      ? 'AI 生成超时，请稍后重试'
+      : error.name === 'TypeError' && /failed to fetch|networkerror|load failed/i.test(error.message || '')
+        ? '无法连接本地生成服务，请确认已通过 npm run dev 启动前后端'
+        : error.message || '生成图片失败';
+    throw new Error(message);
   }
+}
+
+function createApiError(data, fallbackMessage) {
+  const message = typeof data?.error === 'string'
+    ? data.error
+    : data?.error?.message || fallbackMessage;
+  const error = new Error(message);
+  error.code = data?.code || data?.error?.code;
+  error.provider = data?.provider;
+  error.category = data?.category;
+  error.retryable = data?.retryable;
+  return error;
+}
+
+export async function get3DCapabilities(options = {}) {
+  const { timeoutMs = 10000 } = options;
+  const { response, data } = await fetchJsonWithTimeout(
+    `${API_BASE_URL}/3d-capabilities`,
+    { method: 'GET' },
+    timeoutMs
+  );
+  if (!response.ok || !data?.success || !data?.capabilities) {
+    throw createApiError(data, '无法读取真实 3D 服务状态');
+  }
+  return data.capabilities;
+}
+
+export async function create3DGenerationTask(imageUrl, options = {}) {
+  if (!imageUrl) {
+    throw new Error('请先生成 3D 参考图');
+  }
+
+  const {
+    carrier = 'figurine',
+    target_polycount = 100000,
+    timeoutMs = 30000
+  } = options;
+  const { response, data } = await fetchJsonWithTimeout(`${API_BASE_URL}/generate-3d`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      image_url: imageUrl,
+      carrier,
+      ai_model: 'latest',
+      model_type: 'standard',
+      should_texture: true,
+      enable_pbr: true,
+      should_remesh: true,
+      target_polycount
+    })
+  }, timeoutMs);
+
+  if (!response.ok || !data?.success || !data?.task?.id) {
+    throw createApiError(data, '无法创建真实 3D 生成任务');
+  }
+
+  return data.task;
+}
+
+export async function get3DGenerationTask(taskId, options = {}) {
+  if (!taskId) {
+    throw new Error('缺少 3D 任务编号');
+  }
+
+  const { timeoutMs = 30000 } = options;
+  const { response, data } = await fetchJsonWithTimeout(
+    `${API_BASE_URL}/generate-3d/${encodeURIComponent(taskId)}`,
+    { method: 'GET' },
+    timeoutMs
+  );
+
+  if (!response.ok || !data?.success || !data?.task) {
+    throw createApiError(data, '无法查询真实 3D 生成进度');
+  }
+
+  return data.task;
 }
 
 export async function editImage(imageBase64, prompt, options = {}) {
   try {
     const { aspect_ratio = '1:1', mime_type = 'image/png' } = options;
 
-    const { response, data } = await fetchJsonWithTimeout('/api/edit-image', {
+    const { response, data } = await fetchJsonWithTimeout(`${API_BASE_URL}/edit-image`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -134,17 +235,14 @@ export async function editImage(imageBase64, prompt, options = {}) {
     
     throw new Error(data.error || '编辑图片失败');
   } catch (error) {
-    console.warn('Image editing fallback:', error);
-    return {
-      imageUrl: generateMockImage(),
-      message: error.name === 'AbortError' ? 'AI编辑超时，已使用本地模拟图像' : error.message || '编辑失败，使用模拟图像'
-    };
+    console.warn('Image editing failed:', error);
+    throw new Error(error.name === 'AbortError' ? 'AI 编辑超时，请稍后重试' : error.message || '编辑图片失败');
   }
 }
 
 export async function getStyles() {
   try {
-    const response = await fetch('/api/styles');
+    const response = await fetch(`${API_BASE_URL}/styles`);
     const data = await response.json();
     
     if (data.success) {
@@ -159,7 +257,7 @@ export async function getStyles() {
 }
 
 export async function saveCreation(payload) {
-  const response = await fetch('/api/creations', {
+  const response = await fetch(`${API_BASE_URL}/creations`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -178,74 +276,19 @@ export async function saveCreation(payload) {
 }
 
 export async function listCreations(limit = 6) {
-  const response = await fetch(`/api/creations?limit=${encodeURIComponent(limit)}`);
-  const data = await response.json();
+  try {
+    const response = await fetch(`${API_BASE_URL}/creations?limit=${encodeURIComponent(limit)}`);
+    const data = await response.json();
 
-  if (!response.ok || !data.success) {
+    if (!response.ok || !data.success) {
+      return [];
+    }
+
+    return data.data || [];
+  } catch (error) {
+    console.warn('Failed to list creations:', error);
     return [];
   }
-
-  return data.data || [];
-}
-
-function generateMockImage() {
-  const colors = ['#d3382f', '#1f7a6d', '#c99a2e', '#2f5f9f'];
-  const emojis = ['🐯', '✂️', '🪡', '🏺', '🎨', '🖋️', '🧶', '🍵', '🪁', '🏮'];
-  const craftNames = ['剪纸', '皮影', '苗绣', '陶瓷', '扎染', '书法', '云锦', '泥塑', '风筝', '花灯'];
-  
-  const emoji1 = emojis[Math.floor(Math.random() * emojis.length)];
-  const emoji2 = emojis[Math.floor(Math.random() * emojis.length)];
-  const bgColor = colors[Math.floor(Math.random() * colors.length)];
-  const craftName = craftNames[Math.floor(Math.random() * craftNames.length)];
-
-  if (typeof document !== 'undefined') {
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 512;
-    const ctx = canvas.getContext('2d');
-
-    ctx.fillStyle = '#fffaf0';
-    ctx.fillRect(0, 0, 512, 512);
-    ctx.fillStyle = bgColor;
-    ctx.globalAlpha = 0.12;
-    ctx.fillRect(0, 0, 512, 512);
-    ctx.globalAlpha = 1;
-
-    ctx.fillStyle = '#ffffff';
-    ctx.strokeStyle = bgColor;
-    ctx.lineWidth = 10;
-    ctx.beginPath();
-    ctx.roundRect(62, 62, 388, 388, 36);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.fillStyle = bgColor;
-    ctx.font = '120px system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(emoji1, 206, 210);
-    ctx.fillText(emoji2, 306, 290);
-
-    ctx.fillStyle = '#1f2328';
-    ctx.font = '700 26px system-ui, sans-serif';
-    ctx.fillText(`${craftName}风格`, 256, 374);
-    ctx.fillStyle = '#687076';
-    ctx.font = '20px system-ui, sans-serif';
-    ctx.fillText('非遗文创设计', 256, 412);
-
-    return canvas.toDataURL('image/png');
-  }
-  
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512">
-      <rect width="512" height="512" fill="${bgColor}" opacity="0.1"/>
-      <rect x="64" y="64" width="384" height="384" rx="32" fill="white" stroke="${bgColor}" stroke-width="4"/>
-      <text x="256" y="180" font-size="80" text-anchor="middle" font-family="sans-serif">${emoji1}</text>
-      <text x="256" y="280" font-size="120" text-anchor="middle" font-family="sans-serif">${emoji2}</text>
-      <text x="256" y="360" font-size="24" text-anchor="middle" font-family="sans-serif" fill="#666">${craftName}风格</text>
-      <text x="256" y="400" font-size="20" text-anchor="middle" font-family="sans-serif" fill="#999">非遗文创设计</text>
-    </svg>`;
-  
-  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 }
 
 export function getCraftInfo(craft) {
@@ -287,7 +330,8 @@ export function getCarrierInfo(carrier) {
     bag: { name: '帆布包', description: '印有非遗纹样的帆布包' },
     phone: { name: '手机壳', description: '印有非遗纹样的手机壳' },
     sticker: { name: '贴纸套组', description: '非遗主题贴纸套装' },
-    magnet: { name: '冰箱贴', description: '非遗主题冰箱贴' }
+    magnet: { name: '冰箱贴', description: '带独立浮雕正面和磁性背板的非遗主题冰箱贴' },
+    figurine: { name: '3D手办', description: '由参考图生成、可旋转和下载的真实三维手办' }
   };
   
   return info[carrier] || { name: carrier, description: '' };

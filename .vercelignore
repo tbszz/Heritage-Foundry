@@ -1,0 +1,12 @@
+# Local/offline TripoSR runtime. Vercel uses the Meshy provider only.
+sidecar/
+.local-3d/
+artifacts/
+models/TripoSR/
+
+# Original heavyweight assets are not needed by the Vite build; compressed
+# runtime assets remain under public/models/.
+assets-src/models/
+
+# Local demonstration exports are deliberately kept outside source control.
+heritage-foundry-demo.zip

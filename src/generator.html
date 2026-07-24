@@ -6,19 +6,13 @@
   <title>创意生成 - 非遗造物局</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="generator-shell">
   <div class="app">
     <header class="header">
       <div class="logo">
-        <div class="logo-icon">
-          <span></span><span></span><span></span><span></span>
-          <span></span><span></span><span></span><span></span>
-          <span></span><span></span><span></span><span></span>
-          <span></span><span></span><span></span><span></span>
-        </div>
+        <img class="logo-seal" src="assets/generated/seal-mark.png" alt="" aria-hidden="true">
         <div>
           <h1>非遗造物局</h1>
-          <p>AI 非遗文创与手作方案生成平台</p>
         </div>
       </div>
       <nav class="nav">
@@ -29,20 +23,27 @@
       </nav>
     </header>
 
-    <main class="main">
+    <main class="main generator-main" data-component="GeneratorWorkbench">
       <div id="generator-page" class="page active">
+        <div class="generator-pattern" aria-hidden="true"></div>
         <div class="page-header">
-          <h2>创意生成</h2>
-          <p>选择非遗技艺与流行IP，打造专属文创方案</p>
+          <span class="generator-kicker">HERITAGE CREATION LAB · 非遗数字造物台</span>
+          <h2>拼出你的非遗新灵感</h2>
+          <p>从千年技艺中取一枚纹样，与当代想象共同熔铸成可制作、可分享的新作品。</p>
           <div class="workflow-rail" aria-label="生成流程">
             <span class="workflow-step active" data-step="idea">1 选灵感</span>
             <span class="workflow-step" data-step="image">2 生成图像</span>
-            <span class="workflow-step" data-step="pattern">3 拼豆图纸</span>
-            <span class="workflow-step" data-step="save">4 保存作品</span>
+            <span class="workflow-step" data-step="model">3 真实 3D</span>
+            <span class="workflow-step" data-step="pattern">4 拼豆图纸</span>
+            <span class="workflow-step" data-step="save">5 保存作品</span>
           </div>
         </div>
         
-        <div class="control-panel">
+        <div class="control-panel" data-component="InspirationConsole">
+          <div class="console-heading">
+            <span>灵感参数</span>
+            <small>选择四项造物因子</small>
+          </div>
           <div class="control-group">
             <label for="craft">非遗技艺</label>
             <!-- 选项由 generator.js 从 src/data/crafts.json 动态生成 -->
@@ -73,6 +74,7 @@
               <option value="phone">手机壳 - 印有非遗纹样的手机壳</option>
               <option value="sticker">贴纸套组 - 非遗主题贴纸套装</option>
               <option value="magnet">冰箱贴 - 非遗主题冰箱贴</option>
+              <option value="figurine">3D手办 - 从概念图生成可旋转的真实三维模型</option>
             </select>
           </div>
 
@@ -94,14 +96,37 @@
           </div>
         </div>
 
-        <div class="preview-section">
+        <div class="preview-section" data-component="CreationStage">
+          <div class="section-heading">
+            <div>
+              <span class="section-eyebrow">实时造物预演</span>
+              <h3>数字展台</h3>
+            </div>
+            <span class="stage-status"><i></i> 引擎已就绪</span>
+          </div>
           <div class="preview-container">
-            <div id="three-container" class="three-container"></div>
+            <div id="three-container" class="three-container" aria-label="文创载体三维预览">
+              <span class="stage-corner stage-corner-a" aria-hidden="true"></span>
+              <span class="stage-corner stage-corner-b" aria-hidden="true"></span>
+            </div>
             <div id="image-preview" class="image-preview">
               <div class="preview-placeholder">
-                <p>点击"生成AI图像"按钮</p>
-                <p>生成非遗风格的文创设计</p>
+                <p>点击“生成AI图案”按钮</p>
+                <p>生成适配当前载体的非遗文创设计</p>
               </div>
+            </div>
+          </div>
+          <div class="three-d-workflow" data-component="Real3DWorkflow">
+            <div class="three-d-copy">
+              <span class="three-d-kicker">REAL MESH · GLB / PBR</span>
+              <strong>生成真实 3D</strong>
+              <p id="three-d-status" role="status" aria-live="polite">选择“3D手办”并先生成参考图，即可创建真正的 GLB 模型。</p>
+              <progress id="three-d-progress" max="100" value="0" hidden>0%</progress>
+            </div>
+            <div class="three-d-actions">
+              <button id="generate3dBtn" class="btn btn-primary" disabled>生成真实 3D</button>
+              <button id="export-product-glb-btn" class="btn btn-primary" hidden disabled>下载产品 GLB</button>
+              <a id="download-glb-link" class="btn btn-secondary" href="#" download="heritage-figurine.glb" hidden>下载 GLB</a>
             </div>
           </div>
         </div>
@@ -110,6 +135,16 @@
           <div class="section-toolbar">
             <h3>拼豆图纸</h3>
             <div class="tool-actions">
+              <label class="tool-field" for="pattern-resolution-select">
+                <span>图纸精度</span>
+                <select id="pattern-resolution-select" class="tool-select" aria-label="选择拼豆图纸精度">
+                  <option value="29x29">29 × 29 · 单板</option>
+                  <option value="48x48">48 × 48 · 简洁</option>
+                  <option value="64x64">64 × 64 · 标准</option>
+                  <option value="96x96" selected>96 × 96 · 超清推荐</option>
+                  <option value="128x128">128 × 128 · 极清细节</option>
+                </select>
+              </label>
               <select id="color-system-select" class="tool-select" aria-label="选择拼豆色号体系">
                 <option value="MARD">MARD 拼豆</option>
                 <option value="COCO">COCO 拼豆</option>

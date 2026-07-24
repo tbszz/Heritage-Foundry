@@ -5,7 +5,12 @@ build/
 .DS_Store
 .vscode/
 .idea/
+.omx/
+cover-image/
 *.swp
 *.swo
+.pytest_cache/
+__pycache__/
+*.py[cod]
 .env
 .env.local
