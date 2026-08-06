@@ -27,8 +27,11 @@ module.exports = async (req, res) => {
       style = 'default',
       craft_type,
       ip,
-      carrier
+      carrier,
+      custom_prompt: customPromptSnake,
+      customPrompt: customPromptCamel
     } = req.body;
+    const customPrompt = customPromptCamel || customPromptSnake;
 
     if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
       return res.status(400).json({
@@ -38,7 +41,7 @@ module.exports = async (req, res) => {
       });
     }
 
-    const enhancedPrompt = buildEnhancedPrompt(prompt, style, craft_type, { ip, carrier });
+    const enhancedPrompt = buildEnhancedPrompt(prompt, style, craft_type, { ip, carrier, customPrompt });
 
     const result = await geminiService.generateImage(enhancedPrompt, {
       aspect_ratio,

@@ -1,3 +1,23 @@
+# Only upload the application sources required by the Vite build and Vercel
+# Serverless Functions. This also keeps local secrets, submission exports,
+# design references, test artifacts, and generated previews out of deployments.
+/*
+!api
+!middleware
+!routes
+!services
+!src
+!public
+!package.json
+!package-lock.json
+!vite.config.js
+!vercel.json
+!.vercelignore
+
+# Test files under api/ would otherwise be interpreted as Serverless Functions.
+api/*.test.js
+api/**/*.test.js
+
 # Local/offline TripoSR runtime. Vercel uses the Meshy provider only.
 sidecar/
 .local-3d/

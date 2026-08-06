@@ -21,7 +21,7 @@ import {
   downloadPatternCSV,
   DEFAULT_PATTERN_SIZE
 } from './utils/patternGenerator.js';
-import { getCraftById } from './utils/craftData.js';
+import { getCraftById, getGeneratorCrafts } from './utils/craftData.js';
 import { PALETTE_COLORS, getColorKeyByHex, setActiveColorSystem } from './utils/colorSystem.js';
 import {
   applyArtworkTexture,
@@ -59,6 +59,7 @@ let threeDCapabilities = {
 };
 
 function init() {
+  populateCraftOptions();
   bindEvents();
   enhanceSelects();
   applyUrlParams();
@@ -68,6 +69,20 @@ function init() {
   updateThreeDActionState();
   loadThreeDCapabilities();
   loadRecentCreations();
+}
+
+function populateCraftOptions() {
+  const craftSelect = document.getElementById('craft');
+  if (!craftSelect) return;
+
+  const options = getGeneratorCrafts().map((craft) => {
+    const option = document.createElement('option');
+    option.value = craft.id;
+    option.textContent = `${craft.name} - ${craft.blurb || craft.description}`;
+    return option;
+  });
+
+  craftSelect.replaceChildren(...options);
 }
 
 async function loadThreeDCapabilities() {

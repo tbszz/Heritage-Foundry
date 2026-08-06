@@ -87,8 +87,11 @@ export class MuseumScene {
     this.callbacks = {};
     this.stands = [];
     this.modelCache = new Map();
+    this.expectedModelCount = 0;
+    this.settledModelCount = 0;
     this.focusedStand = null;
     this.inputEnabled = true;
+    this.renderPaused = false;
     this.reducedMotion = false;
 
     this.yaw = 0;
@@ -115,8 +118,8 @@ export class MuseumScene {
     this.visibilityHandler = null;
   }
 
-  init({ layout = [], onStateChange, onFocusStand, onSelectStand } = {}) {
-    this.callbacks = { onStateChange, onFocusStand, onSelectStand };
+  init({ layout = [], onStateChange, onFocusStand, onSelectStand, onLoadProgress } = {}) {
+    this.callbacks = { onStateChange, onFocusStand, onSelectStand, onLoadProgress };
     this.reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || false;
 
     const width = Math.max(this.container.clientWidth, 1);
@@ -622,10 +625,15 @@ export class MuseumScene {
       ctx.fillStyle = goldGradient;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      const chars = '非遗造物局'.split('');
+      const chars = '遗见'.split('');
+      const titleSpacing = 220;
       ctx.font = '900 150px "Source Han Serif Local", serif';
       chars.forEach((char, index) => {
-        ctx.fillText(char, 180 + index * 166, 165);
+        ctx.fillText(
+          char,
+          512 + (index - (chars.length - 1) / 2) * titleSpacing,
+          165
+        );
       });
       ctx.font = '42px "LXGW WenKai Local", serif';
       ctx.fillStyle = 'rgba(248, 229, 184, 0.85)';
@@ -801,11 +809,27 @@ export class MuseumScene {
 
   loadCraftModel(url) {
     if (!this.modelCache.has(url)) {
-      this.modelCache.set(url, new Promise((resolve, reject) => {
+      const promise = new Promise((resolve, reject) => {
         this.loader.load(url, resolve, undefined, reject);
-      }));
+      });
+      // 每个唯一 URL settle 一次（成功或失败都算），用于进度上报
+      promise
+        .catch(() => {})
+        .finally(() => {
+          this.settledModelCount += 1;
+          this.reportLoadProgress();
+        });
+      this.modelCache.set(url, promise);
     }
     return this.modelCache.get(url);
+  }
+
+  reportLoadProgress() {
+    if (this.disposed || this.expectedModelCount <= 0) return;
+    this.callbacks.onLoadProgress?.(
+      Math.min(this.settledModelCount, this.expectedModelCount),
+      this.expectedModelCount
+    );
   }
 
   attachModel(stand) {
@@ -828,6 +852,9 @@ export class MuseumScene {
   startModelLoading() {
     // 按排数由近及远加载，并发 2；走近的展台会插队立即加载
     const queue = [...this.stands].sort((a, b) => a.row - b.row || a.index - b.index);
+    this.expectedModelCount = new Set(queue.map((stand) => stand.craft.modelUrl)).size;
+    this.settledModelCount = 0;
+    this.callbacks.onLoadProgress?.(0, this.expectedModelCount);
     let active = 0;
     const pump = () => {
       if (this.disposed) return;
@@ -944,7 +971,7 @@ export class MuseumScene {
     this.visibilityHandler = () => {
       if (document.hidden) {
         this.clock.stop();
-      } else {
+      } else if (!this.renderPaused) {
         this.clock.start();
       }
     };
@@ -976,6 +1003,15 @@ export class MuseumScene {
     }
   }
 
+  setRenderPaused(paused) {
+    this.renderPaused = Boolean(paused);
+    if (this.renderPaused) {
+      this.clock.stop();
+    } else if (!document.hidden) {
+      this.clock.start();
+    }
+  }
+
   getStandById(id) {
     return this.stands.find((stand) => stand.id === id) || null;
   }
@@ -985,6 +1021,7 @@ export class MuseumScene {
   animate() {
     if (this.disposed) return;
     this.animationId = requestAnimationFrame(() => this.animate());
+    if (this.renderPaused) return;
     const now = performance.now();
     const dt = Math.min(this.clock.getDelta(), 0.066);
 

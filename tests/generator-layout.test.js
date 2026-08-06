@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const generatorHtml = readFileSync(new URL('../src/generator.html', import.meta.url), 'utf8');
@@ -6,8 +6,26 @@ const generatorCss = readFileSync(new URL('../src/style.css', import.meta.url), 
 const generatorJs = readFileSync(new URL('../src/generator.js', import.meta.url), 'utf8');
 const patternGeneratorJs = readFileSync(new URL('../src/utils/patternGenerator.js', import.meta.url), 'utf8');
 const threeSceneJs = readFileSync(new URL('../src/components/ThreeScene.js', import.meta.url), 'utf8');
+const craftsHtml = readFileSync(new URL('../src/crafts.html', import.meta.url), 'utf8');
 
 describe('generator museum workspace', () => {
+  it('references the existing navigation seal asset on content pages', () => {
+    const sealAsset = new URL('../public/assets/generated/seal-mark-nav.webp', import.meta.url);
+
+    expect(existsSync(sealAsset)).toBe(true);
+    expect(generatorHtml).toContain('src="assets/generated/seal-mark-nav.webp"');
+    expect(craftsHtml).toContain('src="assets/generated/seal-mark-nav.webp"');
+  });
+
+  it('populates craft choices from the shared craft data before enhancing selects', () => {
+    const initBlock = generatorJs.match(/function init\(\) \{([\s\S]*?)\n\}/)?.[1] || '';
+
+    expect(generatorJs).toContain('getGeneratorCrafts');
+    expect(generatorJs).toContain('function populateCraftOptions');
+    expect(initBlock).toContain('populateCraftOptions();');
+    expect(initBlock.indexOf('populateCraftOptions();')).toBeLessThan(initBlock.indexOf('enhanceSelects();'));
+  });
+
   it('uses the homepage visual shell and preserves the workflow landmarks', () => {
     expect(generatorHtml).toContain('body class="generator-shell"');
     expect(generatorHtml).toContain('data-component="GeneratorWorkbench"');

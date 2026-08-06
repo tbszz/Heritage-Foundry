@@ -2,213 +2,103 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>非遗造物局 · 3D 博物馆</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0b0d">
+  <meta
+    name="description"
+    content="遗见是一座可探索、可共创的数字非遗博物馆。走进主题展厅，发现传统技艺，并用 AI 继续创造。"
+  >
+  <title>遗见 | 数字非遗博物馆</title>
   <link rel="preload" href="/fonts/SourceHanSerifSC-Heavy.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/LXGWWenKai-Regular.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="museum.css">
+  <link rel="preload" href="/assets/generated/museum-cinematic.webp" as="image" type="image/webp" fetchpriority="high">
+  <link rel="icon" href="/assets/generated/seal-mark-nav.webp" type="image/webp">
+  <link rel="stylesheet" href="museum-experience.css">
 </head>
-<body class="museum-shell">
-  <!-- 3D 博物馆画布 -->
-  <div id="museum-container" aria-label="非遗 3D 博物馆"></div>
+<body class="museum-experience-shell">
+  <a class="skip-link" href="#museum-content">跳到主要内容</a>
 
-  <div class="museum-overlay">
-    <!-- 顶部导航 -->
-    <header class="museum-nav">
-      <div class="museum-nav-brand">
-        <img src="/assets/generated/seal-mark.webp" alt="" aria-hidden="true">
-        <span>非遗造物局</span>
+  <header class="museum-nav" aria-label="主导航">
+    <a class="museum-brand" href="index.html" aria-label="遗见首页">
+      <img src="/assets/generated/seal-mark-nav.webp" alt="" width="40" height="40">
+      <span>
+        <strong>遗见</strong>
+        <small>Heritage Foundry</small>
+      </span>
+    </a>
+
+    <nav class="museum-nav-links" aria-label="站点导航">
+      <a href="#museum-stage">主题展厅</a>
+      <a href="crafts.html">技艺图鉴</a>
+      <a href="generator.html">AI 共创</a>
+      <a href="ar.html">AR 体验</a>
+    </nav>
+
+    <button id="experience-mode-toggle" class="mode-toggle" type="button" aria-pressed="false">
+      切换省流模式
+    </button>
+  </header>
+
+  <main id="museum-content">
+    <section id="museum-stage" class="museum-stage" aria-labelledby="museum-stage-title">
+      <div class="museum-stage-image" role="img" aria-label="巨幅丝绢垂落在当代非遗博物馆大厅"></div>
+      <div class="museum-stage-shade" aria-hidden="true"></div>
+      <div class="museum-stage-veil museum-stage-veil-left" aria-hidden="true"></div>
+      <div class="museum-stage-veil museum-stage-veil-right" aria-hidden="true"></div>
+
+      <div id="sketch-corridor" class="sketch-corridor" aria-hidden="true"></div>
+      <div id="sketch-corridor-loader" class="sketch-corridor-loader" role="status" aria-live="polite">
+        <span class="sketch-corridor-loader-mark" aria-hidden="true"></span>
+        <p>正在绘制手绘长廊…</p>
       </div>
-      <nav class="museum-nav-links">
-        <a href="index.html" class="active">3D 博物馆</a>
-        <a href="crafts.html">非遗技艺</a>
-        <a href="generator.html">创意生成</a>
-        <a href="ar.html">AR 体验</a>
-      </nav>
-    </header>
 
-    <!-- 开场提示：点击 / 滚轮进入 -->
-    <div id="gate-hint" class="gate-hint" aria-hidden="true">
-      <span class="gate-hint-ring"></span>
-      <strong>滑动滚轮 或 点击画面</strong>
-      <span>进入博物馆</span>
+      <div class="museum-stage-copy">
+        <p class="museum-stage-kicker">一座仍在生长的数字博物馆</p>
+        <h1 id="museum-stage-title">
+          传统不是被保存，
+          <span>而是被再次看见。</span>
+        </h1>
+        <p class="museum-stage-intro">
+          走进四座主题展厅，触摸十八种非遗技艺，并用 AI 续写它们的当代表达。
+        </p>
+        <div class="museum-stage-actions">
+          <a class="primary-action" href="generator.html">开始 AI 共创</a>
+          <a class="secondary-action" href="crafts.html">浏览技艺图鉴</a>
+        </div>
+      </div>
+
+      <div class="museum-stage-index" aria-label="馆藏概览">
+        <span><strong>18</strong> 项数字馆藏</span>
+        <span><strong>4</strong> 座主题展厅</span>
+        <span><strong>1</strong> 个共创工坊</span>
+      </div>
+
+      <p class="sketch-corridor-hud" id="sketch-corridor-hud" aria-hidden="true">滚轮逛长廊 · 点击木门进入展厅</p>
+      <button id="corridor-back" class="corridor-back" type="button" hidden>← 返回长廊</button>
+    </section>
+  </main>
+
+  <dialog id="artifact-dialog" class="artifact-dialog" aria-labelledby="artifact-name">
+    <button class="artifact-dialog-close" type="button" data-close-dialog aria-label="关闭藏品详情">×</button>
+    <div class="artifact-dialog-media">
+      <div id="artifact-3d-stage" class="artifact-3d-stage" aria-label="可拖动旋转的三维馆藏模型"></div>
+      <div id="artifact-3d-loader" class="artifact-3d-loader" role="status" aria-live="polite" hidden>
+        <span class="sketch-corridor-loader-mark" aria-hidden="true"></span>
+        <p>正在唤醒三维馆藏…</p>
+      </div>
+      <p class="artifact-3d-hint" aria-hidden="true">拖动旋转 · 滚轮缩放</p>
     </div>
-
-    <!-- 馆内 HUD -->
-    <div id="museum-hud" class="museum-hud" hidden>
-      <span class="hud-keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 移动</span>
-      <span class="hud-divider" aria-hidden="true"></span>
-      <span>拖动环视</span>
-      <span class="hud-divider" aria-hidden="true"></span>
-      <span>Shift 加速</span>
-      <span class="hud-divider" aria-hidden="true"></span>
-      <span id="hud-focus-tip"><kbd>E</kbd> 与展台互动</span>
+    <div class="artifact-dialog-copy">
+      <p id="artifact-category">传统陶瓷</p>
+      <h2 id="artifact-name">景德镇陶瓷</h2>
+      <strong id="artifact-description"></strong>
+      <span id="artifact-story"></span>
+      <div class="artifact-dialog-actions">
+        <a id="artifact-craft-link" class="primary-action" href="crafts.html">查看完整技艺</a>
+        <a id="artifact-create-link" class="secondary-action" href="generator.html">用它开始创作</a>
+      </div>
     </div>
-
-    <!-- 展台卡片：技艺信息 + 非遗创造 -->
-    <aside id="craft-panel" class="craft-panel" aria-label="展台详情与非遗创造" hidden>
-      <button id="craft-panel-close" class="craft-panel-close" type="button" aria-label="关闭面板">×</button>
-
-      <div class="craft-panel-header">
-        <img id="panel-craft-icon" src="/assets/generated/craft-icons/papercut.png" alt="" aria-hidden="true">
-        <div>
-          <h2 id="panel-craft-name">剪纸</h2>
-          <p id="panel-craft-category">传统美术</p>
-        </div>
-      </div>
-      <p id="panel-craft-story" class="craft-panel-story"></p>
-      <div class="craft-panel-links">
-        <a id="panel-craft-link" href="crafts.html">技艺详情 →</a>
-        <a id="panel-ar-link" href="ar.html">AR 体验 →</a>
-      </div>
-
-      <div class="craft-panel-divider">
-        <span>非遗创造</span>
-      </div>
-
-      <!-- 创造流程与 generator 页共用结构与元素 ID，由 creationPanel.js 驱动 -->
-      <div class="panel-creation">
-        <div class="workflow-rail" aria-label="生成流程">
-          <span class="workflow-step active" data-step="idea">1 选灵感</span>
-          <span class="workflow-step" data-step="image">2 生成图像</span>
-          <span class="workflow-step" data-step="pattern">3 拼豆图纸</span>
-          <span class="workflow-step" data-step="save">4 保存作品</span>
-        </div>
-
-        <div class="control-panel">
-          <div class="control-group">
-            <label for="craft">非遗技艺</label>
-            <select id="craft"></select>
-          </div>
-
-          <div class="control-group">
-            <label for="ip">流行IP</label>
-            <select id="ip">
-              <option value="doraemon">哆啦A梦 - 经典日本动漫角色</option>
-              <option value="bears">熊大熊二 - 国产动画《熊出没》角色</option>
-              <option value="nezha">哪吒 - 中国神话人物，国漫热门角色</option>
-              <option value="monkey">孙悟空 - 中国神话经典角色</option>
-              <option value="pikachu">皮卡丘 - 精灵宝可梦热门角色</option>
-              <option value="mickey">米老鼠 - 迪士尼经典动画角色</option>
-              <option value="helloKitty">Hello Kitty - 日本三丽鸥卡通形象</option>
-              <option value="spiderMan">蜘蛛侠 - 漫威超级英雄</option>
-              <option value="batman">蝙蝠侠 - DC超级英雄</option>
-              <option value="pokemon">宝可梦 - 精灵宝可梦系列角色</option>
-            </select>
-          </div>
-
-          <div class="control-group">
-            <label for="carrier">文创载体</label>
-            <select id="carrier">
-              <option value="keychain">拼豆挂件 - 用拼豆制作的挂饰</option>
-              <option value="bag">帆布包 - 印有非遗纹样的帆布包</option>
-              <option value="phone">手机壳 - 印有非遗纹样的手机壳</option>
-              <option value="sticker">贴纸套组 - 非遗主题贴纸套装</option>
-              <option value="magnet">冰箱贴 - 非遗主题冰箱贴</option>
-            </select>
-          </div>
-
-          <div class="control-group">
-            <label for="style">风格</label>
-            <select id="style">
-              <option value="chinese">国潮明亮 - 高饱和度配色，现代国潮风格</option>
-              <option value="cute">可爱校园 - 圆润线条，可爱卡通风格</option>
-              <option value="vintage">复古市集 - 怀旧色调，复古文艺风格</option>
-              <option value="minimal">极简日常 - 简约线条，低饱和度配色</option>
-              <option value="festive">节日礼物 - 喜庆配色，节日氛围</option>
-            </select>
-          </div>
-
-          <div class="button-group">
-            <button id="generateBtn" class="btn btn-primary">生成AI图像</button>
-            <button id="patternBtn" class="btn btn-secondary">生成拼豆图纸</button>
-            <button id="saveCreationBtn" class="btn btn-secondary" disabled>保存作品</button>
-          </div>
-        </div>
-
-        <div class="preview-section">
-          <div class="preview-container">
-            <div id="image-preview" class="image-preview">
-              <div class="preview-placeholder">
-                <p>点击"生成AI图像"按钮</p>
-                <p>生成非遗风格的文创设计</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="pattern-section">
-          <div class="section-toolbar">
-            <h3>拼豆图纸</h3>
-            <div class="tool-actions">
-              <select id="color-system-select" class="tool-select" aria-label="选择拼豆色号体系">
-                <option value="MARD">MARD 拼豆</option>
-                <option value="COCO">COCO 拼豆</option>
-                <option value="漫漫">漫漫拼豆</option>
-                <option value="盼盼">盼盼拼豆</option>
-                <option value="咪小窝">咪小窝拼豆</option>
-              </select>
-              <button id="download-image-btn" class="btn btn-secondary btn-small" disabled>下载图纸</button>
-              <button id="download-csv-btn" class="btn btn-secondary btn-small" disabled>下载CSV</button>
-            </div>
-          </div>
-          <div id="pattern-container" class="pattern-container">
-            <div class="pattern-placeholder">
-              <p>点击"生成拼豆图纸"按钮</p>
-              <p>将AI图像转译为拼豆图纸</p>
-            </div>
-          </div>
-
-          <div id="material-list" class="material-list">
-            <h3>材料清单</h3>
-            <div class="materials">
-              <p class="result-note">生成图纸后显示材料清单</p>
-            </div>
-          </div>
-
-          <div id="stats" class="stats">
-            <div class="stat-item">
-              <strong id="bead-count">0</strong>
-              <span>预计豆子数量</span>
-            </div>
-            <div class="stat-item">
-              <strong id="color-count">0 色</strong>
-              <span>智能匹配色号</span>
-            </div>
-            <div class="stat-item">
-              <strong id="time-cost">0 分钟</strong>
-              <span>制作时长</span>
-            </div>
-            <div class="stat-item">
-              <strong id="difficulty">入门</strong>
-              <span>制作难度</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="product-section">
-          <h3>商品文案</h3>
-          <div class="product-card">
-            <h4 id="product-name">请选择参数生成商品名称</h4>
-            <p id="product-desc">选择非遗技艺、流行IP和文创载体后，系统将为您生成独特的商品卖点文案。</p>
-            <div class="story-card">
-              <h5>非遗故事</h5>
-              <p id="story-content">每种非遗技艺都有独特的历史背景和文化内涵，选择非遗技艺后查看详细故事。</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="recent-section" id="recent-section" hidden>
-          <div class="section-toolbar">
-            <h3>最近作品</h3>
-            <button id="refreshCreationsBtn" class="btn btn-secondary btn-small">刷新</button>
-          </div>
-          <div id="recent-creations" class="recent-creations"></div>
-        </div>
-      </div>
-    </aside>
-  </div>
+  </dialog>
 
   <script type="module" src="home.js"></script>
 </body>

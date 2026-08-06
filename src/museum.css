@@ -207,31 +207,92 @@
   text-shadow: 0 0 12px rgba(201, 154, 46, 0.6);
 }
 
-/* ---------- 展台卡片（右滑出面板） ---------- */
+/* ---------- 展品加载进度 ---------- */
+
+.model-progress {
+  position: absolute;
+  left: 50%;
+  bottom: 72px;
+  transform: translateX(-50%);
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: rgba(5, 8, 12, 0.62);
+  border: 1px solid rgba(201, 154, 46, 0.3);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font-size: 13px;
+  letter-spacing: 2px;
+  color: rgba(248, 229, 184, 0.85);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.model-progress span {
+  color: #c99a2e;
+  font-weight: 700;
+}
+
+.model-progress[hidden] {
+  display: none;
+}
+
+/* ---------- 展台创造弹窗 ---------- */
+
+.craft-panel-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(201, 154, 46, 0.08), transparent 42%),
+    rgba(1, 3, 7, 0.72);
+  opacity: 0;
+  transition: opacity 0.28s ease;
+  pointer-events: auto;
+}
+
+.craft-panel-backdrop.open {
+  opacity: 1;
+}
+
+.craft-panel-backdrop[hidden],
+.craft-panel[hidden] {
+  display: none;
+}
 
 .craft-panel {
   position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: min(430px, 94vw);
-  padding: 22px 22px 40px;
+  top: 50%;
+  left: 50%;
+  z-index: 31;
+  width: min(1180px, calc(100vw - 48px));
+  max-height: min(86vh, 900px);
+  padding: 26px 28px 34px;
   overflow-y: auto;
   overscroll-behavior: contain;
-  background: rgba(7, 10, 15, 0.92);
-  border-left: 1px solid rgba(201, 154, 46, 0.4);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  box-shadow: -24px 0 60px rgba(0, 0, 0, 0.55);
-  transform: translateX(106%);
-  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  scrollbar-gutter: stable;
+  background:
+    linear-gradient(145deg, rgba(201, 154, 46, 0.08), transparent 26%),
+    rgba(7, 10, 15, 0.96);
+  border: 1px solid rgba(201, 154, 46, 0.46);
+  border-radius: 22px;
+  box-shadow:
+    0 34px 90px rgba(0, 0, 0, 0.72),
+    inset 0 1px 0 rgba(255, 229, 169, 0.08);
+  transform: translate(-50%, -50%) scale(0.94);
+  transform-origin: center;
+  opacity: 0;
+  transition:
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.24s ease;
   pointer-events: auto;
   color: #e8e2d4;
   font-family: "Source Han Serif Local", "Microsoft YaHei", serif;
+  outline: none;
 }
 
 .craft-panel.open {
-  transform: translateX(0);
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
 }
 
 .craft-panel-close {
@@ -335,24 +396,44 @@
   background: linear-gradient(90deg, transparent, rgba(201, 154, 46, 0.55), transparent);
 }
 
-/* ---------- 面板内创造区紧凑适配 ---------- */
+/* ---------- 弹窗内创造工作区 ---------- */
+
+.panel-creation {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.82fr) minmax(0, 1.18fr);
+  gap: 20px;
+  align-items: stretch;
+}
 
 .panel-creation .workflow-rail {
-  margin-bottom: 16px;
+  grid-column: 1 / -1;
+  margin-bottom: 0;
   flex-wrap: wrap;
 }
 
 .panel-creation .control-panel {
-  padding: 14px;
-  margin-bottom: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: 16px;
+  padding: 20px;
+  margin-bottom: 0;
 }
 
-.panel-creation .choice-switch {
-  max-height: 132px;
-  overflow-y: auto;
+.panel-creation .compact-native-select {
+  position: static;
+  width: 100%;
+  height: auto;
+  opacity: 1;
+  pointer-events: auto;
+  padding: 12px 40px 12px 14px;
+  border-color: rgba(201, 154, 46, 0.38);
+  background: #f5f2eb;
+  color: #171a1f;
+  font-weight: 700;
 }
 
 .panel-creation .button-group {
+  grid-column: 1 / -1;
   flex-direction: row;
   flex-wrap: wrap;
 }
@@ -364,22 +445,25 @@
 }
 
 .panel-creation .preview-section {
-  margin-bottom: 14px;
+  min-width: 0;
+  margin-bottom: 0;
 }
 
 .panel-creation .preview-container {
   grid-template-columns: 1fr;
-  min-height: 220px;
+  min-height: 100%;
 }
 
 .panel-creation .image-preview {
-  min-height: 220px;
+  min-height: 360px;
 }
 
 .panel-creation .pattern-section,
 .panel-creation .product-section,
 .panel-creation .recent-section {
-  margin-bottom: 14px;
+  grid-column: 1 / -1;
+  min-width: 0;
+  margin-bottom: 0;
 }
 
 /* 深色玻璃面板内提亮 generator 组件的卡片底色 */
@@ -399,6 +483,30 @@
 }
 
 /* ---------- 响应式 ---------- */
+
+@media (max-width: 820px) {
+  .craft-panel {
+    width: calc(100vw - 28px);
+    max-height: calc(100dvh - 28px);
+    padding: 22px 18px 28px;
+    border-radius: 18px;
+  }
+
+  .panel-creation {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-creation .workflow-rail,
+  .panel-creation .pattern-section,
+  .panel-creation .product-section,
+  .panel-creation .recent-section {
+    grid-column: auto;
+  }
+
+  .panel-creation .image-preview {
+    min-height: 280px;
+  }
+}
 
 @media (max-width: 640px) {
   .museum-nav {
@@ -420,8 +528,18 @@
   }
 
   .craft-panel {
-    width: 100vw;
-    border-left: none;
+    width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+    padding: 18px 14px 24px;
+    border-radius: 14px;
+  }
+
+  .panel-creation .control-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-creation .button-group {
+    grid-column: auto;
   }
 }
 
@@ -431,6 +549,10 @@
   }
 
   .craft-panel {
+    transition: none;
+  }
+
+  .craft-panel-backdrop {
     transition: none;
   }
 }

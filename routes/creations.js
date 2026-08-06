@@ -21,8 +21,39 @@ function sendSupabaseResult(res, result, successStatus = 200) {
 router.get('/', async (req, res, next) => {
   try {
     const result = await supabaseService.listCreations({
-      limit: req.query.limit
+      limit: req.query.limit,
+      sort: req.query.sort
     });
+    return sendSupabaseResult(res, result);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+// F1 统计面板：注意必须注册在 /:id 之前
+router.get('/stats', async (req, res, next) => {
+  try {
+    const result = await supabaseService.getCreationStats();
+    return sendSupabaseResult(res, result);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.post('/:id/like', async (req, res, next) => {
+  try {
+    const visitorId = req.body?.visitorId || req.body?.visitor_id;
+    if (!visitorId || typeof visitorId !== 'string' || !visitorId.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_BODY',
+          message: '缺少 visitorId'
+        }
+      });
+    }
+
+    const result = await supabaseService.likeCreation(req.params.id, visitorId.trim());
     return sendSupabaseResult(res, result);
   } catch (error) {
     return next(error);

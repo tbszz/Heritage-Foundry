@@ -146,7 +146,7 @@ function adaptStyleToCarrier(styleText, carrierItem) {
   return styleText;
 }
 
-function buildCreativePrompt({ basePrompt = '', style = 'default', craftType, ip, carrier } = {}) {
+function buildCreativePrompt({ basePrompt = '', style = 'default', craftType, ip, carrier, customPrompt = '' } = {}) {
   const craft = resolveLibraryItem(CRAFT_LIBRARY, craftType, craftType);
   const ipItem = resolveLibraryItem(IP_LIBRARY, ip, ip);
   const carrierItem = resolveLibraryItem(CARRIER_LIBRARY, carrier, carrier || '文创产品');
@@ -157,7 +157,7 @@ function buildCreativePrompt({ basePrompt = '', style = 'default', craftType, ip
   const task = basePrompt.trim() || `${craft.name} × ${ipItem.name} ${carrierItem.name}`;
   const carrierOutputInstruction = buildCarrierOutputInstruction(carrierItem);
 
-  return [
+  const promptLines = [
     '你是一位脑洞大开的国潮非遗视觉导演，创作一张非常吸引注意力的非遗 × 流行 IP 跨界主视觉。',
     `核心任务：${task}。`,
     `跨界组合：${craft.name}非遗语言 + ${ipItem.name}流行 IP 角色特征 + ${carrierItem.name}。`,
@@ -166,7 +166,14 @@ function buildCreativePrompt({ basePrompt = '', style = 'default', craftType, ip
     `产品方向：${carrierItem.constraint}，${styleText}。`,
     carrierOutputInstruction,
     `画面要求：${carrierItem.aspectInstruction || '1:1 方形画幅'}，干净背景、纯色背景，无文字，无水印，无 UI mockup，高清产品级渲染，动态感强，奇思妙想但形体明确。`
-  ].join('\n');
+  ];
+
+  // 用户自定义描述直接拼到尾部，不加任何约束
+  if (typeof customPrompt === 'string' && customPrompt.trim()) {
+    promptLines.push(`用户补充描述：${customPrompt.trim()}`);
+  }
+
+  return promptLines.join('\n');
 }
 
 function buildEnhancedPrompt(basePrompt, style, craftType, context = {}) {
@@ -175,7 +182,8 @@ function buildEnhancedPrompt(basePrompt, style, craftType, context = {}) {
     style,
     craftType,
     ip: context.ip,
-    carrier: context.carrier
+    carrier: context.carrier,
+    customPrompt: context.customPrompt
   });
 }
 

@@ -1,12 +1,42 @@
 import { CRAFTS_DATA, getGeneratorCraftId } from './utils/craftData.js';
-import { MuseumScene, getStandLayout } from './components/MuseumScene.js';
-import { initCreationPanel } from './components/creationPanel.js';
-import { prefetchModels } from './utils/modelLoader.js';
 
-let museumScene = null;
-let creationApi = null;
-let focusedStand = null;
-let panelHideTimer = null;
+const CHAPTERS = [
+  {
+    id: 'thread',
+    title: '经纬成章',
+    subtitle: '线与布的记忆',
+    description: '从一根线开始，看图案、身份与祝愿如何被编进日常。',
+    craftIds: ['tiger-head', 'embroidery', 'tie-dye', 'brocade']
+  },
+  {
+    id: 'paper',
+    title: '纸上万象',
+    subtitle: '刀、墨、光与影',
+    description: '一张纸可以成为窗花、戏台、风筝，也可以留下时代的笔迹。',
+    craftIds: ['papercut', 'shadow', 'calligraphy', 'seal', 'kites', 'lanterns', 'new-year']
+  },
+  {
+    id: 'earth',
+    title: '火土新生',
+    subtitle: '泥土与时间',
+    description: '火候改变材料，也让器物拥有被长久使用和讲述的可能。',
+    craftIds: ['porcelain', 'clay', 'tea']
+  },
+  {
+    id: 'carving',
+    title: '雕刻万物',
+    subtitle: '减去，留下',
+    description: '木、石、玉与矿彩，在手的判断中显露形状和精神。',
+    craftIds: ['wood-carving', 'stone-carving', 'jade', 'tangka']
+  }
+];
+
+let selectedCraft = null;
+let returnFocus = null;
+let sketchCorridorScene = null;
+let sketchCorridorPromise = null;
+let artifact3dStage = null;
+let artifact3dPromise = null;
 
 export function getHomepageCrafts(crafts = CRAFTS_DATA) {
   return crafts.filter((craft) => Boolean(craft.modelUrl));
@@ -17,7 +47,7 @@ export function getHomepageCraftIntro(craft) {
     return {
       name: '',
       category: '',
-      description: '选择一项技艺，数字粒子即刻聚合成它的三维形态。',
+      description: '选择一件馆藏，发现它背后的材料、手艺与生活。',
       story: ''
     };
   }
@@ -57,6 +87,7 @@ export function getMuseumTourStops(crafts = CRAFTS_DATA) {
       assetKey: craft.id,
       stopLabel: String(index + 1).padStart(2, '0'),
       iconUrl: `/assets/generated/craft-icons/${craft.id}.png`,
+      iconWebpUrl: `/assets/generated/craft-icons-webp/${craft.id}.webp`,
       museumLine: craft.museumLine || craft.story,
       camera: {
         x: Number((Math.cos(angle) * radius).toFixed(3)),
@@ -72,6 +103,32 @@ export function getMuseumTourStops(crafts = CRAFTS_DATA) {
   });
 }
 
+export function getMuseumChapters(crafts = CRAFTS_DATA) {
+  const modeledCrafts = getHomepageCrafts(crafts);
+  const byId = new Map(modeledCrafts.map((craft) => [craft.id, craft]));
+  const claimed = new Set(CHAPTERS.flatMap((chapter) => chapter.craftIds));
+  const unclaimed = modeledCrafts.filter((craft) => !claimed.has(craft.id));
+
+  return CHAPTERS.map((chapter, index) => ({
+    ...chapter,
+    crafts: [
+      ...chapter.craftIds.map((id) => byId.get(id)).filter(Boolean),
+      ...(index === CHAPTERS.length - 1 ? unclaimed : [])
+    ]
+  }));
+}
+
+export function getMuseumExperienceMode({
+  reducedMotion = false,
+  saveData = false,
+  hardwareConcurrency = 8,
+  deviceMemory = 8
+} = {}) {
+  if (reducedMotion || saveData) return 'still';
+  if (hardwareConcurrency <= 4 || deviceMemory <= 4) return 'lite';
+  return 'cinematic';
+}
+
 export function resolveHomepageSelection(current, requested) {
   return {
     nextCraft: requested || current,
@@ -79,129 +136,248 @@ export function resolveHomepageSelection(current, requested) {
   };
 }
 
-// ---------- 3D 博物馆首页 ----------
-
 function initHomePage() {
-  const container = document.getElementById('museum-container');
-  if (!container) return;
+  const stage = document.getElementById('museum-stage');
+  if (!stage) return;
 
-  const layout = getStandLayout(getHomepageCrafts());
+  const mode = detectExperienceMode();
+  document.body.dataset.experienceMode = mode;
+  bindSketchCorridor();
+  bindDialog();
+  bindModeToggle();
+  bindRevealObserver();
 
-  museumScene = new MuseumScene(container);
-  museumScene.init({
-    layout,
-    onStateChange: handleStateChange,
-    onFocusStand: handleFocusStand,
-    onSelectStand: openCraftPanel
+  const requestedId = new URLSearchParams(window.location.search).get('craft');
+  const initialCraft = getInitialHomepageCraft(requestedId);
+  if (requestedId && initialCraft?.id === requestedId) {
+    window.setTimeout(() => openArtifact(initialCraft), 250);
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    document.body.dataset.paused = document.hidden ? 'true' : 'false';
   });
+}
 
-  // 调试/自动化测试句柄
-  window.__museum = museumScene;
+function detectExperienceMode() {
+  const saved = window.localStorage?.getItem('museum-experience-mode');
+  if (saved === 'still' || saved === 'cinematic') return saved;
 
-  const panel = document.getElementById('craft-panel');
-  if (panel) {
-    creationApi = initCreationPanel(panel);
-  }
-
-  document.getElementById('craft-panel-close')?.addEventListener('click', closeCraftPanel);
-  window.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') closeCraftPanel();
+  return getMuseumExperienceMode({
+    reducedMotion: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
+    saveData: navigator.connection?.saveData,
+    hardwareConcurrency: navigator.hardwareConcurrency,
+    deviceMemory: navigator.deviceMemory
   });
-
-  // 其余模型空闲时预取进 HTTP 缓存，走近展台时解码更快
-  prefetchModels(layout.map((stand) => stand.craft.modelUrl));
 }
 
-function handleStateChange(state) {
-  const gateHint = document.getElementById('gate-hint');
-  const hud = document.getElementById('museum-hud');
+// 手绘 3D 走廊：仅 cinematic 模式动态挂载，Three.js 保持在首页入口 bundle 之外；
+// 挂载失败（WebGL 不可用等）静默回退到静态丝绢 hero。
+function bindSketchCorridor() {
+  if (sketchCorridorScene || sketchCorridorPromise) return;
+  const stage = document.getElementById('museum-stage');
+  const container = document.getElementById('sketch-corridor');
+  if (!stage || !container) return;
+  if (document.body.dataset.experienceMode !== 'cinematic') return;
 
-  if (state === 'entering') {
-    gateHint?.classList.add('is-hidden');
-  }
+  stage.classList.add('is-corridor-loading');
+  sketchCorridorPromise = import('./components/SketchCorridorScene.js')
+    .then(({ SketchCorridorScene }) => {
+      sketchCorridorScene = new SketchCorridorScene(container);
+      sketchCorridorScene.init({
+        chapters: getMuseumChapters(),
+        onRoomEnter: () => {
+          stage.classList.add('is-in-room');
+          updateCorridorHud('滚轮走近展品 · 点击展品看详情');
+          const back = document.getElementById('corridor-back');
+          if (back) back.hidden = false;
+        },
+        onRoomExit: () => {
+          stage.classList.remove('is-in-room');
+          updateCorridorHud('滚轮逛长廊 · 点击木门进入展厅');
+          const back = document.getElementById('corridor-back');
+          if (back) back.hidden = true;
+        },
+        onSelectCraft: (craft) => {
+          if (craft) openArtifact(craft);
+        },
+        onReady: () => {
+          stage.classList.remove('is-corridor-loading');
+          stage.classList.add('is-corridor-live');
+        }
+      });
 
-  if (state === 'explore') {
-    if (gateHint) {
-      gateHint.classList.add('is-hidden');
-      window.setTimeout(() => { gateHint.style.display = 'none'; }, 700);
-    }
-    if (hud) hud.hidden = false;
+      // 出视口暂停渲染，滚回首屏时恢复
+      const observer = new IntersectionObserver((entries) => {
+        sketchCorridorScene?.setRenderPaused(!entries.some((entry) => entry.isIntersecting));
+      }, { threshold: 0.02 });
+      observer.observe(stage);
 
-    // ?craft= 深链：进场后直接打开对应展台卡片
-    const params = new URLSearchParams(window.location.search);
-    const requestedId = params.get('craft');
-    if (requestedId && museumScene) {
-      const stand = museumScene.getStandById(requestedId);
-      if (stand) {
-        window.setTimeout(() => openCraftPanel(stand), 350);
-      }
-    }
-  }
+      document.getElementById('corridor-back')?.addEventListener('click', () => {
+        sketchCorridorScene?.exitRoom();
+      });
+      return sketchCorridorScene;
+    })
+    .catch(() => {
+      stage.classList.remove('is-corridor-loading');
+      return null;
+    })
+    .finally(() => {
+      sketchCorridorPromise = null;
+    });
 }
 
-function handleFocusStand(stand) {
-  focusedStand = stand;
-  const tip = document.getElementById('hud-focus-tip');
-  if (!tip) return;
-
-  if (stand) {
-    tip.innerHTML = `<kbd>E</kbd> 查看 ${stand.craft.name} · 非遗创造`;
-    tip.classList.add('is-active');
-  } else {
-    tip.innerHTML = '<kbd>E</kbd> 与展台互动';
-    tip.classList.remove('is-active');
-  }
+function updateCorridorHud(text) {
+  const hud = document.getElementById('sketch-corridor-hud');
+  if (hud) hud.textContent = text;
 }
 
-function openCraftPanel(stand) {
-  const panel = document.getElementById('craft-panel');
-  if (!panel || !stand) return;
+// 详情弹窗内的 3D 模型查看器：复用活态展厅的 ArtifactStage（拖拽旋转 + 滚轮缩放），
+// 动态 import 保持首页入口 bundle 不含 Three.js；弹窗关闭时 IntersectionObserver 自动停渲染。
+async function loadArtifact3dStage() {
+  if (artifact3dStage) return artifact3dStage;
+  if (artifact3dPromise) return artifact3dPromise;
 
-  const { craft } = stand;
+  artifact3dPromise = import('./components/ArtifactStage.js')
+    .then(({ ArtifactStage }) => {
+      const container = document.getElementById('artifact-3d-stage');
+      if (!container) return null;
+      artifact3dStage = new ArtifactStage(container, {
+        onLoadingChange: (loading) => {
+          const loader = document.getElementById('artifact-3d-loader');
+          if (loader) loader.hidden = !loading;
+        },
+        onError: () => {
+          const loader = document.getElementById('artifact-3d-loader');
+          if (loader) loader.hidden = true;
+        }
+      });
+      artifact3dStage.init();
+      return artifact3dStage;
+    })
+    .catch(() => null)
+    .finally(() => {
+      artifact3dPromise = null;
+    });
+
+  return artifact3dPromise;
+}
+
+function bindDialog() {
+  const dialog = document.getElementById('artifact-dialog');
+  if (!dialog) return;
+
+  dialog.querySelector('[data-close-dialog]')?.addEventListener('click', () => dialog.close());
+  dialog.addEventListener('click', (event) => {
+    if (event.target === dialog) dialog.close();
+  });
+  dialog.addEventListener('close', () => {
+    selectedCraft = null;
+    if (returnFocus instanceof HTMLElement) returnFocus.focus({ preventScroll: true });
+    returnFocus = null;
+    resumeCorridorIfVisible();
+  });
+}
+
+// 详情弹窗关闭后，仅当走廊仍停留在首屏视口内才恢复渲染（省流模式下不恢复）
+function resumeCorridorIfVisible() {
+  if (!sketchCorridorScene) return;
+  if (document.body.dataset.experienceMode !== 'cinematic') return;
+  const stage = document.getElementById('museum-stage');
+  if (!stage) return;
+  const rect = stage.getBoundingClientRect();
+  const visible = rect.bottom > 0 && rect.top < (window.innerHeight || 0);
+  sketchCorridorScene.setRenderPaused(!visible);
+}
+
+function openArtifact(craft, trigger = document.activeElement) {
+  const dialog = document.getElementById('artifact-dialog');
+  if (!dialog || !craft) return;
+
+  selectedCraft = craft;
+  returnFocus = trigger;
+  // 弹窗打开期间暂停走廊渲染，避免 WebGL 循环在弹层下空转
+  sketchCorridorScene?.setRenderPaused(true);
   const intro = getHomepageCraftIntro(craft);
-
-  setText('panel-craft-name', intro.name);
-  setText('panel-craft-category', `${stand.stopLabel} · ${intro.category}`);
-  setText('panel-craft-story', craft.museumLine || intro.story);
-
-  const icon = document.getElementById('panel-craft-icon');
-  if (icon) {
-    icon.src = `/assets/generated/craft-icons/${craft.id}.png`;
-    icon.alt = intro.name;
-  }
-
   const links = getHomepageCraftLinks(craft.id);
-  const craftLink = document.getElementById('panel-craft-link');
-  if (craftLink) craftLink.href = links.craftHref;
 
-  // 创造面板同步到当前展台的技艺（映射到工作台支持的技艺）
-  creationApi?.setCraft(getGeneratorCraftId(craft.id));
+  setText('artifact-name', intro.name);
+  setText('artifact-category', intro.category);
+  setText('artifact-description', craft.museumLine || intro.description);
+  setText('artifact-story', intro.story);
 
-  if (panelHideTimer) {
-    window.clearTimeout(panelHideTimer);
-    panelHideTimer = null;
+  // 左侧换成可旋转的真实 3D 模型（复用 ArtifactStage，弹窗关闭时其渲染循环自动停止）
+  if (craft.modelUrl) {
+    loadArtifact3dStage().then((stage) => stage?.setModel(craft.modelUrl));
   }
-  panel.hidden = false;
-  requestAnimationFrame(() => panel.classList.add('open'));
-  museumScene?.setInputEnabled(false);
+
+  const craftLink = document.getElementById('artifact-craft-link');
+  const createLink = document.getElementById('artifact-create-link');
+  if (craftLink) craftLink.href = links.craftHref;
+  if (createLink) createLink.href = links.generatorHref;
+
+  if (!dialog.open) dialog.showModal();
+  dialog.querySelector('[data-close-dialog]')?.focus({ preventScroll: true });
 }
 
-function closeCraftPanel() {
-  const panel = document.getElementById('craft-panel');
-  if (!panel || panel.hidden) return;
+function bindModeToggle() {
+  const button = document.getElementById('experience-mode-toggle');
+  if (!button) return;
 
-  panel.classList.remove('open');
-  museumScene?.setInputEnabled(true);
+  const syncLabel = () => {
+    const isStill = document.body.dataset.experienceMode === 'still';
+    button.textContent = isStill ? '开启动态场景' : '切换省流模式';
+    button.setAttribute('aria-pressed', String(isStill));
+  };
 
-  if (panelHideTimer) window.clearTimeout(panelHideTimer);
-  panelHideTimer = window.setTimeout(() => {
-    panel.hidden = true;
-  }, 480);
+  syncLabel();
+  button.addEventListener('click', () => {
+    const nextMode = document.body.dataset.experienceMode === 'still' ? 'cinematic' : 'still';
+    document.body.dataset.experienceMode = nextMode;
+    window.localStorage?.setItem('museum-experience-mode', nextMode);
+    const stage = document.getElementById('museum-stage');
+    if (nextMode === 'cinematic') {
+      bindSketchCorridor();
+      sketchCorridorScene?.setRenderPaused(false);
+      stage?.classList.toggle('is-corridor-live', Boolean(sketchCorridorScene));
+    } else {
+      sketchCorridorScene?.setRenderPaused(true);
+      stage?.classList.remove('is-corridor-live');
+    }
+    syncLabel();
+  });
+}
+
+function bindRevealObserver() {
+  const items = [...document.querySelectorAll('.reveal')];
+  if (!items.length) return;
+  if (document.body.dataset.experienceMode === 'still' || !('IntersectionObserver' in window)) {
+    items.forEach((item) => item.classList.add('is-visible'));
+    return;
+  }
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add('is-visible');
+      observer.unobserve(entry.target);
+    });
+  }, { rootMargin: '0px 0px -10% 0px', threshold: 0.08 });
+
+  items.forEach((item) => observer.observe(item));
 }
 
 function setText(id, text) {
   const node = document.getElementById(id);
   if (node) node.textContent = text || '';
+}
+
+function escapeHtml(value = '') {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
 }
 
 if (typeof document !== 'undefined') {

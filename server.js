@@ -8,6 +8,7 @@ const path = require('path');
 const generateRoutes = require('./routes/generate');
 const generate3DRoutes = require('./routes/generate3d');
 const creationRoutes = require('./routes/creations');
+const chatHandler = require('./api/chat');
 const errorHandler = require('./middleware/errorHandler');
 const { createCorsOptions } = require('./middleware/apiGuardrails');
 
@@ -37,6 +38,7 @@ function createApp() {
   app.use('/api', generateRoutes);
   app.use('/api', generate3DRoutes);
   app.use('/api/creations', creationRoutes);
+  app.post('/api/chat', chatHandler);
 
   app.get('/api/health', (req, res) => {
     res.json({

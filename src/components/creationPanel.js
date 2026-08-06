@@ -11,19 +11,16 @@ import {
   listCreations
 } from '../utils/apiService.js';
 import {
-  buildPattern,
   summarizePattern,
   renderPatternHTML,
   calculateStats,
   imageToPattern,
   downloadPatternImage,
-  downloadPatternCSV
+  downloadPatternCSV,
+  DEFAULT_PATTERN_SIZE
 } from '../utils/patternGenerator.js';
 import { getCraftById, getGeneratorCrafts } from '../utils/craftData.js';
 import { PALETTE_COLORS, getColorKeyByHex, setActiveColorSystem } from '../utils/colorSystem.js';
-
-const PATTERN_WIDTH = 18;
-const PATTERN_HEIGHT = 12;
 
 export function initCreationPanel(root, {
   onTexture,
@@ -34,8 +31,7 @@ export function initCreationPanel(root, {
   const $$ = (selector) => Array.from(root.querySelectorAll(selector));
 
   let currentImageUrl = null;
-  let currentSeed = 1;
-  let currentPattern = null;
+  let currentPatternResult = null;
   let currentSummary = {};
   let currentStats = null;
   let currentPrompt = '';
@@ -43,7 +39,6 @@ export function initCreationPanel(root, {
   function init() {
     populateCraftOptions();
     bindEvents();
-    enhanceSelects();
     if (applyUrlParams) {
       applyUrlParamsFromLocation();
     }
@@ -74,7 +69,6 @@ export function initCreationPanel(root, {
       const craftSelect = $('#craft');
       if (craftSelect) {
         craftSelect.value = craft;
-        // 触发 change 让 enhanceSelects 生成的章片同步高亮
         craftSelect.dispatchEvent(new Event('change', { bubbles: true }));
       }
     }
@@ -97,6 +91,7 @@ export function initCreationPanel(root, {
     const patternBtn = $('#patternBtn');
     const saveCreationBtn = $('#saveCreationBtn');
     const colorSystemSelect = $('#color-system-select');
+    const patternResolutionSelect = $('#pattern-resolution-select');
     const downloadImageBtn = $('#download-image-btn');
     const downloadCsvBtn = $('#download-csv-btn');
     const refreshCreationsBtn = $('#refreshCreationsBtn');
@@ -118,64 +113,47 @@ export function initCreationPanel(root, {
 
     colorSystemSelect?.addEventListener('change', () => {
       setActiveColorSystem(colorSystemSelect.value);
-      if (currentPattern) {
-        currentPattern = currentPattern.map((cell) => {
+      if (currentPatternResult) {
+        const pattern = currentPatternResult.pattern.map((cell) => {
           if (!cell || typeof cell !== 'object' || cell.isExternal || !cell.hex) return cell;
           return {
             ...cell,
             key: getColorKeyByHex(cell.hex, colorSystemSelect.value)
           };
         });
-        renderPattern(currentPattern);
+        currentPatternResult = {
+          ...currentPatternResult,
+          pattern,
+          colorSystem: colorSystemSelect.value
+        };
+        renderPattern(currentPatternResult);
       }
     });
 
+    patternResolutionSelect?.addEventListener('change', () => {
+      if (currentImageUrl) handleGeneratePattern();
+    });
+
     downloadImageBtn?.addEventListener('click', () => {
-      if (currentPattern) {
-        downloadPatternImage(currentPattern, PATTERN_WIDTH, PATTERN_HEIGHT, getColorSystem());
+      if (currentPatternResult) {
+        downloadPatternImage(
+          currentPatternResult.pattern,
+          currentPatternResult.width,
+          currentPatternResult.height,
+          currentPatternResult.colorSystem
+        );
       }
     });
 
     downloadCsvBtn?.addEventListener('click', () => {
-      if (currentPattern) {
-        downloadPatternCSV(currentPattern, PATTERN_WIDTH, PATTERN_HEIGHT);
+      if (currentPatternResult) {
+        downloadPatternCSV(
+          currentPatternResult.pattern,
+          currentPatternResult.width,
+          currentPatternResult.height,
+          currentPatternResult.colorSystem
+        );
       }
-    });
-  }
-
-  function enhanceSelects() {
-    $$('.control-group select').forEach((select) => {
-      const switcher = document.createElement('div');
-      switcher.className = 'choice-switch';
-      switcher.setAttribute('role', 'group');
-      switcher.setAttribute('aria-label', select.previousElementSibling?.textContent || '选项');
-
-      Array.from(select.options).forEach((option) => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'choice-chip';
-        button.dataset.value = option.value;
-        button.textContent = option.textContent.split(' - ')[0];
-        button.addEventListener('click', () => {
-          select.value = option.value;
-          select.dispatchEvent(new Event('change', { bubbles: true }));
-          syncChoiceButtons(select, switcher);
-        });
-        switcher.appendChild(button);
-      });
-
-      select.classList.add('enhanced-select');
-      select.insertAdjacentElement('afterend', switcher);
-      syncChoiceButtons(select, switcher);
-      select.addEventListener('change', () => syncChoiceButtons(select, switcher));
-    });
-  }
-
-  function syncChoiceButtons(select, switcher) {
-    switcher.querySelectorAll('.choice-chip').forEach((button) => {
-      const isActive = button.dataset.value === select.value;
-      button.classList.toggle('active', isActive);
-      button.setAttribute('aria-pressed', String(isActive));
     });
   }
 
@@ -201,6 +179,16 @@ export function initCreationPanel(root, {
 
   function getColorSystem() {
     return $('#color-system-select')?.value || 'MARD';
+  }
+
+  function getPatternSize() {
+    const rawValue = $('#pattern-resolution-select')?.value
+      || `${DEFAULT_PATTERN_SIZE}x${DEFAULT_PATTERN_SIZE}`;
+    const [width, height] = rawValue.split('x').map(Number);
+    return {
+      width: Number.isFinite(width) && width > 0 ? width : DEFAULT_PATTERN_SIZE,
+      height: Number.isFinite(height) && height > 0 ? height : DEFAULT_PATTERN_SIZE
+    };
   }
 
   function updateProductInfo() {
@@ -259,7 +247,7 @@ export function initCreationPanel(root, {
       });
 
       currentImageUrl = result.imageUrl;
-      currentPattern = null;
+      currentPatternResult = null;
       currentSummary = {};
       currentStats = null;
       updateDownloadState();
@@ -289,11 +277,22 @@ export function initCreationPanel(root, {
     const patternContainer = $('#pattern-container');
 
     if (!btn || !patternContainer) return;
+    if (!currentImageUrl) {
+      patternContainer.innerHTML = `
+        <div class="pattern-placeholder">
+          <p>请先生成 AI 图像，再转译为拼豆图纸</p>
+        </div>
+      `;
+      showToast('请先生成 AI 图像');
+      return;
+    }
 
     btn.disabled = true;
     btn.textContent = '生成中...';
     setWorkflowStep('pattern');
     setActiveColorSystem(getColorSystem());
+    const size = getPatternSize();
+    const colorSystem = getColorSystem();
 
     patternContainer.innerHTML = `
       <div class="loading-overlay">
@@ -303,56 +302,88 @@ export function initCreationPanel(root, {
     `;
 
     try {
-      currentSeed += 1;
-      currentPattern = currentImageUrl
-        ? await imageToPattern(currentImageUrl, PATTERN_WIDTH, PATTERN_HEIGHT)
-        : buildPattern(PATTERN_WIDTH, PATTERN_HEIGHT, currentSeed);
-
-      renderPattern(currentPattern);
-      showToast(currentImageUrl ? '已从 AI 图像转译为拼豆图纸' : '已生成非遗对称拼豆图纸');
+      const pattern = await imageToPattern(
+        currentImageUrl,
+        size.width,
+        size.height,
+        {
+          colorSystem,
+          removeBackground: true,
+          fitSubject: true,
+          subjectPadding: 0.06
+        }
+      );
+      currentPatternResult = {
+        pattern,
+        width: size.width,
+        height: size.height,
+        colorSystem
+      };
+      renderPattern(currentPatternResult);
+      showToast('已从 AI 图像转译为可制作拼豆图纸');
     } catch (error) {
       console.error('Failed to generate pattern:', error);
-      patternContainer.innerHTML = `
-        <div class="pattern-placeholder">
-          <p>生成失败，请重试</p>
-        </div>
-      `;
-      showToast('拼豆图纸生成失败');
+      if (currentPatternResult) {
+        renderPattern(currentPatternResult);
+        showToast('新图纸生成失败，已保留上一版');
+      } else {
+        patternContainer.innerHTML = `
+          <div class="pattern-placeholder">
+            <p>生成失败，请重试</p>
+          </div>
+        `;
+        showToast('拼豆图纸生成失败');
+      }
     } finally {
       btn.disabled = false;
       btn.textContent = '生成拼豆图纸';
     }
   }
 
-  function renderPattern(pattern) {
+  function renderPattern(result) {
     const patternContainer = $('#pattern-container');
     if (!patternContainer) return;
 
+    const { pattern, width, colorSystem } = result;
     currentSummary = summarizePattern(pattern);
     currentStats = calculateStats(currentSummary);
 
     patternContainer.innerHTML = `
       <div class="bead-pattern is-ready">
-        ${renderPatternHTML(pattern, PATTERN_WIDTH)}
-        <p class="result-note">图纸尺寸: ${PATTERN_WIDTH} × ${PATTERN_HEIGHT} | 色号体系: ${getColorSystem()} | 点击豆子可快速微调</p>
+        ${renderPatternHTML(pattern, width)}
+        <p class="result-note">图纸尺寸: ${result.width} × ${result.height} | 色号体系: ${colorSystem} | 悬停查看色号，点击豆位可微调</p>
       </div>
     `;
 
-    patternContainer.querySelectorAll('.bead-cell').forEach((cell, index) => {
-      cell.addEventListener('click', () => cyclePatternCell(index));
+    const grid = patternContainer.querySelector('.bead-grid');
+    grid?.addEventListener('click', (event) => {
+      const cell = event.target.closest('.bead-cell');
+      if (cell) cyclePatternCell(Number(cell.dataset.index));
+    });
+    grid?.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      const cell = event.target.closest('.bead-cell');
+      if (!cell) return;
+      event.preventDefault();
+      cyclePatternCell(Number(cell.dataset.index));
     });
 
-    updateMaterialList(currentSummary);
+    updateMaterialList(currentSummary, colorSystem);
     updateStats(currentStats);
     updateDownloadState();
   }
 
   function cyclePatternCell(index) {
-    if (!currentPattern) return;
+    if (
+      !currentPatternResult
+      || !Number.isInteger(index)
+      || index < 0
+      || index >= currentPatternResult.pattern.length
+    ) return;
 
-    const cell = currentPattern[index];
-    const editableColors = PALETTE_COLORS.slice(0, 10).map((color) => ({
-      key: getColorKeyByHex(color.hex, getColorSystem()),
+    const cell = currentPatternResult.pattern[index];
+    const editableColors = PALETTE_COLORS.map((color) => ({
+      key: getColorKeyByHex(color.hex, currentPatternResult.colorSystem),
       name: color.name,
       hex: color.hex.toUpperCase(),
       isExternal: false
@@ -360,11 +391,33 @@ export function initCreationPanel(root, {
 
     const currentHex = typeof cell === 'object' ? cell.hex?.toUpperCase() : null;
     const currentIndex = editableColors.findIndex((color) => color.hex === currentHex);
-    currentPattern[index] = editableColors[(currentIndex + 1) % editableColors.length];
-    renderPattern(currentPattern);
+    const pattern = [...currentPatternResult.pattern];
+    pattern[index] = editableColors[(currentIndex + 1) % editableColors.length];
+    currentPatternResult = { ...currentPatternResult, pattern };
+    updatePatternCellElement(index);
+    currentSummary = summarizePattern(pattern);
+    currentStats = calculateStats(currentSummary);
+    updateMaterialList(currentSummary, currentPatternResult.colorSystem);
+    updateStats(currentStats);
+    updateDownloadState();
   }
 
-  function updateMaterialList(summary) {
+  function updatePatternCellElement(index) {
+    const currentCell = $(`.bead-cell[data-index="${index}"]`);
+    const patternCell = currentPatternResult?.pattern[index];
+    if (!currentCell || !patternCell) return;
+
+    const template = document.createElement('template');
+    template.innerHTML = renderPatternHTML([patternCell], 1);
+    const replacement = template.content.querySelector('.bead-cell');
+    if (!replacement) return;
+
+    replacement.dataset.index = String(index);
+    replacement.tabIndex = currentCell.tabIndex;
+    currentCell.replaceWith(replacement);
+  }
+
+  function updateMaterialList(summary, colorSystem = getColorSystem()) {
     const materialList = $('#material-list .materials');
     if (!materialList) return;
 
@@ -382,7 +435,7 @@ export function initCreationPanel(root, {
 
         return {
           name: value.name || '拼豆色',
-          code: value.key || getColorKeyByHex(value.color, getColorSystem()),
+          code: value.key || getColorKeyByHex(value.color, colorSystem),
           color: value.color,
           count: value.count
         };
@@ -414,7 +467,7 @@ export function initCreationPanel(root, {
   }
 
   function updateDownloadState() {
-    const hasPattern = Boolean(currentPattern);
+    const hasPattern = Boolean(currentPatternResult);
     $('#download-image-btn')?.toggleAttribute('disabled', !hasPattern);
     $('#download-csv-btn')?.toggleAttribute('disabled', !hasPattern);
     $('#saveCreationBtn')?.toggleAttribute('disabled', !hasPattern);
@@ -424,7 +477,7 @@ export function initCreationPanel(root, {
     const btn = $('#saveCreationBtn');
     const selection = getCurrentSelection();
 
-    if (!btn || !selection || !currentPattern) return;
+    if (!btn || !selection || !currentPatternResult) return;
 
     btn.disabled = true;
     btn.textContent = '保存中...';
@@ -443,7 +496,7 @@ export function initCreationPanel(root, {
         styleName: selection.style.name,
         prompt: currentPrompt,
         imageUrl: currentImageUrl,
-        pattern: currentPattern,
+        pattern: currentPatternResult.pattern,
         materials: Object.values(currentSummary),
         stats: currentStats,
         story: craftData?.story || ''
