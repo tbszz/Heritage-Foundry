@@ -1,19 +1,39 @@
-// 手绘素描风 3D 走廊 + 主题展厅：纸白排线长廊 → 木门 = 主题展厅 / AI 共创工坊。
+// 暗夜展厅风 3D 长廊 + 主题展厅：深色云纹石墙长廊 → 朱漆木门 = 主题展厅 / AI 共创工坊。
 // 交互为轨道式（借鉴 itom portfolio 的 useScrollCamera 思路）：
 // 滚轮/方向键/触摸竖滑沿轨道前进后退，鼠标移动视差环顾；
 // 点击木门 → 相机转向 90° 正对门 → 真实穿门而入（房间就在门后，无跳切）。
-// 墙面用 MeshBasicMaterial 手绘贴图（baked tinting 思路），GLB 模型保持正常立体渲染。
+// 渲染/灯光惯例与 MuseumScene 保持一致（RoomEnvironment PMREM + ACES + 暖金射灯），
+// 墙面/地面/门均为受光 Standard 材质，GLB 模型保持正常立体渲染。
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { Easing, Tween, update as updateTweens } from '@tweenjs/tween.js/dist/tween.esm.js';
 import { createGLTFLoader } from '../utils/modelLoader.js';
+import { Companion } from './Companion.js';
 
-const PAPER = 0xf7f4ee;
-const INK = '#23201c';
+const HALL_INK = 0x0a0b0d;
+const GOLD = '#c99a2e';
+const GOLD_TEXT = '#e6cd8f';
+const SILK = '#e7e1d7';
+const MIST = 'rgba(231, 225, 215, 0.62)';
 
-const TEXTURE_BASE = '/assets/textures/sketch/';
+const TEXTURE_BASE = '/assets/textures/';
 const CRAFT_ICON_BASE = '/assets/generated/craft-icons-webp/';
 const textureLoader = new THREE.TextureLoader();
+
+// 门饰共享几何体/材质（全部展厅门复用，减少内存与 draw call 状态切换）
+let sharedDoorDecor = null;
+
+function getSharedDoorDecor() {
+  if (!sharedDoorDecor) {
+    sharedDoorDecor = {
+      studGeometry: new THREE.SphereGeometry(0.058, 12, 8),
+      bossGeometry: new THREE.CylinderGeometry(0.075, 0.075, 0.03, 16),
+      ringGeometry: new THREE.TorusGeometry(0.11, 0.024, 10, 28),
+      goldMaterial: new THREE.MeshStandardMaterial({ color: 0xd4a83a, roughness: 0.28, metalness: 0.85 })
+    };
+  }
+  return sharedDoorDecor;
+}
 
 export const CORRIDOR = {
   width: 10,           // 走廊总宽（墙在 x=±5）
@@ -85,11 +105,40 @@ export function getGeneratorDoorLayout(chapterCount = 0) {
   };
 }
 
-// 纯函数：相机轨道边界（含 AI 共创门，可单测）。
-export function getCorridorRailBounds(doorCount = 0) {
+// 功能门定义：排在 AI 共创门之后的两扇"展陈功能"门，点击打开全屏展厅覆盖层
+export const FEATURE_DOORS = [
+  { id: 'gallery', title: '共创画廊', subtitle: '人人都是非遗共创者' },
+  { id: 'map', title: '山河图志', subtitle: '非遗地域分布全图' }
+];
+
+// 纯函数：功能门布局（AI 共创门之后，交替侧，可单测）。
+export function getFeatureDoorLayout(chapterCount = 0) {
+  const generator = getGeneratorDoorLayout(chapterCount);
+  return FEATURE_DOORS.map((feature, index) => {
+    const doorIndex = chapterCount + 1 + index; // 章节门 + 共创门之后的交替序号
+    const side = doorIndex % 2 === 0 ? 'left' : 'right';
+    return {
+      id: feature.id,
+      kind: 'feature',
+      featureId: feature.id,
+      chapter: { id: feature.id, title: feature.title, subtitle: feature.subtitle, crafts: [] },
+      index: doorIndex,
+      side,
+      position: {
+        x: side === 'left' ? -(CORRIDOR.width / 2 - 0.12) : CORRIDOR.width / 2 - 0.12,
+        y: 0,
+        z: generator.position.z - (index + 1) * CORRIDOR.doorSpacing
+      }
+    };
+  });
+}
+
+// 纯函数：相机轨道边界（含 AI 共创门与功能门，可单测）。
+export function getCorridorRailBounds(doorCount = 0, featureCount = FEATURE_DOORS.length) {
   const lastDoorZ = CORRIDOR.firstDoorZ
     - Math.max(doorCount - 1, 0) * CORRIDOR.doorSpacing
-    - (doorCount > 0 ? CORRIDOR.generatorGap : 0);
+    - (doorCount > 0 ? CORRIDOR.generatorGap : 0)
+    - featureCount * CORRIDOR.doorSpacing;
   return {
     maxZ: CORRIDOR.startZ,
     minZ: lastDoorZ - 2.5
@@ -151,6 +200,7 @@ export class SketchCorridorScene {
     this.renderPaused = false;
     this.reducedMotion = false;
     this.disposed = false;
+    this.companion = null;
     this.animationId = null;
 
     // 状态机：corridor（走廊）→ entering（穿门）→ room（展厅内）→ exiting → corridor
@@ -180,16 +230,16 @@ export class SketchCorridorScene {
     this.visibilityHandler = null;
   }
 
-  init({ chapters = [], onRoomEnter, onRoomExit, onSelectCraft, onReady } = {}) {
-    this.callbacks = { onRoomEnter, onRoomExit, onSelectCraft, onReady };
+  init({ chapters = [], onRoomEnter, onRoomExit, onSelectCraft, onOpenFeature, onCompanion, onReady } = {}) {
+    this.callbacks = { onRoomEnter, onRoomExit, onSelectCraft, onOpenFeature, onCompanion, onReady };
     this.reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || false;
 
     const width = Math.max(this.container.clientWidth, 1);
     const height = Math.max(this.container.clientHeight, 1);
 
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(PAPER);
-    this.scene.fog = new THREE.Fog(PAPER, 20, 55);
+    this.scene.background = new THREE.Color(HALL_INK);
+    this.scene.fog = new THREE.Fog(HALL_INK, 16, 52);
 
     this.camera = new THREE.PerspectiveCamera(55, width / height, 0.1, 120);
     this.camera.position.set(0, CORRIDOR.eyeY, CORRIDOR.startZ);
@@ -199,11 +249,12 @@ export class SketchCorridorScene {
     this.renderer.setSize(width, height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    // 手绘贴图即最终颜色，不做色调映射，保持纸白纯净
-    this.renderer.toneMapping = THREE.NoToneMapping;
+    // 与 MuseumScene 同款：ACES 色调映射 + 微提曝光，射灯下的展厅更有层次
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.22;
     this.container.appendChild(this.renderer.domElement);
 
-    // 灯光只作用于 GLB 模型的 Standard 材质（Basic 手绘墙面不受光照影响）
+    // 灯光同时作用于展厅 Standard 材质与 GLB 模型
     this.addLighting();
     const pmrem = new THREE.PMREMGenerator(this.renderer);
     const roomEnv = new RoomEnvironment();
@@ -213,7 +264,8 @@ export class SketchCorridorScene {
 
     const layouts = [
       ...getCorridorDoorLayout(chapters),
-      getGeneratorDoorLayout(chapters.length)
+      getGeneratorDoorLayout(chapters.length),
+      ...getFeatureDoorLayout(chapters.length)
     ];
     this.railBounds = getCorridorRailBounds(chapters.length);
     this.targetZ = CORRIDOR.startZ;
@@ -221,8 +273,12 @@ export class SketchCorridorScene {
     this.buildCorridor(layouts);
     layouts.forEach((layout) => this.buildDoor(layout));
     this.buildFrames(chapters);
-    this.buildDoodles();
+    this.buildLanterns();
     this.bindEvents();
+
+    // 创建灵宠导览员
+    this.companion = new Companion(this.scene);
+    this.companion.mesh.position.set(0, 0.3, CORRIDOR.startZ - 2);
 
     // 性能预热：一次性编译 shader + 上传 Canvas 纹理，避免首次滚动时卡顿
     this.renderer.compile(this.scene, this.camera);
@@ -240,10 +296,9 @@ export class SketchCorridorScene {
   // ---------- 场景搭建 ----------
 
   addLighting() {
-    this.scene.add(new THREE.AmbientLight(0xffffff, 0.95));
-    const key = new THREE.DirectionalLight(0xfff2e0, 1.1);
-    key.position.set(6, 10, 8);
-    this.scene.add(key);
+    // 博物馆基调：环境光给到能看清墙面浮雕与石纹的程度，门上暖金射灯塑造观展光池
+    this.scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+    this.scene.add(new THREE.HemisphereLight(0x4a5060, 0x1c1712, 0.75));
   }
 
   buildCorridor(layouts) {
@@ -253,10 +308,14 @@ export class SketchCorridorScene {
     const length = startZ - endZ;
     const centerZ = (startZ + endZ) / 2;
 
-    // 地板（木板排线贴图沿走廊方向平铺）
+    // 地板（深色石材 + 金色砖缝，沿走廊方向平铺）
     const floor = new THREE.Mesh(
       new THREE.PlaneGeometry(CORRIDOR.width, length),
-      new THREE.MeshBasicMaterial({ map: this.loadSketchTexture('sketch-floor', [1.6, Math.ceil(length / 5)]) })
+      new THREE.MeshStandardMaterial({
+        map: this.loadMuseumTexture('floor-stone', [1.6, Math.ceil(length / 5)]),
+        roughness: 0.55,
+        metalness: 0.18
+      })
     );
     floor.rotation.x = -Math.PI / 2;
     floor.position.set(0, 0, centerZ);
@@ -270,7 +329,7 @@ export class SketchCorridorScene {
         const segmentLength = from - to;
         const wall = new THREE.Mesh(
           new THREE.PlaneGeometry(segmentLength, CORRIDOR.height),
-          new THREE.MeshBasicMaterial({ map: this.loadSketchTexture('sketch-wall', [Math.max(segmentLength / 7, 0.4), 1]) })
+          this.makeWallMaterial('wall-cloud', [Math.max(segmentLength / 7, 0.4), 1])
         );
         wall.rotation.y = side === 'left' ? Math.PI / 2 : -Math.PI / 2;
         wall.position.set(sign * CORRIDOR.width / 2, CORRIDOR.height / 2, (from + to) / 2);
@@ -281,7 +340,7 @@ export class SketchCorridorScene {
         const lintelHeight = CORRIDOR.height - CORRIDOR.doorHeight - 0.14;
         const lintel = new THREE.Mesh(
           new THREE.PlaneGeometry(CORRIDOR.doorWidth + 0.28, lintelHeight),
-          new THREE.MeshBasicMaterial({ map: this.loadSketchTexture('sketch-wall', [0.4, lintelHeight / CORRIDOR.height]) })
+          this.makeWallMaterial('wall-cloud', [0.4, lintelHeight / CORRIDOR.height])
         );
         lintel.rotation.y = side === 'left' ? Math.PI / 2 : -Math.PI / 2;
         lintel.position.set(sign * CORRIDOR.width / 2, CORRIDOR.doorHeight + 0.14 + lintelHeight / 2, z);
@@ -289,28 +348,77 @@ export class SketchCorridorScene {
       });
     });
 
-    // 顶面（云朵涂鸦纸纹）
+    // 顶面（鎏金藻井）
     const ceiling = new THREE.Mesh(
       new THREE.PlaneGeometry(CORRIDOR.width, length),
-      new THREE.MeshBasicMaterial({ map: this.loadSketchTexture('sketch-ceiling', [1.6, Math.ceil(length / 6)]) })
+      this.makeWallMaterial('ceiling-coffer', [1.6, Math.ceil(length / 6)], { roughness: 0.75, metalness: 0.2, emissiveIntensity: 0.16 })
     );
     ceiling.rotation.x = Math.PI / 2;
     ceiling.position.set(0, CORRIDOR.height, centerZ);
     this.scene.add(ceiling);
 
-    // 尽头墙 + 「非遗博物馆」大标题
+    // 中轴红毯：金龙祥云纹，引视线向长廊深处
+    const carpet = new THREE.Mesh(
+      new THREE.PlaneGeometry(2.3, length),
+      new THREE.MeshStandardMaterial({
+        map: this.loadMuseumTexture('carpet-runner', [1, Math.ceil(length / 4)]),
+        roughness: 0.92,
+        metalness: 0.02
+      })
+    );
+    carpet.rotation.x = -Math.PI / 2;
+    carpet.position.set(0, 0.015, centerZ);
+    this.scene.add(carpet);
+
+    // 两侧墙脚鎏金踢脚线
+    const baseTrimGeometry = new THREE.BoxGeometry(0.06, 0.16, length);
+    const baseTrimMaterial = new THREE.MeshStandardMaterial({ color: 0x8a6a2a, roughness: 0.4, metalness: 0.7 });
+    [-1, 1].forEach((sign) => {
+      const trim = new THREE.Mesh(baseTrimGeometry, baseTrimMaterial);
+      trim.position.set(sign * (CORRIDOR.width / 2 - 0.04), 0.08, centerZ);
+      this.scene.add(trim);
+    });
+
+    // 尽头墙：云纹石底 + 金凤照壁 + 横版馆名金匾
     const endWall = new THREE.Mesh(
       new THREE.PlaneGeometry(CORRIDOR.width, CORRIDOR.height),
-      new THREE.MeshBasicMaterial({ map: this.loadSketchTexture('sketch-wall', [1.4, 1]) })
+      this.makeWallMaterial('wall-cloud', [1.4, 1])
     );
     endWall.position.set(0, CORRIDOR.height / 2, endZ);
     this.scene.add(endWall);
 
-    const title = new THREE.Mesh(
-      new THREE.PlaneGeometry(5.6, 2.8),
-      new THREE.MeshBasicMaterial({ map: this.makeTitleTexture(), transparent: true })
+    // 金凤纹照壁（鎏金衬框 + 缂丝凤纹面板）
+    const featureFrame = new THREE.Mesh(
+      new THREE.PlaneGeometry(4.06, 3.16),
+      new THREE.MeshStandardMaterial({ color: 0x8a6a2a, roughness: 0.4, metalness: 0.7 })
     );
-    title.position.set(0, 2.4, endZ + 0.06);
+    featureFrame.position.set(0, 2.85, endZ + 0.03);
+    this.scene.add(featureFrame);
+
+    const feature = new THREE.Mesh(
+      new THREE.PlaneGeometry(3.9, 3.0),
+      new THREE.MeshStandardMaterial({
+        map: this.loadMuseumTexture('feature-wall', [1, 1]),
+        roughness: 0.7,
+        metalness: 0.15
+      })
+    );
+    feature.position.set(0, 2.85, endZ + 0.05);
+    this.scene.add(feature);
+
+    // 照壁洗墙灯：暖金光束打在尽头端景上
+    const featureSpot = new THREE.SpotLight(0xffd9a0, 14, 18, 0.5, 0.6, 1.1);
+    featureSpot.position.set(0, CORRIDOR.height - 0.3, endZ + 6);
+    featureSpot.target.position.set(0, 2.2, endZ);
+    this.scene.add(featureSpot);
+    this.scene.add(featureSpot.target);
+
+    const title = new THREE.Mesh(
+      new THREE.PlaneGeometry(4.6, 1.15),
+      // 牌匾类 Canvas 纹理不参与色调映射与雾效，保持金字在暗墙上的准确发色与可读性
+      new THREE.MeshBasicMaterial({ map: this.makeTitleTexture(), transparent: true, toneMapped: false, fog: false })
+    );
+    title.position.set(0, 0.62, endZ + 0.06);
     this.scene.add(title);
   }
 
@@ -321,8 +429,8 @@ export class SketchCorridorScene {
     group.rotation.y = layout.side === 'left' ? Math.PI / 2 : -Math.PI / 2;
     this.scene.add(group);
 
-    // 门框（深色描边盒子，模拟手绘粗线框）
-    const frameMaterial = new THREE.MeshBasicMaterial({ color: 0x3a332c });
+    // 门框（鎏金铜框）
+    const frameMaterial = new THREE.MeshStandardMaterial({ color: 0x8a6a2a, roughness: 0.38, metalness: 0.78 });
     const sidePostGeometry = new THREE.BoxGeometry(0.14, CORRIDOR.doorHeight + 0.14, 0.14);
     [-1, 1].forEach((sign) => {
       const post = new THREE.Mesh(sidePostGeometry, frameMaterial);
@@ -336,24 +444,63 @@ export class SketchCorridorScene {
     lintel.position.set(0, CORRIDOR.doorHeight + 0.07, 0);
     group.add(lintel);
 
-    // 门板（铰链在局部左侧，开门时向展厅内旋开，不挡走廊）
+    // 门板（朱漆大门：clearcoat 漆面光泽，铰链在局部左侧，开门时向展厅内旋开，不挡走廊）
     const pivot = new THREE.Group();
     pivot.position.set(-CORRIDOR.doorWidth / 2, 0, 0.04);
     group.add(pivot);
     const panel = new THREE.Mesh(
       new THREE.PlaneGeometry(CORRIDOR.doorWidth, CORRIDOR.doorHeight),
-      new THREE.MeshBasicMaterial({ map: this.loadSketchTexture('sketch-door', [1, 1]), side: THREE.DoubleSide })
+      new THREE.MeshPhysicalMaterial({
+        map: this.loadMuseumTexture('red-lacquer', [1, 1]),
+        roughness: 0.34,
+        metalness: 0.1,
+        clearcoat: 0.7,
+        clearcoatRoughness: 0.25,
+        side: THREE.DoubleSide
+      })
     );
     panel.position.set(CORRIDOR.doorWidth / 2, CORRIDOR.doorHeight / 2, 0);
     pivot.add(panel);
 
-    // 木牌匾（Canvas 纹理：展厅名 + 副题）
+    // 门槛（鎏金压边）
+    const threshold = new THREE.Mesh(
+      new THREE.BoxGeometry(CORRIDOR.doorWidth + 0.28, 0.09, 0.22),
+      frameMaterial
+    );
+    threshold.position.set(0, 0.045, 0.06);
+    group.add(threshold);
+
+    // 门钉（4×3 鎏金泡钉）与铺首门环，挂在门板上随门开合
+    const decor = getSharedDoorDecor();
+    [0.3, 0.68, 1.06, 1.44].forEach((x) => {
+      [0.7, 1.5, 2.3].forEach((y) => {
+        const stud = new THREE.Mesh(decor.studGeometry, decor.goldMaterial);
+        stud.position.set(x, y, 0.03);
+        pivot.add(stud);
+      });
+    });
+    const boss = new THREE.Mesh(decor.bossGeometry, decor.goldMaterial);
+    boss.rotation.x = Math.PI / 2;
+    boss.position.set(1.7, 1.52, 0.04);
+    pivot.add(boss);
+    const ring = new THREE.Mesh(decor.ringGeometry, decor.goldMaterial);
+    ring.position.set(1.7, 1.36, 0.06);
+    pivot.add(ring);
+
+    // 黑漆金字牌匾（Canvas 纹理：展厅名 + 副题）
     const sign = new THREE.Mesh(
       new THREE.PlaneGeometry(2.4, 0.84),
-      new THREE.MeshBasicMaterial({ map: this.makeSignTexture(layout.chapter), transparent: true })
+      new THREE.MeshBasicMaterial({ map: this.makeSignTexture(layout.chapter), transparent: true, toneMapped: false, fog: false })
     );
     sign.position.set(0, CORRIDOR.doorHeight + 0.72, 0.08);
     group.add(sign);
+
+    // 门上暖金射灯：照亮门、牌匾与周边墙面，在地面投出观展光池
+    const spot = new THREE.SpotLight(0xffd9a0, 20, 14, 0.75, 0.55, 1.2);
+    spot.position.set(layout.position.x * 0.4, CORRIDOR.height - 0.25, layout.position.z + 0.6);
+    spot.target.position.set(layout.position.x, 1.7, layout.position.z);
+    this.scene.add(spot);
+    this.scene.add(spot.target);
 
     const door = {
       ...layout,
@@ -387,7 +534,11 @@ export class SketchCorridorScene {
     // 地板 / 顶面
     const floor = new THREE.Mesh(
       new THREE.PlaneGeometry(ROOM.depth, ROOM.width),
-      new THREE.MeshBasicMaterial({ map: this.loadSketchTexture('sketch-floor', [2, 2]) })
+      new THREE.MeshStandardMaterial({
+        map: this.loadMuseumTexture('floor-stone', [2, 2]),
+        roughness: 0.55,
+        metalness: 0.18
+      })
     );
     floor.rotation.x = -Math.PI / 2;
     floor.position.set(centerX, 0, doorZ);
@@ -395,7 +546,11 @@ export class SketchCorridorScene {
 
     const ceiling = new THREE.Mesh(
       new THREE.PlaneGeometry(ROOM.depth, ROOM.width),
-      new THREE.MeshBasicMaterial({ map: this.loadSketchTexture('sketch-ceiling', [2, 2]) })
+      new THREE.MeshStandardMaterial({
+        map: this.loadMuseumTexture('ceiling-coffer', [2, 2]),
+        roughness: 0.75,
+        metalness: 0.2
+      })
     );
     ceiling.rotation.x = Math.PI / 2;
     ceiling.position.set(centerX, ROOM.height, doorZ);
@@ -409,7 +564,7 @@ export class SketchCorridorScene {
     ].forEach(({ z, rotationY }) => {
       const wall = new THREE.Mesh(
         sideWallGeometry,
-        new THREE.MeshBasicMaterial({ map: this.loadSketchTexture('sketch-wall', [1.6, 1]) })
+        this.makeWallMaterial('wall-cloud', [1.6, 1])
       );
       wall.rotation.y = rotationY;
       wall.position.set(centerX, ROOM.height / 2, z);
@@ -420,7 +575,7 @@ export class SketchCorridorScene {
     const farWallRotation = dir === -1 ? Math.PI / 2 : -Math.PI / 2;
     const farWall = new THREE.Mesh(
       new THREE.PlaneGeometry(ROOM.width, ROOM.height),
-      new THREE.MeshBasicMaterial({ map: this.loadSketchTexture('sketch-wall', [1.6, 1]) })
+      this.makeWallMaterial('wall-cloud', [1.6, 1])
     );
     farWall.rotation.y = farWallRotation;
     farWall.position.set(farX, ROOM.height / 2, doorZ);
@@ -428,22 +583,33 @@ export class SketchCorridorScene {
 
     const title = new THREE.Mesh(
       new THREE.PlaneGeometry(5.2, 2.6),
-      new THREE.MeshBasicMaterial({ map: this.makeRoomTitleTexture(door.chapter), transparent: true })
+      new THREE.MeshBasicMaterial({ map: this.makeRoomTitleTexture(door.chapter), transparent: true, toneMapped: false, fog: false })
     );
     title.rotation.y = farWallRotation;
     title.position.set(farX - dir * 0.08, 2.5, doorZ);
     this.scene.add(title);
 
-    // 展厅照明（只影响 GLB 模型；手绘墙面是 Basic 材质不受光照）
-    const roomLight = new THREE.PointLight(0xfff6e8, 60, 22, 1.6);
+    // 展厅照明：暖金点光源悬于厅心，仅在观众进入该厅时点亮（控制同屏灯数）
+    const roomLight = new THREE.PointLight(0xffd9a0, 8, 22, 1.6);
     roomLight.position.set(centerX, ROOM.height - 0.7, doorZ);
+    roomLight.visible = false;
     this.scene.add(roomLight);
+    door.roomLight = roomLight;
 
-    // 展台（纸白圆柱 + 墨色顶圈 + 手写名牌 + GLB 锚点）
+    // 展台（深色花岗岩贴图石座 + 鎏金顶圈 + 深色名牌 + GLB 锚点）
+    // 石纹同时挂到自发光通道，保证远距离也能读出石材颗粒感而不是一团黑
     const pedestalGeometry = new THREE.CylinderGeometry(0.5, 0.58, 1.0, 24);
-    const pedestalMaterial = new THREE.MeshBasicMaterial({ color: 0xfdfbf6 });
+    const pedestalTexture = this.loadMuseumTexture('pedestal-stone', [3, 1]);
+    const pedestalMaterial = new THREE.MeshStandardMaterial({
+      map: pedestalTexture,
+      emissive: 0xffffff,
+      emissiveMap: pedestalTexture,
+      emissiveIntensity: 0.3,
+      roughness: 0.55,
+      metalness: 0.15
+    });
     const rimGeometry = new THREE.TorusGeometry(0.5, 0.02, 8, 40);
-    const rimMaterial = new THREE.MeshBasicMaterial({ color: 0x23201c });
+    const rimMaterial = new THREE.MeshStandardMaterial({ color: 0xc99a2e, roughness: 0.3, metalness: 0.8 });
 
     getRoomStandLayout(door.chapter.crafts || [], door).forEach((layout) => {
       const group = new THREE.Group();
@@ -464,7 +630,8 @@ export class SketchCorridorScene {
       const label = new THREE.Sprite(new THREE.SpriteMaterial({
         map: this.makeStandLabelTexture(layout.craft),
         transparent: true,
-        depthWrite: false
+        depthWrite: false,
+        fog: false
       }));
       label.scale.set(1.5, 0.375, 1);
       label.position.set(0, 0.35, 0);
@@ -514,6 +681,8 @@ export class SketchCorridorScene {
     this.inputEnabled = false;
     this.currentDoor = door;
     this.requestRoomModels(door);
+    // 点亮该厅射灯（其余展厅的灯保持熄灭，控制同屏灯数）
+    if (door.roomLight) door.roomLight.visible = true;
     // 进厅动作一开始就让首页覆盖层淡出（等走完再切会遮挡穿门过程）
     this.callbacks.onRoomEnter?.(door.chapter.id);
 
@@ -589,6 +758,7 @@ export class SketchCorridorScene {
       this.viewState = 'corridor';
       this.callbacks.onRoomExit?.();
       if (door) {
+        if (door.roomLight) door.roomLight.visible = false;
         new Tween(door.pivot.rotation)
           .to({ y: 0 }, 700)
           .easing(Easing.Cubic.InOut)
@@ -616,6 +786,40 @@ export class SketchCorridorScene {
     }, 1750);
   }
 
+  // 功能门（共创画廊 / 山河图志）：开门动画后由首页打开对应的全屏展厅覆盖层；
+  // 门保持打开，覆盖层关闭时首页调 closeFeatureDoor 把门带上
+  enterFeature(door) {
+    this.inputEnabled = false;
+    this.activeDoor = door;
+    const dir = door.side === 'left' ? -1 : 1;
+    this.targetYaw = -dir * 0.5;
+    this.targetZ = door.position.z;
+
+    new Tween(door.pivot.rotation)
+      .to({ y: door.openAngle }, this.reducedMotion ? 200 : 800)
+      .easing(Easing.Cubic.InOut)
+      .delay(this.reducedMotion ? 0 : 300)
+      .start();
+
+    window.setTimeout(() => {
+      if (this.disposed) return;
+      this.callbacks.onOpenFeature?.(door.featureId);
+      this.inputEnabled = true;
+      this.activeDoor = null;
+    }, this.reducedMotion ? 300 : 1050);
+  }
+
+  // 覆盖层关闭后把功能门带回关上
+  closeFeatureDoor(featureId) {
+    const door = this.doors.find((item) => item.featureId === featureId);
+    if (!door || !door.opened) return;
+    new Tween(door.pivot.rotation)
+      .to({ y: 0 }, 700)
+      .easing(Easing.Cubic.InOut)
+      .start();
+    door.opened = false;
+  }
+
   // AI 共创门：开门动画后跳转到生成工坊
   enterGenerator(door) {
     this.inputEnabled = false;
@@ -635,9 +839,91 @@ export class SketchCorridorScene {
     }, this.reducedMotion ? 300 : 1050);
   }
 
-  // ---------- 墙面展品格 / 涂鸦 ----------
+  // ---------- 墙面展品格 ----------
 
-  // 墙面展品格：把现有馆藏图标合成「素描画框 + 蓝胶带」纹理，挂在门与门之间
+  // 宫灯壁灯：入口段与功能门区段的门间墙面各挂一盏，暖光晕填补墙面留白
+  buildLanterns() {
+    const glowTexture = this.makeGlowTexture();
+    const zs = [1.5, -36.5, -44.5, -53.5];
+    zs.forEach((z) => {
+      this.addLantern('left', z, glowTexture);
+      this.addLantern('right', z, glowTexture);
+    });
+  }
+
+  addLantern(side, z, glowTexture) {
+    const dir = side === 'left' ? -1 : 1;
+    const group = new THREE.Group();
+    group.position.set(dir * (CORRIDOR.width / 2 - 0.2), 2.6, z);
+
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xd4a83a, roughness: 0.35, metalness: 0.8 });
+    const redMat = new THREE.MeshStandardMaterial({
+      color: 0xb03226,
+      roughness: 0.5,
+      metalness: 0.1,
+      emissive: 0xff6a3c,
+      emissiveIntensity: 0.55
+    });
+
+    // 墙面挂板 + 挑杆
+    const plate = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.3, 0.12), goldMat);
+    plate.position.set(dir * 0.16, 0.1, 0);
+    group.add(plate);
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.035, 0.035), goldMat);
+    arm.position.set(dir * 0.05, 0.26, 0);
+    group.add(arm);
+
+    // 六棱朱漆灯身 + 鎏金灯盖
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.3, 6), redMat);
+    group.add(body);
+    [-1, 1].forEach((capDir) => {
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 0.06, 6), goldMat);
+      cap.position.set(0, capDir * 0.18, 0);
+      group.add(cap);
+    });
+
+    // 灯穗
+    const tassel = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.14, 8), redMat);
+    tassel.position.set(0, -0.3, 0);
+    tassel.rotation.x = Math.PI;
+    group.add(tassel);
+    const bead = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), goldMat);
+    bead.position.set(0, -0.22, 0);
+    group.add(bead);
+
+    // 暖金光晕（加色混合 sprite，不占用真实光源）
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: glowTexture,
+      color: 0xffc97a,
+      transparent: true,
+      opacity: 0.5,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    }));
+    glow.scale.set(1.3, 1.3, 1);
+    group.add(glow);
+
+    this.scene.add(group);
+  }
+
+  // 径向光晕纹理（宫灯共用）
+  makeGlowTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    const gradient = ctx.createRadialGradient(64, 64, 4, 64, 64, 62);
+    gradient.addColorStop(0, 'rgba(255, 220, 160, 0.85)');
+    gradient.addColorStop(0.45, 'rgba(255, 190, 110, 0.28)');
+    gradient.addColorStop(1, 'rgba(255, 190, 110, 0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 128, 128);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
+  }
+
+  // 墙面展品格：把现有馆藏图标合成「鎏金画框」纹理，挂在门与门之间
   buildFrames(chapters) {
     const crafts = chapters.flatMap((chapter) => chapter.crafts || []).slice(0, 6);
     if (!crafts.length) return;
@@ -650,7 +936,7 @@ export class SketchCorridorScene {
       const z = CORRIDOR.firstDoorZ - gapIndex * CORRIDOR.doorSpacing - CORRIDOR.doorSpacing / 2;
       const frame = new THREE.Mesh(
         frameGeometry,
-        new THREE.MeshBasicMaterial({ map: this.makeFrameTexture(craft), transparent: true })
+        new THREE.MeshBasicMaterial({ map: this.makeFrameTexture(craft), transparent: true, toneMapped: false, fog: false })
       );
       frame.position.set(side === 'left' ? -(CORRIDOR.width / 2 - 0.06) : CORRIDOR.width / 2 - 0.06, 2.35, z);
       frame.rotation.y = side === 'left' ? Math.PI / 2 : -Math.PI / 2;
@@ -658,46 +944,9 @@ export class SketchCorridorScene {
     });
   }
 
-  // 云朵与纸飞机涂鸦（sprite，轻微浮动）
-  buildDoodles() {
-    const cloudTexture = this.makeCloudTexture();
-    const bounds = this.railBounds;
-    for (let i = 0; i < 6; i += 1) {
-      const cloud = new THREE.Sprite(new THREE.SpriteMaterial({
-        map: cloudTexture,
-        transparent: true,
-        opacity: 0.9,
-        depthWrite: false
-      }));
-      const scale = 0.9 + (i % 3) * 0.35;
-      cloud.scale.set(1.6 * scale, scale, 1);
-      cloud.position.set(
-        (i % 2 === 0 ? -1 : 1) * (2.2 + (i % 3)),
-        CORRIDOR.height - 0.9 - (i % 2) * 0.5,
-        CORRIDOR.startZ - 6 - i * ((CORRIDOR.startZ - bounds.minZ - 10) / 6)
-      );
-      cloud.userData.baseY = cloud.position.y;
-      cloud.userData.phase = i * 1.7;
-      this.scene.add(cloud);
-      (this.doodleSprites ||= []).push(cloud);
-    }
-
-    const plane = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: this.makePaperPlaneTexture(),
-      transparent: true,
-      depthWrite: false
-    }));
-    plane.scale.set(1.1, 1.1, 1);
-    plane.position.set(0.8, 3.2, CORRIDOR.startZ - 14);
-    plane.userData.baseY = 3.2;
-    plane.userData.phase = 0.4;
-    this.scene.add(plane);
-    (this.doodleSprites ||= []).push(plane);
-  }
-
   // ---------- Canvas 纹理 ----------
 
-  loadSketchTexture(name, repeat = [1, 1]) {
+  loadMuseumTexture(name, repeat = [1, 1]) {
     const texture = textureLoader.load(`${TEXTURE_BASE}${name}.webp`, (loaded) => {
       this.renderer?.initTexture(loaded);
     });
@@ -707,6 +956,19 @@ export class SketchCorridorScene {
     texture.repeat.set(repeat[0], repeat[1]);
     texture.anisotropy = 8;
     return texture;
+  }
+
+  // 墙面/顶面材质：贴图同时挂自发光通道，暗部的浮雕纹理在全场景可读（不再是一团黑）
+  makeWallMaterial(name, repeat, { roughness = 0.9, metalness = 0.05, emissiveIntensity = 0.2 } = {}) {
+    const texture = this.loadMuseumTexture(name, repeat);
+    return new THREE.MeshStandardMaterial({
+      map: texture,
+      emissive: 0xffffff,
+      emissiveMap: texture,
+      emissiveIntensity,
+      roughness,
+      metalness
+    });
   }
 
   registerTextTexture(canvas, draw) {
@@ -726,64 +988,64 @@ export class SketchCorridorScene {
     });
   }
 
-  // 门楣木牌匾：纸底粗描边 + 毛笔感展厅名
+  // 门楣牌匾：黑漆底 + 鎏金双线框 + 金字展厅名
   makeSignTexture(chapter) {
     const canvas = document.createElement('canvas');
     canvas.width = 1024;
     canvas.height = 360;
     const draw = (ctx) => {
-      ctx.fillStyle = '#f1e9da';
+      const lacquer = ctx.createLinearGradient(0, 0, 0, 360);
+      lacquer.addColorStop(0, '#1d150b');
+      lacquer.addColorStop(1, '#120d07');
+      ctx.fillStyle = lacquer;
       ctx.fillRect(0, 0, 1024, 360);
-      ctx.strokeStyle = INK;
-      ctx.lineWidth = 12;
-      ctx.strokeRect(14, 14, 996, 332);
-      ctx.lineWidth = 4;
-      ctx.strokeRect(36, 36, 952, 288);
-      // 四角钉孔
-      ctx.fillStyle = INK;
-      [[52, 52], [972, 52], [52, 308], [972, 308]].forEach(([x, y]) => {
+      ctx.strokeStyle = GOLD;
+      ctx.lineWidth = 10;
+      ctx.strokeRect(16, 16, 992, 328);
+      ctx.lineWidth = 3;
+      ctx.strokeRect(40, 40, 944, 280);
+      // 四角鎏金铆钉
+      ctx.fillStyle = GOLD;
+      [[60, 60], [964, 60], [60, 300], [964, 300]].forEach(([x, y]) => {
         ctx.beginPath();
-        ctx.arc(x, y, 9, 0, Math.PI * 2);
+        ctx.arc(x, y, 8, 0, Math.PI * 2);
         ctx.fill();
       });
 
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = INK;
-      ctx.font = '900 148px "LXGW WenKai Local", serif';
+      ctx.fillStyle = GOLD_TEXT;
+      ctx.font = '800 136px "Source Han Serif", serif';
       ctx.fillText(chapter.title || '', 512, 158);
-      ctx.fillStyle = 'rgba(35, 32, 28, 0.66)';
-      ctx.font = '46px "LXGW WenKai Local", serif';
+      ctx.fillStyle = MIST;
+      ctx.font = '44px "LXGW WenKai", serif';
       ctx.fillText(chapter.subtitle || '', 512, 292);
     };
     draw(canvas.getContext('2d'));
     return this.registerTextTexture(canvas, draw);
   }
 
+  // 尽头墙横版馆名金匾（与上方金凤照壁组成端景）
   makeTitleTexture() {
     const canvas = document.createElement('canvas');
     canvas.width = 1024;
-    canvas.height = 512;
+    canvas.height = 256;
     const draw = (ctx) => {
-      ctx.clearRect(0, 0, 1024, 512);
+      ctx.clearRect(0, 0, 1024, 256);
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = INK;
-      ctx.font = '900 190px "Source Han Serif Local", serif';
-      ctx.fillText('非遗博物馆', 512, 190);
-      ctx.strokeStyle = INK;
-      ctx.lineWidth = 3;
+      ctx.fillStyle = GOLD_TEXT;
+      ctx.font = '800 112px "Source Han Serif", serif';
+      ctx.fillText('非遗造物局', 512, 92);
+      ctx.strokeStyle = GOLD;
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(212, 300);
-      ctx.lineTo(812, 300);
+      ctx.moveTo(312, 162);
+      ctx.lineTo(712, 162);
       ctx.stroke();
-      ctx.font = '54px "LXGW WenKai Local", serif';
-      ctx.fillStyle = 'rgba(35, 32, 28, 0.72)';
-      ctx.fillText('H E R I T A G E   F O U N D R Y', 512, 380);
-      // 四角涂鸦星芒
-      ctx.font = '64px system-ui, sans-serif';
-      ctx.fillText('✦', 120, 96);
-      ctx.fillText('✦', 904, 430);
+      ctx.font = '36px "LXGW WenKai", serif';
+      ctx.fillStyle = MIST;
+      ctx.fillText('H E R I T A G E   F O U N D R Y', 512, 212);
     };
     draw(canvas.getContext('2d'));
     return this.registerTextTexture(canvas, draw);
@@ -798,90 +1060,74 @@ export class SketchCorridorScene {
       ctx.clearRect(0, 0, 1024, 512);
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = INK;
-      ctx.font = '900 168px "Source Han Serif Local", serif';
+      ctx.fillStyle = GOLD_TEXT;
+      ctx.font = '800 150px "Source Han Serif", serif';
       ctx.fillText(chapter?.title || '', 512, 180);
-      ctx.strokeStyle = INK;
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = GOLD;
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(262, 288);
-      ctx.lineTo(762, 288);
+      ctx.moveTo(282, 288);
+      ctx.lineTo(742, 288);
       ctx.stroke();
-      ctx.font = '52px "LXGW WenKai Local", serif';
-      ctx.fillStyle = 'rgba(35, 32, 28, 0.72)';
+      ctx.font = '50px "LXGW WenKai", serif';
+      ctx.fillStyle = MIST;
       ctx.fillText(chapter?.subtitle || '', 512, 368);
-      ctx.font = '40px "LXGW WenKai Local", serif';
-      ctx.fillText(`${chapter?.crafts?.length || 0} 件馆藏`, 512, 436);
+      ctx.font = '40px "LXGW WenKai", serif';
+      ctx.fillText(`${chapter?.crafts?.length || 0} 件馆藏`, 512, 438);
     };
     draw(canvas.getContext('2d'));
     return this.registerTextTexture(canvas, draw);
   }
 
-  // 展台手写名牌
+  // 展台名牌：深色小牌 + 绢白字
   makeStandLabelTexture(craft) {
     const canvas = document.createElement('canvas');
     canvas.width = 512;
     canvas.height = 128;
     const draw = (ctx) => {
-      ctx.fillStyle = 'rgba(253, 251, 246, 0.92)';
+      ctx.fillStyle = 'rgba(18, 15, 11, 0.92)';
       ctx.beginPath();
-      ctx.roundRect(8, 16, 496, 96, 12);
+      ctx.roundRect(8, 16, 496, 96, 10);
       ctx.fill();
-      ctx.strokeStyle = INK;
-      ctx.lineWidth = 4;
+      ctx.strokeStyle = GOLD;
+      ctx.lineWidth = 3;
       ctx.stroke();
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = INK;
-      ctx.font = '52px "LXGW WenKai Local", serif';
+      ctx.fillStyle = SILK;
+      ctx.font = '50px "LXGW WenKai", serif';
       ctx.fillText(craft?.name || '', 256, 66);
     };
     draw(canvas.getContext('2d'));
     return this.registerTextTexture(canvas, draw);
   }
 
-  // 素描展品格：纸底 + 双线框 + 灰度馆藏图 + 蓝胶带 + 手写名
+  // 鎏金展品格：深色衬底 + 鎏金双线框 + 馆藏彩图 + 绢白名
   makeFrameTexture(craft) {
     const canvas = document.createElement('canvas');
     canvas.width = 512;
     canvas.height = 640;
     const image = new Image();
     const draw = (ctx) => {
-      ctx.fillStyle = '#fdfbf6';
+      ctx.fillStyle = '#14110c';
       ctx.fillRect(0, 0, 512, 640);
-      ctx.strokeStyle = INK;
-      ctx.lineWidth = 10;
-      ctx.strokeRect(10, 10, 492, 620);
-      ctx.lineWidth = 3;
-      ctx.strokeRect(28, 28, 456, 584);
+      ctx.strokeStyle = GOLD;
+      ctx.lineWidth = 8;
+      ctx.strokeRect(12, 12, 488, 616);
+      ctx.lineWidth = 2;
+      ctx.strokeRect(30, 30, 452, 580);
 
       if (image.complete && image.naturalWidth > 0) {
-        ctx.save();
-        ctx.filter = 'grayscale(0.92) contrast(1.08)';
         ctx.drawImage(image, 56, 56, 400, 400);
-        ctx.restore();
       }
 
       ctx.textAlign = 'center';
-      ctx.fillStyle = INK;
-      ctx.font = '54px "LXGW WenKai Local", serif';
+      ctx.fillStyle = SILK;
+      ctx.font = '52px "LXGW WenKai", serif';
       ctx.fillText(craft.name || '', 256, 540);
-      ctx.fillStyle = 'rgba(35, 32, 28, 0.6)';
-      ctx.font = '34px "LXGW WenKai Local", serif';
+      ctx.fillStyle = GOLD_TEXT;
+      ctx.font = '32px "LXGW WenKai", serif';
       ctx.fillText(craft.category || '', 256, 592);
-
-      // 顶部两截蓝色美纹胶带
-      ctx.fillStyle = 'rgba(125, 167, 217, 0.78)';
-      ctx.save();
-      ctx.translate(86, 18);
-      ctx.rotate(-0.32);
-      ctx.fillRect(-58, -14, 116, 34);
-      ctx.restore();
-      ctx.save();
-      ctx.translate(426, 18);
-      ctx.rotate(0.3);
-      ctx.fillRect(-58, -14, 116, 34);
-      ctx.restore();
     };
     draw(canvas.getContext('2d'));
     image.onload = () => {
@@ -893,51 +1139,6 @@ export class SketchCorridorScene {
     };
     image.src = `${CRAFT_ICON_BASE}${encodeURIComponent(craft.id)}.webp`;
     return this.registerTextTexture(canvas, draw);
-  }
-
-  makeCloudTexture() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 160;
-    const ctx = canvas.getContext('2d');
-    ctx.strokeStyle = INK;
-    ctx.lineWidth = 5;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(40, 120);
-    ctx.arc(70, 120, 30, Math.PI * 0.9, Math.PI * 1.9);
-    ctx.arc(115, 92, 34, Math.PI * 0.95, Math.PI * 1.85);
-    ctx.arc(165, 100, 28, Math.PI * 1.1, Math.PI * 2.05);
-    ctx.arc(190, 122, 24, Math.PI * 1.4, Math.PI * 0.45);
-    ctx.closePath();
-    ctx.stroke();
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    return texture;
-  }
-
-  makePaperPlaneTexture() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 256;
-    const ctx = canvas.getContext('2d');
-    ctx.strokeStyle = INK;
-    ctx.lineWidth = 5;
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    ctx.moveTo(30, 140);
-    ctx.lineTo(226, 60);
-    ctx.lineTo(120, 200);
-    ctx.closePath();
-    ctx.moveTo(30, 140);
-    ctx.lineTo(120, 128);
-    ctx.lineTo(226, 60);
-    ctx.moveTo(120, 128);
-    ctx.lineTo(120, 200);
-    ctx.stroke();
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    return texture;
   }
 
   // ---------- 输入 ----------
@@ -1084,6 +1285,16 @@ export class SketchCorridorScene {
     if (this.activeDoor) return;
     const pointer = this.ndcFromClient(clientX, clientY);
     this.raycaster.setFromCamera(pointer, this.camera);
+
+    // 点到灵宠：交给首页打开导览对话，不触发门逻辑
+    if (this.companion?.getMesh()) {
+      const petHits = this.raycaster.intersectObject(this.companion.getMesh(), true);
+      if (petHits.length) {
+        this.callbacks.onCompanion?.();
+        return;
+      }
+    }
+
     const hits = this.raycaster.intersectObjects(this.doors.map((door) => door.group), true);
     if (!hits.length) return;
     let node = hits[0].object;
@@ -1094,6 +1305,8 @@ export class SketchCorridorScene {
     door.opened = true;
     if (door.kind === 'generator') {
       this.enterGenerator(door);
+    } else if (door.kind === 'feature') {
+      this.enterFeature(door);
     } else {
       this.enterRoom(door);
     }
@@ -1167,17 +1380,25 @@ export class SketchCorridorScene {
       this.updateDoorHover(dt);
     }
 
-    // 涂鸦轻微浮动
-    this.doodleSprites?.forEach((sprite) => {
-      sprite.position.y = sprite.userData.baseY + Math.sin(now * 0.0006 + sprite.userData.phase) * 0.12;
-    });
-
     // 展厅模型：缓慢自旋 + 悬浮
     if (this.viewState === 'room' && this.currentDoor) {
       this.currentDoor.roomStands.forEach((stand, index) => {
         if (!stand.modelAnchor.children.length) return;
         stand.modelAnchor.rotation.y += dt * 0.4;
         stand.modelAnchor.position.y = 1.55 + Math.sin(now * 0.001 + index) * 0.05;
+      });
+    }
+
+    // 灵宠跟随：漂浮在相机朝向前方偏左的空中，展厅内同样适用
+    if (this.companion) {
+      const forwardX = -Math.sin(this.yaw);
+      const forwardZ = -Math.cos(this.yaw);
+      const leftX = forwardZ;
+      const leftZ = -forwardX;
+      this.companion.update(dt, {
+        x: this.camera.position.x + forwardX * 2.4 + leftX * 0.9,
+        y: 1.35,
+        z: this.camera.position.z + forwardZ * 2.4 + leftZ * 0.9
       });
     }
 
@@ -1258,6 +1479,8 @@ export class SketchCorridorScene {
       canvas.removeEventListener('pointerup', this.pointerUpHandler);
       canvas.removeEventListener('pointercancel', this.pointerUpHandler);
     }
+    this.companion?.dispose();
+    this.companion = null;
     this.scene?.traverse((child) => {
       child.geometry?.dispose?.();
       const materials = Array.isArray(child.material) ? child.material : [child.material];

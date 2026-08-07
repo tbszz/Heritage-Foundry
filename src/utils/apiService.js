@@ -90,6 +90,7 @@ export async function generateImage(prompt, options = {}) {
       craft_type,
       ip,
       carrier,
+      customPrompt,
       signal,
       timeoutMs = 135000
     } = options;
@@ -107,7 +108,8 @@ export async function generateImage(prompt, options = {}) {
         style,
         craft_type,
         ip,
-        carrier
+        carrier,
+        customPrompt
       }),
       signal
     }, timeoutMs);
@@ -275,9 +277,9 @@ export async function saveCreation(payload) {
   return data.data;
 }
 
-export async function listCreations(limit = 6) {
+export async function listCreations(limit = 6, sort = 'latest') {
   try {
-    const response = await fetch(`${API_BASE_URL}/creations?limit=${encodeURIComponent(limit)}`);
+    const response = await fetch(`${API_BASE_URL}/creations?limit=${encodeURIComponent(limit)}&sort=${encodeURIComponent(sort)}`);
     const data = await response.json();
 
     if (!response.ok || !data.success) {
@@ -288,6 +290,35 @@ export async function listCreations(limit = 6) {
   } catch (error) {
     console.warn('Failed to list creations:', error);
     return [];
+  }
+}
+
+export async function getCreationStats() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/creations/stats`);
+    const data = await response.json();
+    if (data.success) {
+      return data.data || { totalCreations: 0, totalWithImage: 0, craftDistribution: {} };
+    }
+    return { totalCreations: 0, totalWithImage: 0, craftDistribution: {} };
+  } catch (error) {
+    console.warn('Failed to get creation stats:', error);
+    return { totalCreations: 0, totalWithImage: 0, craftDistribution: {} };
+  }
+}
+
+export async function likeCreation(id, visitorId) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/creations/${encodeURIComponent(id)}/like`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visitorId })
+    });
+    const data = await response.json();
+    return data.success ? data.data : { liked: false };
+  } catch (error) {
+    console.warn('Failed to like creation:', error);
+    return { liked: false };
   }
 }
 

@@ -1,13 +1,10 @@
--- F3 共创画廊 + 点赞
--- 给 heritage_creations 表新增 likes 字段
+-- F3 共创画廊：给 heritage_creations 新增 likes 字段 + 点赞表
 alter table public.heritage_creations
   add column if not exists likes integer not null default 0;
 
--- 新增 likes 索引（按点赞数排序查询时使用）
 create index if not exists heritage_creations_likes_idx
   on public.heritage_creations (likes desc);
 
--- 点赞表：记录每次点赞（防重复点赞用）
 create table if not exists public.creation_likes (
   id uuid primary key default gen_random_uuid(),
   creation_id uuid not null references public.heritage_creations(id) on delete cascade,

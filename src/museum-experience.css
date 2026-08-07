@@ -32,6 +32,7 @@
   --muted: #777a7d;
   --cinnabar: #a83b32;
   --cinnabar-bright: #c44d42;
+  --gold: #c99a2e;
   --line: rgb(231 225 215 / 0.14);
   --panel-radius: 20px;
   --page-padding: clamp(20px, 4vw, 64px);
@@ -288,47 +289,18 @@ body[data-experience-mode="cinematic"] .museum-stage::after {
   background: linear-gradient(72deg, transparent 18%, rgb(168 59 50 / 0.24) 52%, transparent 82%);
 }
 
-.museum-stage-copy {
-  width: min(720px, calc(100% - 2 * var(--page-padding)));
-  margin: 0 var(--page-padding) clamp(126px, 18vh, 186px);
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
-body[data-experience-mode="cinematic"] .museum-stage-copy {
-  animation: museum-copy-enter 880ms 820ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.museum-stage-kicker {
-  margin: 0 0 18px;
-  color: rgb(231 225 215 / 0.66);
-  font-size: 14px;
-  letter-spacing: 0.12em;
-}
-
-.museum-stage h1 {
-  max-width: 700px;
-  margin: 0;
-  font-family: "Source Han Serif Regular", "Songti SC", serif;
-  font-size: clamp(48px, 6.2vw, 96px);
-  font-weight: 400;
-  line-height: 1.06;
-  letter-spacing: -0.045em;
-  text-wrap: balance;
-}
-
-.museum-stage h1 span {
-  display: block;
-  color: rgb(231 225 215 / 0.72);
-}
-
-.museum-stage-intro {
-  max-width: 560px;
-  margin: 24px 0 0;
-  color: rgb(231 225 215 / 0.72);
-  font-size: clamp(16px, 1.5vw, 20px);
-  line-height: 1.75;
-}
-
-.museum-stage-actions,
 .artifact-dialog-actions {
   display: flex;
   flex-wrap: wrap;
@@ -383,7 +355,7 @@ body[data-experience-mode="cinematic"] .museum-stage-copy {
   right: var(--page-padding);
   bottom: 42px;
   display: grid;
-  grid-template-columns: repeat(3, auto);
+  grid-template-columns: repeat(4, auto);
   gap: clamp(20px, 3vw, 54px);
   padding: 18px 0 0;
   border-top: 1px solid rgb(231 225 215 / 0.26);
@@ -1318,10 +1290,6 @@ body[data-experience-mode="still"] .reveal {
     display: none;
   }
 
-  .museum-stage-copy {
-    margin-bottom: 170px;
-  }
-
   .museum-stage-index {
     right: var(--page-padding);
     bottom: 38px;
@@ -1420,30 +1388,6 @@ body[data-experience-mode="still"] .reveal {
     background:
       linear-gradient(0deg, rgb(8 9 11 / 0.96) 0%, rgb(8 9 11 / 0.72) 56%, rgb(8 9 11 / 0.22) 100%),
       linear-gradient(90deg, rgb(8 9 11 / 0.55), transparent);
-  }
-
-  .museum-stage-copy {
-    width: calc(100% - 2 * var(--page-padding));
-    margin: 0 var(--page-padding) 180px;
-  }
-
-  .museum-stage-kicker {
-    margin-bottom: 12px;
-    font-size: 12px;
-  }
-
-  .museum-stage h1 {
-    font-size: clamp(42px, 13.2vw, 66px);
-    line-height: 1.08;
-  }
-
-  .museum-stage-intro {
-    margin-top: 18px;
-    font-size: 15px;
-  }
-
-  .museum-stage-actions {
-    margin-top: 22px;
   }
 
   .primary-action,
@@ -1648,7 +1592,7 @@ body[data-experience-mode="still"] .reveal {
   }
 }
 
-/* ---------- 手绘 3D 走廊（cinematic 模式首屏） ---------- */
+/* ---------- 暗夜展厅 3D 长廊（cinematic 模式首屏） ---------- */
 .sketch-corridor {
   position: absolute;
   inset: 0;
@@ -1670,7 +1614,7 @@ body[data-experience-mode="still"] .reveal {
   opacity: 1;
 }
 
-/* 加载薄纱：纸白底手绘风等待提示 */
+/* 加载薄纱：深墨底 + 金色旋转印记 */
 .sketch-corridor-loader {
   position: absolute;
   inset: 0;
@@ -1679,9 +1623,9 @@ body[data-experience-mode="still"] .reveal {
   place-items: center;
   align-content: center;
   gap: 14px;
-  background: #f7f4ee;
-  color: #23201c;
-  font-family: "LXGW WenKai Local", serif;
+  background: #0a0b0d;
+  color: var(--silk);
+  font-family: "LXGW WenKai", serif;
   font-size: 15px;
   letter-spacing: 0.08em;
 }
@@ -1693,20 +1637,19 @@ body[data-experience-mode="still"] .reveal {
 .sketch-corridor-loader-mark {
   width: 34px;
   height: 34px;
-  border: 3px solid #23201c;
+  border: 3px solid var(--gold, #c99a2e);
   border-right-color: transparent;
   border-radius: 50%;
-  transform: rotate(-4deg);
   animation: sketch-corridor-spin 1s linear infinite;
 }
 
 @keyframes sketch-corridor-spin {
   to {
-    transform: rotate(356deg);
+    transform: rotate(360deg);
   }
 }
 
-/* 底部操作提示：手绘纸条风 */
+/* 底部操作提示：深色玻璃 pill + 细金边 */
 .sketch-corridor-hud {
   position: absolute;
   left: 50%;
@@ -1714,18 +1657,18 @@ body[data-experience-mode="still"] .reveal {
   z-index: 2;
   margin: 0;
   padding: 10px 24px;
-  border: 2px solid #23201c;
-  border-radius: 3px;
-  background: #fdfbf6;
-  box-shadow: 3px 3px 0 #23201c;
-  color: #23201c;
-  font-family: "LXGW WenKai Local", serif;
+  border: 1px solid rgb(201 154 46 / 0.55);
+  border-radius: 999px;
+  background: rgb(14 16 20 / 0.72);
+  backdrop-filter: blur(10px);
+  color: var(--silk);
+  font-family: "LXGW WenKai", serif;
   font-size: 14px;
   letter-spacing: 0.1em;
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
-  transform: translateX(-50%) rotate(-1.2deg);
+  transform: translateX(-50%);
   transition: opacity 480ms ease;
 }
 
@@ -1733,86 +1676,41 @@ body[data-experience-mode="still"] .reveal {
   opacity: 1;
 }
 
-/* 走廊生效后，覆盖层文案从「绢白于暗场」切换为「墨色于纸面」 */
-/* 走廊生效后，文案覆盖层不挡画布点击（链接/按钮仍可点） */
-.museum-stage.is-corridor-live .museum-stage-copy,
+/* 走廊生效后，统计条不挡画布点击 */
 .museum-stage.is-corridor-live .museum-stage-index {
   pointer-events: none;
 }
 
-.museum-stage.is-corridor-live .museum-stage-copy a {
-  pointer-events: auto;
-}
-
-.museum-stage.is-corridor-live .museum-stage-kicker,
-.museum-stage.is-corridor-live .museum-stage-intro {
-  color: rgb(35 32 28 / 0.72);
-}
-
-.museum-stage.is-corridor-live h1 {
-  color: #23201c;
-}
-
-.museum-stage.is-corridor-live h1 span {
-  color: rgb(35 32 28 / 0.58);
-}
-
-.museum-stage.is-corridor-live .secondary-action {
-  color: #23201c;
-  border-color: rgb(35 32 28 / 0.42);
-  background: rgb(253 251 246 / 0.62);
-}
-
-.museum-stage.is-corridor-live .secondary-action:hover {
-  border-color: rgb(35 32 28 / 0.68);
-  background: rgb(253 251 246 / 0.88);
-}
-
-.museum-stage.is-corridor-live .museum-stage-index {
-  border-top-color: rgb(35 32 28 / 0.3);
-}
-
-.museum-stage.is-corridor-live .museum-stage-index span {
-  color: rgb(35 32 28 / 0.56);
-}
-
-.museum-stage.is-corridor-live .museum-stage-index strong {
-  color: #23201c;
-}
-
-/* 展厅内：返回长廊按钮（手绘纸条风，与 HUD 同族） */
+/* 展厅内：返回长廊按钮（深色 pill，与 HUD 同族） */
 .corridor-back {
   position: absolute;
   left: var(--page-padding);
   top: 96px;
   z-index: 4;
   padding: 10px 22px;
-  border: 2px solid #23201c;
-  border-radius: 3px;
-  background: #fdfbf6;
-  box-shadow: 3px 3px 0 #23201c;
-  color: #23201c;
-  font-family: "LXGW WenKai Local", serif;
+  border: 1px solid rgb(201 154 46 / 0.55);
+  border-radius: 999px;
+  background: rgb(14 16 20 / 0.72);
+  backdrop-filter: blur(10px);
+  color: var(--silk);
+  font-family: "LXGW WenKai", serif;
   font-size: 14px;
   letter-spacing: 0.08em;
   cursor: pointer;
-  transform: rotate(-1deg);
-  transition: transform 160ms ease, box-shadow 160ms ease;
+  transition: transform 160ms ease, border-color 160ms ease;
 }
 
 .corridor-back:hover {
-  transform: rotate(-1deg) translateY(-2px);
-  box-shadow: 5px 5px 0 #23201c;
+  transform: translateY(-2px);
+  border-color: rgb(201 154 46 / 0.9);
 }
 
 .corridor-back:active {
-  transform: rotate(-1deg) translateY(1px);
-  box-shadow: 2px 2px 0 #23201c;
+  transform: translateY(1px);
 }
 
-/* 展厅内隐藏首页大标题覆盖层，避免遮挡展品
-   （copy 的入场动画是 opacity 填充，必须用 visibility 才能压过动画终态） */
-.museum-stage.is-in-room .museum-stage-copy,
+/* 展厅内隐藏首页统计条，避免遮挡展品
+   （index 的入场动画是 opacity 填充，必须用 visibility 才能压过动画终态） */
 .museum-stage.is-in-room .museum-stage-index {
   visibility: hidden;
   opacity: 0;
@@ -1837,39 +1735,39 @@ body[data-experience-mode="still"] .reveal {
   }
 }
 
-/* ---------- 馆藏详情弹窗：左 3D 模型 + 右手绘风介绍 ---------- */
+/* ---------- 馆藏详情弹窗：左 3D 模型 + 右展厅风介绍 ---------- */
 .artifact-dialog {
-  color: #23201c;
-  border: 2px solid #23201c;
-  border-radius: 6px;
-  background: #fdfbf6;
-  box-shadow: 10px 10px 0 rgba(35, 32, 28, 0.8);
+  color: var(--silk);
+  border: 1px solid rgb(201 154 46 / 0.4);
+  border-radius: 12px;
+  background: #17191d;
+  box-shadow: 0 30px 80px rgb(0 0 0 / 0.55);
 }
 
 .artifact-dialog::backdrop {
-  background: rgb(247 244 238 / 0.62);
+  background: rgb(10 11 13 / 0.68);
   backdrop-filter: blur(8px);
 }
 
 .artifact-dialog-close {
-  color: #23201c;
-  border: 2px solid #23201c;
-  border-radius: 3px;
-  background: #fdfbf6;
-  box-shadow: 2px 2px 0 #23201c;
-  transition: transform 150ms ease, box-shadow 150ms ease;
+  color: var(--silk);
+  border: 1px solid rgb(231 225 215 / 0.28);
+  border-radius: 999px;
+  background: rgb(20 22 28 / 0.72);
+  transition: transform 150ms ease, border-color 150ms ease;
 }
 
 .artifact-dialog-close:hover {
   transform: translateY(-1px);
-  box-shadow: 3px 3px 0 #23201c;
+  border-color: rgb(201 154 46 / 0.85);
 }
 
 .artifact-dialog-media {
   position: relative;
-  background: #f7f4ee url("/assets/textures/sketch/sketch-wall.webp") repeat;
-  background-size: 420px;
-  border-right: 2px solid #23201c;
+  background:
+    radial-gradient(circle at 50% 32%, rgb(201 154 46 / 0.12), transparent 62%),
+    #101216;
+  border-right: 1px solid rgb(231 225 215 / 0.14);
 }
 
 .artifact-3d-stage {
@@ -1890,8 +1788,8 @@ body[data-experience-mode="still"] .reveal {
   place-items: center;
   align-content: center;
   gap: 12px;
-  color: #23201c;
-  font-family: "LXGW WenKai Local", serif;
+  color: var(--silk);
+  font-family: "LXGW WenKai", serif;
   font-size: 14px;
   letter-spacing: 0.08em;
 }
@@ -1902,68 +1800,745 @@ body[data-experience-mode="still"] .reveal {
   bottom: 14px;
   margin: 0;
   padding: 6px 16px;
-  border: 2px solid #23201c;
-  border-radius: 3px;
-  background: #fdfbf6;
-  box-shadow: 2px 2px 0 #23201c;
-  color: rgba(35, 32, 28, 0.75);
-  font-family: "LXGW WenKai Local", serif;
+  border: 1px solid rgb(201 154 46 / 0.45);
+  border-radius: 999px;
+  background: rgb(14 16 20 / 0.72);
+  color: var(--mist);
+  font-family: "LXGW WenKai", serif;
   font-size: 12px;
   letter-spacing: 0.1em;
   pointer-events: none;
-  transform: translateX(-50%) rotate(-1deg);
+  transform: translateX(-50%);
 }
 
 .artifact-dialog-copy > p {
-  color: rgba(35, 32, 28, 0.58);
-  font-family: "LXGW WenKai Local", serif;
+  color: var(--mist);
+  font-family: "LXGW WenKai", serif;
   letter-spacing: 0.12em;
 }
 
 .artifact-dialog-copy h2 {
-  color: #23201c;
+  color: var(--silk);
   font-family: "Source Han Serif", serif;
 }
 
 .artifact-dialog-copy > strong {
-  color: #23201c;
+  color: var(--silk);
 }
 
 .artifact-dialog-copy > span {
-  color: rgba(35, 32, 28, 0.68);
+  color: var(--mist);
 }
 
 .artifact-dialog .primary-action {
   color: #fdfbf6;
-  background: #23201c;
-  border: 2px solid #23201c;
-  border-radius: 3px;
-  box-shadow: 3px 3px 0 rgba(35, 32, 28, 0.55);
-  font-family: "LXGW WenKai Local", serif;
+  background: var(--cinnabar);
+  border: 1px solid var(--cinnabar-bright);
+  border-radius: 8px;
+  font-family: "LXGW WenKai", serif;
 }
 
 .artifact-dialog .primary-action:hover {
-  background: #3a332c;
-  box-shadow: 5px 5px 0 rgba(35, 32, 28, 0.55);
+  background: var(--cinnabar-bright);
 }
 
 .artifact-dialog .secondary-action {
-  color: #23201c;
-  border: 2px solid #23201c;
-  border-radius: 3px;
-  background: #fdfbf6;
-  box-shadow: 3px 3px 0 rgba(35, 32, 28, 0.55);
-  font-family: "LXGW WenKai Local", serif;
+  color: var(--silk);
+  border: 1px solid rgb(231 225 215 / 0.32);
+  border-radius: 8px;
+  background: transparent;
+  font-family: "LXGW WenKai", serif;
 }
 
 .artifact-dialog .secondary-action:hover {
-  background: #fffdf8;
-  box-shadow: 5px 5px 0 rgba(35, 32, 28, 0.55);
+  border-color: rgb(201 154 46 / 0.85);
+  background: rgb(201 154 46 / 0.1);
 }
 
 @media (max-width: 700px) {
   .artifact-dialog-media {
     border-right: none;
-    border-bottom: 2px solid #23201c;
+    border-bottom: 1px solid rgb(231 225 215 / 0.14);
+  }
+}
+
+/* ---------- 共创画廊 ---------- */
+.community-gallery {
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: 80px var(--page-padding) 60px;
+}
+
+.community-heading {
+  text-align: center;
+  margin-bottom: 48px;
+}
+.community-heading p {
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+  margin: 0 0 8px;
+}
+.community-heading h2 {
+  font-family: "Source Han Serif", serif;
+  font-size: clamp(26px, 4vw, 40px);
+  margin: 0 0 12px;
+  color: var(--silk);
+}
+.community-heading > span {
+  display: block;
+  font-size: 15px;
+  color: var(--mist);
+  margin-bottom: 24px;
+}
+
+.community-tabs {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+.community-tab {
+  padding: 8px 28px;
+  border: 1px solid rgb(231 225 215 / 0.22);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--mist);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.community-tab:hover {
+  border-color: var(--gold);
+  color: var(--silk);
+}
+.community-tab.active {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--ink);
+}
+
+.community-grid {
+  column-count: 4;
+  column-gap: 16px;
+}
+.community-card {
+  break-inside: avoid;
+  margin-bottom: 16px;
+  background: var(--surface);
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  transition: transform 0.2s, border-color 0.2s;
+}
+.community-card:hover {
+  transform: translateY(-3px);
+  border-color: rgb(201 154 46 / 0.4);
+}
+.community-card-image {
+  position: relative;
+  overflow: hidden;
+  background: var(--ink);
+}
+.community-card-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  transition: transform 0.3s;
+}
+.community-card:hover .community-card-image img {
+  transform: scale(1.04);
+}
+.community-card-body {
+  padding: 12px 14px;
+}
+.community-card-body strong {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 6px;
+  color: var(--silk);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.community-card-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.community-card-tags .tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgb(201 154 46 / 0.12);
+  color: var(--gold);
+  border: 1px solid rgb(201 154 46 / 0.2);
+}
+.like-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.like-btn:hover { color: var(--cinnabar-bright); }
+.like-btn.liked { color: var(--cinnabar-bright); }
+.like-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  transition: transform 0.2s;
+}
+.like-btn:active svg { transform: scale(1.25); }
+
+.community-empty {
+  text-align: center;
+  padding: 60px 20px;
+}
+.community-empty p {
+  font-size: 16px;
+  color: var(--mist);
+}
+.community-empty a {
+  color: var(--gold);
+  text-decoration: underline;
+}
+
+@media (max-width: 900px) { .community-grid { column-count: 2; } }
+@media (max-width: 500px) { .community-grid { column-count: 1; } }
+
+/* ---------- 非遗地域分布地图 ---------- */
+.heritage-map {
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: 80px var(--page-padding) 60px;
+}
+
+.heritage-map-heading {
+  text-align: center;
+  margin-bottom: 48px;
+}
+.heritage-map-heading p {
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+  margin: 0 0 8px;
+}
+.heritage-map-heading h2 {
+  font-family: "Source Han Serif", serif;
+  font-size: clamp(26px, 4vw, 40px);
+  margin: 0 0 12px;
+  color: var(--silk);
+}
+.heritage-map-heading > span {
+  display: block;
+  font-size: 15px;
+  color: var(--mist);
+}
+
+.heritage-map-body {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 32px;
+  align-items: start;
+}
+
+.heritage-map-svg-container {
+  background: var(--surface);
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  padding: 16px;
+  overflow: hidden;
+}
+.heritage-map-svg-container svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.heritage-map-svg-container .province-path {
+  fill: #2a2d33;
+  stroke: rgb(231 225 215 / 0.18);
+  stroke-width: 1;
+  cursor: pointer;
+  transition: fill 0.25s, stroke 0.25s;
+}
+.heritage-map-svg-container .province-path.has-heritage {
+  fill: rgb(196 77 66 / 0.35);
+  stroke: rgb(196 77 66 / 0.5);
+}
+.heritage-map-svg-container .province-path.has-stats {
+  fill: rgb(201 154 46 / 0.16);
+  stroke: rgb(201 154 46 / 0.4);
+}
+.heritage-map-svg-container .province-path.has-heritage.has-stats {
+  fill: rgb(196 77 66 / 0.4);
+  stroke: rgb(201 154 46 / 0.55);
+}
+.heritage-map-svg-container .province-path:hover {
+  fill: rgb(196 77 66 / 0.6);
+  stroke: rgb(196 77 66 / 0.8);
+}
+.heritage-map-svg-container .province-path.active {
+  fill: rgb(196 77 66 / 0.75);
+  stroke: var(--cinnabar-bright);
+  stroke-width: 2;
+}
+.heritage-map-svg-container .province-label {
+  fill: rgb(231 225 215 / 0.5);
+  font-size: 10px;
+  font-family: "LXGW WenKai", serif;
+  text-anchor: middle;
+  pointer-events: none;
+}
+.heritage-map-svg-container .province-label.has-heritage {
+  fill: var(--silk);
+  font-weight: 700;
+  font-size: 11px;
+}
+
+.heritage-map-detail {
+  background: var(--surface);
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  padding: 24px;
+  min-height: 200px;
+}
+.heritage-map-hint {
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+  padding: 40px 0;
+  margin: 0;
+}
+.heritage-map-detail-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.heritage-map-detail-list li {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.heritage-map-detail-list li:last-child {
+  border-bottom: none;
+}
+.heritage-map-detail-list a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--silk);
+  font-size: 15px;
+  transition: color 0.2s;
+}
+.heritage-map-detail-list a:hover {
+  color: var(--gold);
+}
+.heritage-map-detail-list .craft-emoji {
+  font-size: 20px;
+}
+.heritage-map-detail-title {
+  font-family: "Source Han Serif", serif;
+  font-size: 22px;
+  margin: 0 0 12px;
+  color: var(--silk);
+}
+.heritage-map-detail-count {
+  font-size: 13px;
+  color: var(--mist);
+  margin: 0 0 16px;
+}
+
+.heritage-map-nationwide {
+  margin-top: 28px;
+  padding: 16px 20px;
+  background: var(--surface);
+  border-radius: 10px;
+  border: 1px solid var(--line);
+}
+.heritage-map-nationwide .national-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.heritage-map-nationwide .national-stat {
+  background: rgb(201 154 46 / 0.07);
+  border: 1px solid rgb(201 154 46 / 0.22);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.heritage-map-nationwide .national-stat strong {
+  display: block;
+  font-family: "Source Han Serif", serif;
+  font-size: 30px;
+  line-height: 1.1;
+  color: var(--gold);
+  margin-bottom: 4px;
+}
+.heritage-map-nationwide .national-stat span {
+  font-size: 12px;
+  color: var(--mist);
+  line-height: 1.5;
+}
+.heritage-map-nationwide .national-stats-source {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+.heritage-map-nationwide .nationwide-crafts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  font-size: 13px;
+  color: var(--mist);
+}
+.heritage-map-nationwide .nationwide-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  background: rgb(201 154 46 / 0.12);
+  border: 1px solid rgb(201 154 46 / 0.2);
+  border-radius: 999px;
+  color: var(--gold);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  text-decoration: none;
+}
+.heritage-map-nationwide .nationwide-tag:hover {
+  background: rgb(201 154 46 / 0.25);
+  border-color: var(--gold);
+}
+
+@media (max-width: 900px) {
+  .heritage-map-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- 灵宠聊天浮窗 ---------- */
+.companion-chat {
+  position: fixed;
+  right: 20px;
+  bottom: 24px;
+  z-index: 30;
+  width: 360px;
+  max-height: 480px;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  background: var(--surface-raised);
+  border: 1px solid rgb(201 154 46 / 0.35);
+  border-radius: 16px;
+  box-shadow: 0 16px 48px rgb(0 0 0 / 0.5);
+  overflow: hidden;
+  animation: companion-chat-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.companion-chat[hidden] {
+  display: none;
+}
+
+@keyframes companion-chat-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.companion-chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(135deg, rgb(201 154 46 / 0.15), transparent);
+}
+.companion-chat-header span {
+  font-family: "Source Han Serif", serif;
+  font-size: 15px;
+  color: var(--silk);
+}
+.companion-chat-header button {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  font-size: 18px;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+}
+.companion-chat-header button:hover {
+  color: var(--silk);
+  background: rgb(231 225 215 / 0.1);
+}
+
+.companion-chat-messages {
+  overflow-y: auto;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 80px;
+  max-height: 300px;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(231 225 215 / 0.2) transparent;
+}
+
+.companion-chat-msg {
+  max-width: 88%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  animation: chat-msg-enter 0.25s ease;
+}
+@keyframes chat-msg-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.companion-chat-msg.user {
+  align-self: flex-end;
+  background: var(--cinnabar);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.companion-chat-msg.model {
+  align-self: flex-start;
+  background: rgb(231 225 215 / 0.08);
+  color: var(--silk);
+  border-bottom-left-radius: 4px;
+}
+.companion-chat-msg.thinking {
+  align-self: flex-start;
+  background: rgb(231 225 215 / 0.05);
+  color: var(--mist);
+  font-style: italic;
+}
+
+.companion-chat-input {
+  display: flex;
+  gap: 8px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--line);
+}
+.companion-chat-input input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--silk);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.companion-chat-input input:focus {
+  border-color: var(--gold);
+}
+.companion-chat-input input::placeholder {
+  color: var(--muted);
+}
+.companion-chat-input button {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 999px;
+  background: var(--gold);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+  white-space: nowrap;
+}
+.companion-chat-input button:hover {
+  background: #d9aa3e;
+  transform: translateY(-1px);
+}
+.companion-chat-input button:active {
+  transform: translateY(1px);
+}
+.companion-chat-input button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* 灵宠触发提示按钮 */
+.companion-trigger {
+  position: fixed;
+  right: 20px;
+  bottom: 24px;
+  z-index: 29;
+  width: 52px;
+  height: 52px;
+  border: 2px solid var(--gold);
+  border-radius: 50%;
+  background: var(--surface-raised);
+  color: var(--gold);
+  font-size: 24px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 4px 20px rgb(0 0 0 / 0.4);
+  transition: transform 0.2s, box-shadow 0.2s;
+  animation: companion-bounce 2s ease-in-out infinite;
+}
+.companion-trigger:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 28px rgb(201 154 46 / 0.3);
+}
+.companion-trigger:active {
+  transform: scale(0.95);
+}
+.companion-trigger[hidden] {
+  display: none;
+}
+
+@keyframes companion-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@media (max-width: 500px) {
+  .companion-chat {
+    right: 8px;
+    bottom: 12px;
+    width: calc(100vw - 16px);
+    max-height: 60vh;
+  }
+  .companion-trigger {
+    right: 12px;
+    bottom: 16px;
+    width: 46px;
+    height: 46px;
+  }
+}
+
+/* ---------- 功能展厅覆盖层（共创画廊 / 山河图志，由长廊功能门开启） ---------- */
+.feature-overlay {
+  width: min(1240px, 94vw);
+  max-height: 88vh;
+  margin: auto;
+  padding: clamp(22px, 3.5vw, 44px);
+  color: var(--silk);
+  background: #14161c;
+  border: 1px solid rgb(201 154 46 / 0.4);
+  border-radius: 16px;
+  box-shadow: 0 30px 90px rgb(0 0 0 / 0.6);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(231 225 215 / 0.2) transparent;
+}
+
+.feature-overlay::backdrop {
+  background: rgb(10 11 13 / 0.72);
+  backdrop-filter: blur(10px);
+}
+
+.feature-overlay-close {
+  position: sticky;
+  top: 0;
+  float: right;
+  z-index: 5;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgb(231 225 215 / 0.28);
+  border-radius: 999px;
+  background: rgb(20 22 28 / 0.72);
+  color: var(--silk);
+  font-size: 20px;
+  cursor: pointer;
+  transition: transform 150ms ease, border-color 150ms ease;
+}
+
+.feature-overlay-close:hover {
+  transform: translateY(-1px);
+  border-color: rgb(201 154 46 / 0.85);
+}
+
+/* 覆盖层内的标题区压住关闭按钮的浮动占位 */
+.feature-overlay .community-heading,
+.feature-overlay .heritage-map-heading {
+  margin-top: 8px;
+  margin-bottom: 36px;
+}
+
+/* 山河图志：省份详情与提示 */
+.heritage-map-tooltip {
+  position: absolute;
+  background: var(--surface-raised);
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--silk);
+  pointer-events: none;
+  z-index: 10;
+  white-space: nowrap;
+}
+
+.heritage-map-detail-count strong {
+  color: var(--gold);
+  font-size: 20px;
+  font-family: "Source Han Serif", serif;
+}
+
+.heritage-map-detail-famous {
+  font-size: 13px;
+  color: var(--mist);
+  line-height: 1.7;
+  margin: 0 0 14px;
+}
+
+.heritage-map-detail-note {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 10px;
+}
+
+.heritage-map-detail-subtitle {
+  font-size: 14px;
+  color: var(--gold);
+  margin: 16px 0 4px;
+}
+
+.heritage-map-detail-empty {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 14px 0 0;
+}
+
+/* 灵宠触发按钮：印章「灵」字徽 */
+.companion-trigger span {
+  font-family: "Source Han Serif", serif;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--gold);
+}
+
+@media (max-width: 700px) {
+  .feature-overlay {
+    width: 96vw;
+    max-height: 92vh;
+    padding: 18px 16px 28px;
   }
 }

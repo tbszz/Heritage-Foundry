@@ -6,6 +6,7 @@ import {
   clampCorridorZ,
   getCorridorDoorLayout,
   getCorridorRailBounds,
+  getFeatureDoorLayout,
   getGeneratorDoorLayout,
   getRoomStandLayout,
   getWallSegments
@@ -45,6 +46,22 @@ describe('sketch corridor scene', () => {
       CORRIDOR.firstDoorZ - 3 * CORRIDOR.doorSpacing - CORRIDOR.generatorGap
     );
     expect(door.chapter.title).toContain('AI');
+  });
+
+  it('places feature doors (gallery / map) after the generator door, alternating sides', () => {
+    const doors = getFeatureDoorLayout(4);
+    expect(doors).toHaveLength(2);
+    expect(doors.map((door) => door.featureId)).toEqual(['gallery', 'map']);
+    expect(doors.every((door) => door.kind === 'feature')).toBe(true);
+    const generator = getGeneratorDoorLayout(4);
+    // 共创画廊在共创门之后（右侧），山河图志再往后（左侧）
+    expect(doors[0].side).toBe('right');
+    expect(doors[1].side).toBe('left');
+    expect(doors[0].position.z).toBe(generator.position.z - CORRIDOR.doorSpacing);
+    expect(doors[1].position.z).toBe(generator.position.z - 2 * CORRIDOR.doorSpacing);
+    // 轨道边界要覆盖到最后一扇功能门之后
+    const bounds = getCorridorRailBounds(4);
+    expect(bounds.minZ).toBeLessThan(doors[1].position.z);
   });
 
   it('clamps the camera rail to the corridor bounds', () => {
@@ -132,7 +149,7 @@ describe('sketch corridor scene', () => {
     expect(indexHtml).not.toContain('WASD');
   });
 
-  it('themes the generator workspace with the same sketch language', () => {
-    expect(generatorHtml).toContain('generator-sketch.css');
+  it('themes the generator workspace with the same museum language', () => {
+    expect(generatorHtml).toContain('generator-museum.css');
   });
 });

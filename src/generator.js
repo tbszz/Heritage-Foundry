@@ -172,6 +172,15 @@ function bindEvents() {
   ipSelect?.addEventListener('change', onSelectionChange);
   carrierSelect?.addEventListener('change', onSelectionChange);
   styleSelect?.addEventListener('change', onSelectionChange);
+
+  const customPromptEl = document.getElementById('custom-prompt');
+  const customPromptHint = document.getElementById('custom-prompt-hint');
+  customPromptEl?.addEventListener('input', () => {
+    if (customPromptHint) {
+      const remaining = 500 - (customPromptEl.value?.length || 0);
+      customPromptHint.textContent = `剩余 ${remaining} 字`;
+    }
+  });
   generateBtn?.addEventListener('click', handleGenerateImage);
   generate3dBtn?.addEventListener('click', handleGenerate3D);
   exportProductGlbBtn?.addEventListener('click', handleExportProductGLB);
@@ -372,6 +381,7 @@ async function handleGenerateImage() {
 
   try {
     const imageConfig = getCarrierImageConfig(selection.carrierId);
+    const customPrompt = document.getElementById('custom-prompt')?.value?.trim() || '';
     currentPrompt = generatePrompt(selection.craftId, selection.ipId, selection.styleId, selection.carrierId);
     const result = await generateImage(currentPrompt, {
       aspect_ratio: imageConfig.aspectRatio,
@@ -379,6 +389,7 @@ async function handleGenerateImage() {
       craft_type: selection.craftId,
       ip: selection.ipId,
       carrier: selection.carrierId,
+      customPrompt,
       signal: imageAbortController.signal
     });
 

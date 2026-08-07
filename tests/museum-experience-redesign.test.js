@@ -72,7 +72,13 @@ describe('cinematic digital museum redesign', () => {
 
   it('uses a dedicated regular serif face for the hero and manifesto copy', () => {
     expect(museumCss).toMatch(/font-family:\s*"Source Han Serif Regular";[\s\S]*?SourceHanSerifSC-Regular\.woff2[\s\S]*?font-weight:\s*400;/);
-    expect(museumCss).toMatch(/\.museum-stage h1\s*\{[\s\S]*?font-family:\s*"Source Han Serif Regular", "Songti SC", serif;[\s\S]*?font-weight:\s*400;/);
     expect(museumCss).toMatch(/\.museum-manifesto blockquote p\s*\{[\s\S]*?font-family:\s*"Source Han Serif Regular", serif;[\s\S]*?font-weight:\s*400;/);
+  });
+
+  it('lets the 3D corridor own the first screen, keeping only a screen-reader title', () => {
+    // 左侧营销文案块已移除：首屏由 3D 长廊本身呈现，标题仅供无障碍朗读
+    expect(indexHtml).not.toContain('museum-stage-copy');
+    expect(indexHtml).toContain('id="museum-stage-title" class="sr-only"');
+    expect(indexHtml).toContain('aria-labelledby="museum-stage-title"');
   });
 });

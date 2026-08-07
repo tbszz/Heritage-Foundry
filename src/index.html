@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#0a0b0d">
   <meta
     name="description"
-    content="遗见是一座可探索、可共创的数字非遗博物馆。走进主题展厅，发现传统技艺，并用 AI 继续创造。"
+    content="非遗造物局是一座可探索、可共创的数字非遗博物馆。走进主题展厅，发现传统技艺，并用 AI 继续创造。"
   >
-  <title>遗见 | 数字非遗博物馆</title>
+  <title>非遗造物局 | 数字非遗博物馆</title>
   <link rel="preload" href="/fonts/SourceHanSerifSC-Heavy.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/LXGWWenKai-Regular.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/assets/generated/museum-cinematic.webp" as="image" type="image/webp" fetchpriority="high">
@@ -19,18 +19,18 @@
   <a class="skip-link" href="#museum-content">跳到主要内容</a>
 
   <header class="museum-nav" aria-label="主导航">
-    <a class="museum-brand" href="index.html" aria-label="遗见首页">
+    <a class="museum-brand" href="index.html" aria-label="非遗造物局首页">
       <img src="/assets/generated/seal-mark-nav.webp" alt="" width="40" height="40">
       <span>
-        <strong>遗见</strong>
+        <strong>非遗造物局</strong>
         <small>Heritage Foundry</small>
       </span>
     </a>
 
     <nav class="museum-nav-links" aria-label="站点导航">
-      <a href="#museum-stage">主题展厅</a>
-      <a href="crafts.html">技艺图鉴</a>
-      <a href="generator.html">AI 共创</a>
+      <a href="index.html">首页</a>
+      <a href="crafts.html">非遗技艺</a>
+      <a href="generator.html">创意生成</a>
       <a href="ar.html">AR 体验</a>
     </nav>
 
@@ -49,33 +49,22 @@
       <div id="sketch-corridor" class="sketch-corridor" aria-hidden="true"></div>
       <div id="sketch-corridor-loader" class="sketch-corridor-loader" role="status" aria-live="polite">
         <span class="sketch-corridor-loader-mark" aria-hidden="true"></span>
-        <p>正在绘制手绘长廊…</p>
+        <p>正在点亮展厅…</p>
       </div>
 
-      <div class="museum-stage-copy">
-        <p class="museum-stage-kicker">一座仍在生长的数字博物馆</p>
-        <h1 id="museum-stage-title">
-          传统不是被保存，
-          <span>而是被再次看见。</span>
-        </h1>
-        <p class="museum-stage-intro">
-          走进四座主题展厅，触摸十八种非遗技艺，并用 AI 续写它们的当代表达。
-        </p>
-        <div class="museum-stage-actions">
-          <a class="primary-action" href="generator.html">开始 AI 共创</a>
-          <a class="secondary-action" href="crafts.html">浏览技艺图鉴</a>
-        </div>
-      </div>
+      <h1 id="museum-stage-title" class="sr-only">非遗造物局 · 数字非遗博物馆</h1>
 
       <div class="museum-stage-index" aria-label="馆藏概览">
-        <span><strong>18</strong> 项数字馆藏</span>
-        <span><strong>4</strong> 座主题展厅</span>
-        <span><strong>1</strong> 个共创工坊</span>
+        <span><strong id="stat-craft-count">18</strong> 项非遗技艺</span>
+        <span><strong id="stat-model-count">15</strong> 3D 馆藏</span>
+        <span><strong id="stat-creation-count">—</strong> 共创作品</span>
+        <span><strong id="stat-3d-count">—</strong> 3D 模型</span>
       </div>
 
       <p class="sketch-corridor-hud" id="sketch-corridor-hud" aria-hidden="true">滚轮逛长廊 · 点击木门进入展厅</p>
       <button id="corridor-back" class="corridor-back" type="button" hidden>← 返回长廊</button>
     </section>
+
   </main>
 
   <dialog id="artifact-dialog" class="artifact-dialog" aria-labelledby="artifact-name">
@@ -101,5 +90,52 @@
   </dialog>
 
   <script type="module" src="home.js"></script>
+
+  <!-- 功能展厅覆盖层：共创画廊（长廊「共创画廊」门开启） -->
+  <dialog id="gallery-overlay" class="feature-overlay" aria-labelledby="community-title">
+    <button class="feature-overlay-close" type="button" data-close-overlay aria-label="关闭共创画廊">×</button>
+    <div class="community-heading">
+      <p>共创画廊</p>
+      <h2 id="community-title">人人都是非遗共创者。</h2>
+      <span>看看大家用 AI 创作的非遗文创作品，为你喜欢的点赞。</span>
+      <div class="community-tabs" role="tablist">
+        <button class="community-tab active" data-sort="latest" role="tab">最新</button>
+        <button class="community-tab" data-sort="likes" role="tab">最热</button>
+      </div>
+    </div>
+    <div id="community-grid" class="community-grid" aria-live="polite"></div>
+    <div id="community-empty" class="community-empty" hidden>
+      <p>还没有共创作品，去 <a href="generator.html">AI 共创工坊</a> 创建第一件吧！</p>
+    </div>
+  </dialog>
+
+  <!-- 功能展厅覆盖层：山河图志（长廊「山河图志」门开启） -->
+  <dialog id="map-overlay" class="feature-overlay" aria-labelledby="heritage-map-title">
+    <button class="feature-overlay-close" type="button" data-close-overlay aria-label="关闭山河图志">×</button>
+    <div class="heritage-map-heading">
+      <p>山河图志</p>
+      <h2 id="heritage-map-title">1557 项国家级非遗，散落山河之间。</h2>
+      <span>点击省份，查看该地区的国家级非遗代表与本馆馆藏。</span>
+    </div>
+    <div id="heritage-map-nationwide" class="heritage-map-nationwide"></div>
+    <div class="heritage-map-body">
+      <div id="heritage-map-svg" class="heritage-map-svg-container"></div>
+      <div id="heritage-map-detail" class="heritage-map-detail">
+        <p class="heritage-map-hint">点击地图上的省份，查看该地区的非遗技艺</p>
+      </div>
+    </div>
+  </dialog>
+
+  <div id="companion-chat" class="companion-chat" hidden>
+    <div class="companion-chat-header">
+      <span>小天犬 · 非遗导览员</span>
+      <button id="companion-chat-close" type="button" aria-label="关闭对话">×</button>
+    </div>
+    <div id="companion-chat-messages" class="companion-chat-messages"></div>
+    <div class="companion-chat-input">
+      <input id="companion-chat-input" type="text" placeholder="问问小天犬关于非遗的问题…" maxlength="200">
+      <button id="companion-chat-send" type="button">发送</button>
+    </div>
+  </div>
 </body>
 </html>

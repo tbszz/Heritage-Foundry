@@ -1,0 +1,186 @@
+/* 非遗造物局 · 暗夜展厅主题（generator 页面覆盖层）
+   基座 style.css 已完成暗色化，本层只保留 generator 专属组件的展厅化样式：
+   深墨底、绢白字、朱砂唯一强调色、材质金仅作装饰线。 */
+
+body.generator-shell {
+  background:
+    radial-gradient(circle at 85% 12%, rgb(196 77 66 / 0.07), transparent 30%),
+    var(--paper);
+  color: var(--ink);
+}
+
+/* 流程签：默认绢白描边，active 朱砂底绢白字 */
+body.generator-shell .workflow-step {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--muted);
+  box-shadow: none;
+}
+
+body.generator-shell .workflow-step.active {
+  border-color: transparent;
+  background: var(--accent);
+  color: var(--ink);
+  box-shadow: 0 0 20px rgba(196, 77, 66, 0.28);
+}
+
+/* 卡片：深面板 + 绢白分隔线 + 12px 圆角 */
+body.generator-shell .control-panel,
+body.generator-shell .preview-section,
+body.generator-shell .pattern-section,
+body.generator-shell .product-card,
+body.generator-shell .material-list,
+body.generator-shell .recent-section,
+body.generator-shell .three-d-workflow {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  color: var(--ink);
+}
+
+body.generator-shell .console-heading span,
+body.generator-shell .section-heading h3,
+body.generator-shell .section-toolbar h3,
+body.generator-shell .product-card h4,
+body.generator-shell .material-list h3,
+body.generator-shell .product-section h3,
+body.generator-shell .three-d-copy strong {
+  color: var(--ink);
+  font-family: "Source Han Serif Local", serif;
+}
+
+body.generator-shell .console-heading small,
+body.generator-shell .control-group label,
+body.generator-shell .product-card p,
+body.generator-shell .story-card p,
+body.generator-shell .three-d-copy p {
+  color: var(--muted);
+}
+
+body.generator-shell .generator-kicker,
+body.generator-shell .section-eyebrow,
+body.generator-shell .three-d-kicker {
+  color: var(--muted);
+  letter-spacing: 0.14em;
+}
+
+/* 表单控件：深底 + 绢白描边，focus 朱砂 */
+body.generator-shell select,
+body.generator-shell input,
+body.generator-shell .tool-select {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  box-shadow: none;
+}
+
+body.generator-shell select:focus,
+body.generator-shell input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* 按钮：主按钮朱砂，次要按钮透明 + 绢白边 */
+body.generator-shell .btn {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  box-shadow: none;
+  transition: transform 150ms ease, border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+}
+
+body.generator-shell .btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+}
+
+body.generator-shell .btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+body.generator-shell .btn-primary {
+  border-color: transparent;
+  background: var(--accent);
+  color: var(--ink);
+}
+
+body.generator-shell .btn-primary:hover:not(:disabled) {
+  background: var(--accent-deep);
+}
+
+body.generator-shell .btn:disabled {
+  opacity: 0.45;
+}
+
+/* 展台与预览留白 */
+body.generator-shell .three-container,
+body.generator-shell .image-preview,
+body.generator-shell .pattern-container {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+body.generator-shell .preview-placeholder p,
+body.generator-shell .pattern-placeholder p {
+  color: var(--muted);
+}
+
+body.generator-shell .stage-status {
+  color: var(--muted);
+  border-color: var(--line);
+}
+
+/* 材料清单 / 统计 / 故事卡 */
+body.generator-shell .material-item {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+}
+
+body.generator-shell .stat-item {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+body.generator-shell .stat-item strong {
+  color: var(--ink);
+  font-family: "Source Han Serif Local", serif;
+}
+
+body.generator-shell .stat-item span {
+  color: var(--muted);
+}
+
+body.generator-shell .story-card {
+  border: 1px dashed var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  background: rgba(196, 77, 66, 0.06);
+}
+
+body.generator-shell .story-card h5 {
+  color: var(--ink);
+}
+
+/* 最近作品卡片 */
+body.generator-shell .recent-creations .creation-card,
+body.generator-shell .creation-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: none;
+}
+
+/* 页脚 */
+body.generator-shell .footer {
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+}

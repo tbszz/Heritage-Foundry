@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>创意生成 - 非遗造物局</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="generator-sketch.css">
+  <link rel="stylesheet" href="generator-museum.css">
 </head>
 <body class="generator-shell">
   <div class="app">
@@ -88,6 +88,17 @@
               <option value="minimal">极简日常 - 简约线条，低饱和度配色</option>
               <option value="festive">节日礼物 - 喜庆配色，节日氛围</option>
             </select>
+          </div>
+
+          <div class="control-group custom-prompt-group">
+            <label for="custom-prompt">自定义描述 <small>（可选）</small></label>
+            <textarea
+              id="custom-prompt"
+              rows="3"
+              maxlength="500"
+              placeholder="输入你的创意描述，例如：角色穿着汉服站在元宵节灯会中、背景加上敦煌飞天纹样、整体色调偏暖金色……"
+            ></textarea>
+            <small class="custom-prompt-hint" id="custom-prompt-hint">剩余 500 字</small>
           </div>
 
           <div class="button-group">

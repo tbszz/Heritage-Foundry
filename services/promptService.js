@@ -183,7 +183,7 @@ function buildEnhancedPrompt(basePrompt, style, craftType, context = {}) {
     craftType,
     ip: context.ip,
     carrier: context.carrier,
-    customPrompt: context.customPrompt
+    customPrompt: context.customPrompt || ''
   });
 }
 

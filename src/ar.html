@@ -60,9 +60,9 @@
       padding: 12px 26px;
       font-size: 15px;
       font-weight: 600;
-      color: #fffaf0;
-      background: linear-gradient(135deg, var(--accent), #a52a20);
-      box-shadow: 0 10px 26px rgba(211, 56, 47, 0.4);
+      color: var(--ink);
+      background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+      box-shadow: 0 10px 26px rgba(196, 77, 66, 0.4);
       cursor: pointer;
     }
     .ar-story-card {
@@ -100,9 +100,9 @@
     }
     .ar-craft-chip.active {
       border-color: var(--accent);
-      color: #fffaf0;
+      color: var(--ink);
       background: var(--accent);
-      box-shadow: 0 6px 16px rgba(211, 56, 47, 0.35);
+      box-shadow: 0 6px 16px rgba(196, 77, 66, 0.35);
     }
     .ar-tips {
       font-size: 12.5px;
@@ -117,12 +117,7 @@
   <div class="app">
     <header class="header">
       <div class="logo">
-        <div class="logo-icon">
-          <span></span><span></span><span></span><span></span>
-          <span></span><span></span><span></span><span></span>
-          <span></span><span></span><span></span><span></span>
-          <span></span><span></span><span></span><span></span>
-        </div>
+        <img class="logo-seal" src="assets/generated/seal-mark-nav.webp" alt="" aria-hidden="true">
         <div>
           <h1>非遗造物局</h1>
           <p>AI 非遗文创与手作方案生成平台</p>
@@ -153,14 +148,14 @@
           exposure="1.05"
           loading="eager"
           alt="非遗展品三维模型">
-          <button slot="ar-button" class="ar-enter-btn" type="button">📱 把它放进你的房间</button>
+          <button slot="ar-button" class="ar-enter-btn" type="button">把它放进你的房间</button>
         </model-viewer>
       </div>
 
       <div id="ar-craft-strip" class="ar-craft-strip" role="tablist" aria-label="选择非遗技艺"></div>
 
       <div class="ar-story-card">
-        <span id="ar-story-emoji" class="ar-story-emoji">🏺</span>
+        <span id="ar-story-emoji" class="ar-story-emoji"></span>
         <div>
           <h2 id="ar-craft-name">加载中…</h2>
           <p id="ar-craft-category" class="ar-story-category"></p>
@@ -169,7 +164,7 @@
       </div>
 
       <p class="ar-tips">
-        📖 用法：手机打开本页，点击「把它放进你的房间」，对准桌面或地面即可以真实尺寸摆放文物，可环绕观看、放大细节。
+        用法：手机打开本页，点击「把它放进你的房间」，对准桌面或地面即可以真实尺寸摆放文物，可环绕观看、放大细节。
         安卓（含鸿蒙）用 Chrome / 系统浏览器体验最佳；iOS 的 AR Quick Look 需 USDZ 模型（规划中），当前提供 3D 环绕预览。
         电脑端可拖拽旋转、滚轮缩放。
       </p>
