@@ -57,6 +57,12 @@ export function generatePrompt(craft, ip, style, carrier = 'keychain') {
   ].join('，');
 }
 
+export function buildSavedPrompt(basePrompt, customPrompt = '') {
+  const trimmedCustomPrompt = typeof customPrompt === 'string' ? customPrompt.trim() : '';
+  if (!trimmedCustomPrompt) return basePrompt;
+  return `${basePrompt}\n用户补充描述：${trimmedCustomPrompt}`;
+}
+
 async function fetchJsonWithTimeout(url, options = {}, timeoutMs = 15000) {
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);

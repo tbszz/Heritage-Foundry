@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { Easing, Tween, update as updateTweens } from '@tweenjs/tween.js/dist/tween.esm.js';
 import { createGLTFLoader } from '../utils/modelLoader.js';
+import { loadManagedMuseumTexture } from '../utils/museumTexture.js';
 import { Companion } from './Companion.js';
 
 const HALL_INK = 0x0a0b0d;
@@ -947,15 +948,15 @@ export class SketchCorridorScene {
   // ---------- Canvas 纹理 ----------
 
   loadMuseumTexture(name, repeat = [1, 1]) {
-    const texture = textureLoader.load(`${TEXTURE_BASE}${name}.webp`, (loaded) => {
-      this.renderer?.initTexture(loaded);
+    return loadManagedMuseumTexture({
+      THREE,
+      loader: textureLoader,
+      renderer: this.renderer,
+      url: `${TEXTURE_BASE}${name}.webp`,
+      name,
+      repeat,
+      anisotropy: 8
     });
-    texture.colorSpace = THREE.SRGBColorSpace;
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(repeat[0], repeat[1]);
-    texture.anisotropy = 8;
-    return texture;
   }
 
   // 墙面/顶面材质：贴图同时挂自发光通道，暗部的浮雕纹理在全场景可读（不再是一团黑）

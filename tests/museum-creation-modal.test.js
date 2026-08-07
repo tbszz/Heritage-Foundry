@@ -11,7 +11,7 @@ describe('museum artifact dialog', () => {
     expect(museumHtml).toContain('aria-labelledby="artifact-name"');
     expect(museumHtml).toContain('data-close-dialog');
     expect(homeJs).toContain('dialog.showModal()');
-    expect(homeJs).toContain("if (event.target === dialog) dialog.close()");
+    expect(homeJs).toContain("if (event.target === dialog) closeModalElement(dialog)");
     expect(homeJs).toContain("dialog.addEventListener('close'");
   });
 

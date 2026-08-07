@@ -2,6 +2,7 @@ import { ThreeScene } from './components/ThreeScene.js';
 import {
   generateImage,
   generatePrompt,
+  buildSavedPrompt,
   create3DGenerationTask,
   get3DCapabilities,
   get3DGenerationTask,
@@ -382,8 +383,9 @@ async function handleGenerateImage() {
   try {
     const imageConfig = getCarrierImageConfig(selection.carrierId);
     const customPrompt = document.getElementById('custom-prompt')?.value?.trim() || '';
-    currentPrompt = generatePrompt(selection.craftId, selection.ipId, selection.styleId, selection.carrierId);
-    const result = await generateImage(currentPrompt, {
+    const basePrompt = generatePrompt(selection.craftId, selection.ipId, selection.styleId, selection.carrierId);
+    currentPrompt = buildSavedPrompt(basePrompt, customPrompt);
+    const result = await generateImage(basePrompt, {
       aspect_ratio: imageConfig.aspectRatio,
       style: selection.styleId,
       craft_type: selection.craftId,

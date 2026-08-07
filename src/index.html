@@ -54,11 +54,18 @@
 
       <h1 id="museum-stage-title" class="sr-only">非遗造物局 · 数字非遗博物馆</h1>
 
-      <div class="museum-stage-index" aria-label="馆藏概览">
-        <span><strong id="stat-craft-count">18</strong> 项非遗技艺</span>
-        <span><strong id="stat-model-count">15</strong> 3D 馆藏</span>
-        <span><strong id="stat-creation-count">—</strong> 共创作品</span>
-        <span><strong id="stat-3d-count">—</strong> 3D 模型</span>
+      <div class="museum-stage-index stats-panel" aria-label="馆藏数据">
+        <div class="stats-panel-heading">
+          <span>馆藏数据</span>
+          <small>实时更新</small>
+        </div>
+        <div class="stats-metrics" aria-label="馆藏概览">
+          <span class="stats-metric"><strong id="stat-craft-count">18</strong> 项非遗技艺</span>
+          <span class="stats-metric"><strong id="stat-model-count">15</strong> 3D 馆藏</span>
+          <span class="stats-metric"><strong id="stat-creation-count">—</strong> 共创作品</span>
+          <span class="stats-metric"><strong id="stat-3d-count">—</strong> 3D 模型</span>
+        </div>
+        <div id="stats-distribution" class="stats-distribution" hidden></div>
       </div>
 
       <p class="sketch-corridor-hud" id="sketch-corridor-hud" aria-hidden="true">滚轮逛长廊 · 点击木门进入展厅</p>

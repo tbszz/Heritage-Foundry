@@ -131,6 +131,27 @@ export function getMuseumExperienceMode({
   return 'cinematic';
 }
 
+export function openModalElement(dialog) {
+  if (!dialog || dialog.open) return;
+  if (typeof dialog.showModal === 'function') {
+    dialog.showModal();
+    return;
+  }
+  dialog.setAttribute?.('open', '');
+  dialog.open = true;
+}
+
+export function closeModalElement(dialog) {
+  if (!dialog) return;
+  if (typeof dialog.close === 'function') {
+    dialog.close();
+    return;
+  }
+  dialog.removeAttribute?.('open');
+  dialog.open = false;
+  dialog.dispatchEvent?.(new Event('close'));
+}
+
 export function resolveHomepageSelection(current, requested) {
   return {
     nextCraft: requested || current,
@@ -194,10 +215,50 @@ async function loadStats() {
     const model3dEl = document.getElementById('stat-3d-count');
     if (creationEl) animateNumber(creationEl, stats.totalCreations || 0);
     if (model3dEl) animateNumber(model3dEl, stats.totalWithImage || 0);
+    renderStatsDistribution(stats.craftDistribution || {});
   } catch {
     // 降级：Supabase 不可达时保持显示 —
     console.warn('Stats loading skipped, Supabase unavailable');
+    renderStatsDistribution({});
   }
+}
+
+export function getCraftDistributionRows(distribution = {}, limit = 4) {
+  const rows = Object.entries(distribution || {})
+    .map(([name, count]) => ({ name, count: Number(count) || 0 }))
+    .filter((row) => row.name && row.count > 0)
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'zh-Hans'))
+    .slice(0, limit);
+  const max = Math.max(...rows.map((row) => row.count), 0);
+  return rows.map((row) => ({
+    ...row,
+    percent: max > 0 ? Math.round((row.count / max) * 100) : 0
+  }));
+}
+
+export function getStatsDistributionMarkup(distribution = {}) {
+  const rows = getCraftDistributionRows(distribution);
+  if (!rows.length) return '';
+
+  return `
+    <p class="stats-distribution-title">共创技艺热度</p>
+    <div class="stats-distribution-list">
+      ${rows.map((row) => `
+        <div class="stats-distribution-row" aria-label="${escapeHtml(row.name)} ${row.count} 件作品">
+          <span>${escapeHtml(row.name)}</span>
+          <i aria-hidden="true"><b style="--bar-width: ${row.percent}%"></b></i>
+          <strong>${row.count}</strong>
+        </div>
+      `).join('')}
+    </div>`;
+}
+
+function renderStatsDistribution(distribution) {
+  const panel = document.getElementById('stats-distribution');
+  if (!panel) return;
+  const markup = getStatsDistributionMarkup(distribution);
+  panel.hidden = !markup;
+  panel.innerHTML = markup;
 }
 
 function getVisitorId() {
@@ -208,6 +269,49 @@ function getVisitorId() {
     try { window.localStorage?.setItem(key, id); } catch { /* noop */ }
   }
   return id;
+}
+
+export function getCommunityCardFallbackMarkup(title = '') {
+  const label = title ? `${title}暂无图片` : '非遗作品暂无图片';
+  return `
+    <div class="community-card-fallback" role="img" aria-label="${escapeHtml(label)}">
+      <span aria-hidden="true">造</span>
+      <small>暂无图片</small>
+    </div>`;
+}
+
+export function getCommunityCardImageMarkup(creation = {}) {
+  const title = creation.title || '非遗作品';
+  const imageUrl = typeof creation.image_url === 'string' ? creation.image_url.trim() : '';
+  const fallback = getCommunityCardFallbackMarkup(title);
+  if (!imageUrl) {
+    return `<div class="community-card-image">${fallback}</div>`;
+  }
+
+  return `
+    <div class="community-card-image">
+      <img
+        src="${escapeHtml(imageUrl)}"
+        alt="${escapeHtml(title)}"
+        loading="lazy"
+        data-fallback-html="${escapeHtml(fallback)}"
+      >
+    </div>`;
+}
+
+export function getNextLikeState({ previousCount = 0, wasLiked = false, result = null } = {}) {
+  const count = Number(previousCount) || 0;
+  if (wasLiked) {
+    return { liked: true, count, shouldStore: true };
+  }
+  if (result?.liked) {
+    const nextCount = Number.isFinite(Number(result.likes)) ? Number(result.likes) : count + 1;
+    return { liked: true, count: nextCount, shouldStore: true };
+  }
+  if (result?.alreadyLiked) {
+    return { liked: true, count, shouldStore: true };
+  }
+  return { liked: false, count, shouldStore: false };
 }
 
 async function loadCommunityGallery(sort = 'latest') {
@@ -237,9 +341,7 @@ async function loadCommunityGallery(sort = 'latest') {
       card.className = 'community-card';
       card.dataset.id = c.id;
       card.innerHTML = `
-        <div class="community-card-image">
-          <img src="${escapeHtml(c.image_url || '')}" alt="${escapeHtml(c.title || '')}" loading="lazy" onerror="this.parentElement.innerHTML='<div style=\\'padding:40% 0;text-align:center;color:var(--muted)\\'>暂无图片</div>'">
-        </div>
+        ${getCommunityCardImageMarkup(c)}
         <div class="community-card-body">
           <strong>${escapeHtml(c.title || '未命名作品')}</strong>
           <div class="community-card-tags">
@@ -254,6 +356,7 @@ async function loadCommunityGallery(sort = 'latest') {
       grid.appendChild(card);
     });
 
+    bindCommunityCardImages(grid);
     bindLikeButtons(visitorId);
   } catch {
     empty.hidden = false;
@@ -261,27 +364,34 @@ async function loadCommunityGallery(sort = 'latest') {
   }
 }
 
+function bindCommunityCardImages(root) {
+  root.querySelectorAll('.community-card-image img[data-fallback-html]:not([data-error-bound])').forEach((img) => {
+    img.dataset.errorBound = '1';
+    img.addEventListener('error', () => {
+      const wrapper = img.closest('.community-card-image');
+      if (wrapper) wrapper.innerHTML = img.dataset.fallbackHtml || getCommunityCardFallbackMarkup();
+    }, { once: true });
+  });
+}
+
 function bindLikeButtons(visitorId) {
   document.querySelectorAll('.like-btn:not([data-bound])').forEach(btn => {
     btn.dataset.bound = '1';
     btn.addEventListener('click', async () => {
       const id = btn.dataset.id;
-      if (btn.classList.contains('liked')) return;
+      const wasLiked = btn.classList.contains('liked');
+      if (wasLiked) return;
       btn.classList.add('liked');
       const countEl = btn.querySelector('.like-count');
       const prev = parseInt(countEl.textContent, 10) || 0;
       countEl.textContent = prev + 1;
 
       const result = await likeCreation(id, visitorId);
-      if (!result || !result.liked) {
-        countEl.textContent = prev;
-        if (result?.alreadyLiked) {
-          btn.classList.add('liked');
-        } else {
-          btn.classList.remove('liked');
-        }
-      }
+      const next = getNextLikeState({ previousCount: prev, wasLiked, result });
+      btn.classList.toggle('liked', next.liked);
+      countEl.textContent = next.count;
 
+      if (!next.shouldStore) return;
       try {
         const stored = window.localStorage?.getItem('hf-liked');
         const liked = stored ? JSON.parse(stored) : [];
@@ -643,16 +753,16 @@ function openFeatureOverlay(featureId) {
   openOverlayId = featureId;
   // 覆盖层打开期间暂停走廊渲染，避免 WebGL 循环在弹层下空转
   sketchCorridorScene?.setRenderPaused(true);
-  if (!dialog.open) dialog.showModal();
+  openModalElement(dialog);
   dialog.querySelector('[data-close-overlay]')?.focus({ preventScroll: true });
 }
 
 function bindFeatureOverlays() {
   document.querySelectorAll('.feature-overlay').forEach((dialog) => {
-    dialog.querySelector('[data-close-overlay]')?.addEventListener('click', () => dialog.close());
+    dialog.querySelector('[data-close-overlay]')?.addEventListener('click', () => closeModalElement(dialog));
     dialog.addEventListener('click', (event) => {
       // 点击内容区以外的背板关闭
-      if (event.target === dialog) dialog.close();
+      if (event.target === dialog) closeModalElement(dialog);
     });
     dialog.addEventListener('close', () => {
       const featureId = openOverlayId;
@@ -699,9 +809,9 @@ function bindDialog() {
   const dialog = document.getElementById('artifact-dialog');
   if (!dialog) return;
 
-  dialog.querySelector('[data-close-dialog]')?.addEventListener('click', () => dialog.close());
+  dialog.querySelector('[data-close-dialog]')?.addEventListener('click', () => closeModalElement(dialog));
   dialog.addEventListener('click', (event) => {
-    if (event.target === dialog) dialog.close();
+    if (event.target === dialog) closeModalElement(dialog);
   });
   dialog.addEventListener('close', () => {
     selectedCraft = null;
@@ -748,7 +858,7 @@ function openArtifact(craft, trigger = document.activeElement) {
   if (craftLink) craftLink.href = links.craftHref;
   if (createLink) createLink.href = links.generatorHref;
 
-  if (!dialog.open) dialog.showModal();
+  openModalElement(dialog);
   dialog.querySelector('[data-close-dialog]')?.focus({ preventScroll: true });
 }
 

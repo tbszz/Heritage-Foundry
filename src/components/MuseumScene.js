@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createGLTFLoader } from '../utils/modelLoader.js';
+import { loadManagedMuseumTexture } from '../utils/museumTexture.js';
 import { Easing, Tween, update as updateTweens } from '@tweenjs/tween.js/dist/tween.esm.js';
 
 const INK = 0x05070c;
@@ -575,15 +576,15 @@ export class MuseumScene {
 
   // 加载 AI 生成的无缝贴图;就绪后立刻上传 GPU(initTexture),避免走进视野时才解码卡顿
   loadSceneTexture(name, { repeat = [1, 1], anisotropy = 8 } = {}) {
-    const texture = textureLoader.load(`${TEXTURE_BASE}${name}.webp`, (loaded) => {
-      this.renderer?.initTexture(loaded);
+    return loadManagedMuseumTexture({
+      THREE,
+      loader: textureLoader,
+      renderer: this.renderer,
+      url: `${TEXTURE_BASE}${name}.webp`,
+      name,
+      repeat,
+      anisotropy
     });
-    texture.colorSpace = THREE.SRGBColorSpace;
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(repeat[0], repeat[1]);
-    texture.anisotropy = anisotropy;
-    return texture;
   }
 
   registerTextTexture(canvas, draw) {

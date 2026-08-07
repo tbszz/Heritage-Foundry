@@ -19,6 +19,28 @@ function sendSupabaseResult(res, result, successStatus = 200) {
   });
 }
 
+function normalizePathId(value) {
+  if (!value) return '';
+  return String(value).replace(/^\/+|\/+$/g, '');
+}
+
+function parseLikePath(value) {
+  const normalized = normalizePathId(value);
+  const match = /^(.+)\/like$/.exec(normalized);
+  return match?.[1] || null;
+}
+
+function sendInvalidVisitorId(res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  return res.status(400).json({
+    success: false,
+    error: {
+      code: 'INVALID_BODY',
+      message: '缺少 visitorId'
+    }
+  });
+}
+
 module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -28,15 +50,19 @@ module.exports = async (req, res) => {
   }
 
   if (req.method === 'GET') {
-    const creationId = req.query.id;
+    const creationId = normalizePathId(req.query.id);
 
     try {
-      if (creationId) {
+      if (creationId === 'stats') {
+        const result = await supabaseService.getCreationStats();
+        return sendSupabaseResult(res, result);
+      } else if (creationId) {
         const result = await supabaseService.getCreation(creationId);
         return sendSupabaseResult(res, result);
       } else {
         const result = await supabaseService.listCreations({
-          limit: req.query.limit
+          limit: req.query.limit,
+          sort: req.query.sort
         });
         return sendSupabaseResult(res, result);
       }
@@ -51,6 +77,17 @@ module.exports = async (req, res) => {
 
   if (req.method === 'POST') {
     try {
+      const likeCreationId = parseLikePath(req.query.id);
+      if (likeCreationId) {
+        const visitorId = req.body?.visitorId || req.body?.visitor_id;
+        if (!visitorId || typeof visitorId !== 'string' || !visitorId.trim()) {
+          return sendInvalidVisitorId(res);
+        }
+
+        const result = await supabaseService.likeCreation(likeCreationId, visitorId.trim());
+        return sendSupabaseResult(res, result);
+      }
+
       if (!req.body || typeof req.body !== 'object') {
         res.setHeader('Access-Control-Allow-Origin', '*');
         return res.status(400).json({

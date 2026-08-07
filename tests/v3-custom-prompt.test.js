@@ -3,6 +3,7 @@ import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 
 import { buildCreativePrompt, buildEnhancedPrompt } from '../services/promptService.js';
+import { buildSavedPrompt } from '../src/utils/apiService.js';
 
 describe('F2 buildCreativePrompt customPrompt', () => {
   const base = {
@@ -38,6 +39,19 @@ describe('F2 buildCreativePrompt customPrompt', () => {
       customPrompt: '背景加敦煌飞天纹样'
     });
     expect(prompt).toContain('用户补充描述：背景加敦煌飞天纹样');
+  });
+});
+
+describe('F2 saved prompt persistence', () => {
+  it('stores the user custom description together with the generated base prompt', () => {
+    const saved = buildSavedPrompt('基础四因子 prompt', '  背景加敦煌飞天纹样  ');
+
+    expect(saved).toBe('基础四因子 prompt\n用户补充描述：背景加敦煌飞天纹样');
+  });
+
+  it('keeps the saved prompt unchanged when customPrompt is blank', () => {
+    expect(buildSavedPrompt('基础四因子 prompt', '')).toBe('基础四因子 prompt');
+    expect(buildSavedPrompt('基础四因子 prompt', '   ')).toBe('基础四因子 prompt');
   });
 });
 

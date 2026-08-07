@@ -3093,19 +3093,39 @@ body.generator-shell .preview-container { grid-template-columns: minmax(0, 1.5fr
 body.generator-shell .three-container {
   height: 560px;
   background:
-    radial-gradient(ellipse at 50% 72%, rgba(201, 154, 46, 0.2), transparent 44%),
-    radial-gradient(circle at 48% 38%, rgba(255, 239, 207, 0.075), transparent 42%),
-    linear-gradient(180deg, rgba(18, 16, 14, 0.84), rgba(4, 5, 6, 0.96));
+    radial-gradient(ellipse at 50% 72%, rgba(201, 154, 46, 0.24), transparent 44%),
+    radial-gradient(circle at 48% 38%, rgba(255, 239, 207, 0.11), transparent 42%),
+    linear-gradient(180deg, rgba(48, 43, 35, 0.64), rgba(23, 25, 29, 0.9)),
+    url("/assets/textures/floor-stone.webp");
+  background-size: auto, auto, auto, 380px 380px;
+  background-blend-mode: screen, normal, multiply, normal;
 }
 
 .stage-corner { position: absolute; z-index: 2; width: 46px; height: 46px; pointer-events: none; }
 .stage-corner-a { left: 16px; top: 16px; border-left: 1px solid rgba(231, 225, 215, 0.58); border-top: 1px solid rgba(231, 225, 215, 0.58); }
 .stage-corner-b { right: 16px; bottom: 16px; border-right: 1px solid #c99a2e; border-bottom: 1px solid #c99a2e; }
 
+body.generator-shell .image-preview,
+body.generator-shell .pattern-container {
+  background:
+    linear-gradient(135deg, rgba(231, 225, 215, 0.08), transparent 44%),
+    url("/assets/textures/banner-silk.webp"),
+    var(--panel);
+  background-size: auto, 420px 420px, auto;
+}
 body.generator-shell .image-preview { padding: 18px; }
-body.generator-shell .image-preview img { object-fit: contain; background: var(--night); }
+body.generator-shell .image-preview img {
+  object-fit: contain;
+  background:
+    linear-gradient(135deg, rgba(201, 154, 46, 0.12), rgba(231, 225, 215, 0.08)),
+    #24272d;
+}
 body.generator-shell .preview-placeholder,
-body.generator-shell .pattern-placeholder { border-color: var(--line); color: var(--muted); }
+body.generator-shell .pattern-placeholder {
+  border-color: var(--line);
+  color: var(--muted);
+  background: rgba(231, 225, 215, 0.035);
+}
 
 .three-d-workflow {
   display: flex;
@@ -3295,12 +3315,29 @@ body.generator-shell .generator-pattern {
 }
 
 body.generator-shell .control-panel,
-body.generator-shell .three-container,
-body.generator-shell .image-preview,
 body.generator-shell .pattern-section,
 body.generator-shell .product-section,
 body.generator-shell .recent-section {
   background: var(--panel);
+}
+
+body.generator-shell .three-container {
+  background:
+    radial-gradient(ellipse at 50% 72%, rgba(201, 154, 46, 0.24), transparent 44%),
+    radial-gradient(circle at 48% 38%, rgba(255, 239, 207, 0.11), transparent 42%),
+    linear-gradient(180deg, rgba(48, 43, 35, 0.64), rgba(23, 25, 29, 0.9)),
+    url("/assets/textures/floor-stone.webp");
+  background-size: auto, auto, auto, 380px 380px;
+  background-blend-mode: screen, normal, multiply, normal;
+}
+
+body.generator-shell .image-preview,
+body.generator-shell .pattern-container {
+  background:
+    linear-gradient(135deg, rgba(231, 225, 215, 0.08), transparent 44%),
+    url("/assets/textures/banner-silk.webp"),
+    var(--panel);
+  background-size: auto, 420px 420px, auto;
 }
 
 body.generator-shell .generator-kicker,
