@@ -9,7 +9,6 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { Easing, Tween, update as updateTweens } from '@tweenjs/tween.js/dist/tween.esm.js';
 import { createGLTFLoader } from '../utils/modelLoader.js';
 import { loadManagedMuseumTexture } from '../utils/museumTexture.js';
-import { Companion } from './Companion.js';
 
 const HALL_INK = 0x0a0b0d;
 const GOLD = '#c99a2e';
@@ -201,7 +200,6 @@ export class SketchCorridorScene {
     this.renderPaused = false;
     this.reducedMotion = false;
     this.disposed = false;
-    this.companion = null;
     this.animationId = null;
 
     // 状态机：corridor（走廊）→ entering（穿门）→ room（展厅内）→ exiting → corridor
@@ -231,8 +229,8 @@ export class SketchCorridorScene {
     this.visibilityHandler = null;
   }
 
-  init({ chapters = [], onRoomEnter, onRoomExit, onSelectCraft, onOpenFeature, onCompanion, onReady } = {}) {
-    this.callbacks = { onRoomEnter, onRoomExit, onSelectCraft, onOpenFeature, onCompanion, onReady };
+  init({ chapters = [], onRoomEnter, onRoomExit, onSelectCraft, onOpenFeature, onReady } = {}) {
+    this.callbacks = { onRoomEnter, onRoomExit, onSelectCraft, onOpenFeature, onReady };
     this.reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || false;
 
     const width = Math.max(this.container.clientWidth, 1);
@@ -276,10 +274,6 @@ export class SketchCorridorScene {
     this.buildFrames(chapters);
     this.buildLanterns();
     this.bindEvents();
-
-    // 创建灵宠导览员
-    this.companion = new Companion(this.scene);
-    this.companion.mesh.position.set(0, 0.3, CORRIDOR.startZ - 2);
 
     // 性能预热：一次性编译 shader + 上传 Canvas 纹理，避免首次滚动时卡顿
     this.renderer.compile(this.scene, this.camera);
@@ -675,6 +669,22 @@ export class SketchCorridorScene {
   }
 
   // ---------- 进门 / 出门 ----------
+
+  enterChapter(chapterId) {
+    const aliases = {
+      shadow: 'paper',
+      textile: 'thread',
+      tiger: 'thread'
+    };
+    const resolvedId = aliases[chapterId] || chapterId;
+    const door = this.doors.find((item) => item.kind === 'chapter' && item.id === resolvedId);
+    if (!door || this.activeDoor || this.viewState !== 'corridor') return false;
+
+    this.activeDoor = door;
+    door.opened = true;
+    this.enterRoom(door);
+    return true;
+  }
 
   // 点击展厅门：滑到门前 → 转向 90° 正对门 → 穿门而入（房间就在门后）
   enterRoom(door) {
@@ -1287,15 +1297,6 @@ export class SketchCorridorScene {
     const pointer = this.ndcFromClient(clientX, clientY);
     this.raycaster.setFromCamera(pointer, this.camera);
 
-    // 点到灵宠：交给首页打开导览对话，不触发门逻辑
-    if (this.companion?.getMesh()) {
-      const petHits = this.raycaster.intersectObject(this.companion.getMesh(), true);
-      if (petHits.length) {
-        this.callbacks.onCompanion?.();
-        return;
-      }
-    }
-
     const hits = this.raycaster.intersectObjects(this.doors.map((door) => door.group), true);
     if (!hits.length) return;
     let node = hits[0].object;
@@ -1390,19 +1391,6 @@ export class SketchCorridorScene {
       });
     }
 
-    // 灵宠跟随：漂浮在相机朝向前方偏左的空中，展厅内同样适用
-    if (this.companion) {
-      const forwardX = -Math.sin(this.yaw);
-      const forwardZ = -Math.cos(this.yaw);
-      const leftX = forwardZ;
-      const leftZ = -forwardX;
-      this.companion.update(dt, {
-        x: this.camera.position.x + forwardX * 2.4 + leftX * 0.9,
-        y: 1.35,
-        z: this.camera.position.z + forwardZ * 2.4 + leftZ * 0.9
-      });
-    }
-
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -1480,8 +1468,6 @@ export class SketchCorridorScene {
       canvas.removeEventListener('pointerup', this.pointerUpHandler);
       canvas.removeEventListener('pointercancel', this.pointerUpHandler);
     }
-    this.companion?.dispose();
-    this.companion = null;
     this.scene?.traverse((child) => {
       child.geometry?.dispose?.();
       const materials = Array.isArray(child.material) ? child.material : [child.material];
