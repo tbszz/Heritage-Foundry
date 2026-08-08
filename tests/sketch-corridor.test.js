@@ -155,6 +155,12 @@ describe('sketch corridor scene', () => {
     expect(scene.enterChapter('unknown')).toBe(false);
   });
 
+  it('can redirect from an open room through a guarded corridor transition', () => {
+    expect(corridorJs).toContain('switchChapter(chapterId)');
+    expect(corridorJs).toContain('this.exitRoom();');
+    expect(corridorJs).toContain('this.enterChapter(chapterId)');
+  });
+
   it('keeps the dynamic corridor dormant during homepage initialization', () => {
     const initBlock = homeJs.match(/async function initHomePage\(\) \{([\s\S]*?)\n\}/)?.[1] || '';
 
@@ -190,10 +196,14 @@ describe('sketch corridor scene', () => {
   });
 
   it('offers numeric keyboard shortcuts for halls and room artifacts', () => {
+    const keydownBlock = corridorJs.match(/this\.keydownHandler = \(event\) => \{([\s\S]*?)\n    \};/)?.[1] || '';
+
     expect(corridorJs).toContain("event.code.match(/^Digit([1-9])$/)");
+    expect(corridorJs).toContain('this.container.contains(document.activeElement)');
     expect(corridorJs).toContain("this.doors.filter((door) => door.kind === 'chapter')");
     expect(corridorJs).toContain('this.currentDoor?.roomStands');
     expect(corridorJs).toContain('this.callbacks.onSelectCraft?.(stand.craft)');
+    expect(keydownBlock.indexOf('corridorFocused')).toBeLessThan(keydownBlock.indexOf("event.code === 'Escape'"));
   });
 
   it('does not auto-spin or float room models when reduced motion is requested', () => {

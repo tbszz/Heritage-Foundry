@@ -694,6 +694,19 @@ export class SketchCorridorScene {
     return true;
   }
 
+  switchChapter(chapterId) {
+    if (this.disposed || this.renderPaused) return false;
+    if (this.viewState === 'corridor') return this.enterChapter(chapterId);
+    if (this.viewState !== 'room') return false;
+
+    this.exitRoom();
+    if (this.reducedMotion) return this.enterChapter(chapterId);
+    window.setTimeout(() => {
+      if (!this.disposed) this.enterChapter(chapterId);
+    }, 1800);
+    return true;
+  }
+
   // 点击展厅门：滑到门前 → 转向 90° 正对门 → 穿门而入（房间就在门后）
   enterRoom(door) {
     this.viewState = 'entering';
@@ -1170,11 +1183,14 @@ export class SketchCorridorScene {
 
     this.keydownHandler = (event) => {
       if (event.target?.closest?.('input, textarea, select')) return;
+      if (!this.inputEnabled || this.renderPaused) return;
+      const corridorFocused = document.activeElement === this.container
+        || this.container.contains(document.activeElement);
+      if (!corridorFocused) return;
       if (event.code === 'Escape' && this.viewState === 'room') {
         this.exitRoom();
         return;
       }
-      if (!this.inputEnabled || this.renderPaused) return;
 
       const numericShortcut = event.code.match(/^Digit([1-9])$/);
       if (numericShortcut) {
@@ -1227,6 +1243,7 @@ export class SketchCorridorScene {
     canvas.addEventListener('wheel', this.wheelHandler, { passive: false });
 
     this.pointerDownHandler = (event) => {
+      this.container.focus({ preventScroll: true });
       if (event.pointerType === 'touch') {
         this.touchPointer = {
           active: true,

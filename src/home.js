@@ -1,6 +1,5 @@
 import { CRAFTS_DATA, getGeneratorCraftId } from './utils/craftData.js';
 import { getCreationStats, listCreations, likeCreation } from './utils/apiService.js';
-import { PROVINCE_PATHS, PROVINCE_STATS, NATIONAL_STATS } from './data/province-paths.js';
 
 const CHAPTERS = [
   {
@@ -39,6 +38,10 @@ let sketchCorridorScene = null;
 let sketchCorridorPromise = null;
 let artifact3dStage = null;
 let artifact3dPromise = null;
+let pendingChapterId = null;
+let communityLoadVersion = 0;
+let communityTabsBound = false;
+const loadedFeatureContent = new Set();
 
 export function getHomepageCrafts(crafts = CRAFTS_DATA) {
   return crafts.filter((craft) => Boolean(craft.modelUrl));
@@ -165,16 +168,11 @@ async function initHomePage() {
 
   const mode = detectExperienceMode();
   document.body.dataset.experienceMode = mode;
-  bindSketchCorridor();
   bindDialog();
+  bindMuseumEntry();
   bindModeToggle();
   bindRevealObserver();
   bindFeatureOverlays();
-  loadStats();
-  loadCommunityGallery();
-  bindCommunityGalleryTabs();
-  renderHeritageMap();
-  bindCompanionChat();
 
   const requestedId = new URLSearchParams(window.location.search).get('craft');
   const initialCraft = getInitialHomepageCraft(requestedId);
@@ -315,6 +313,7 @@ export function getNextLikeState({ previousCount = 0, wasLiked = false, result =
 }
 
 async function loadCommunityGallery(sort = 'latest') {
+  const loadVersion = ++communityLoadVersion;
   const grid = document.getElementById('community-grid');
   const empty = document.getElementById('community-empty');
   if (!grid || !empty) return;
@@ -324,6 +323,7 @@ async function loadCommunityGallery(sort = 'latest') {
 
   try {
     const creations = await listCreations(24, sort);
+    if (loadVersion !== communityLoadVersion) return;
     if (!creations || creations.length === 0) {
       empty.hidden = false;
       return;
@@ -359,6 +359,7 @@ async function loadCommunityGallery(sort = 'latest') {
     bindCommunityCardImages(grid);
     bindLikeButtons(visitorId);
   } catch {
+    if (loadVersion !== communityLoadVersion) return;
     empty.hidden = false;
     empty.querySelector('p').textContent = '加载失败，请刷新重试';
   }
@@ -403,6 +404,8 @@ function bindLikeButtons(visitorId) {
 }
 
 function bindCommunityGalleryTabs() {
+  if (communityTabsBound) return;
+  communityTabsBound = true;
   document.querySelectorAll('.community-tab').forEach(tab => {
     tab.addEventListener('click', () => {
       document.querySelectorAll('.community-tab').forEach(t => t.classList.remove('active'));
@@ -413,11 +416,12 @@ function bindCommunityGalleryTabs() {
 }
 
 // ===== F5: 山河图志（真实省界 + 官方非遗统计） =====
-function renderHeritageMap() {
+async function renderHeritageMap() {
   const container = document.getElementById('heritage-map-svg');
   const detail = document.getElementById('heritage-map-detail');
   const nationwideEl = document.getElementById('heritage-map-nationwide');
   if (!container || !detail) return;
+  const { PROVINCE_PATHS, PROVINCE_STATS, NATIONAL_STATS } = await import('./data/province-paths.js');
 
   // 按 region 分组本馆馆藏非遗
   const regionMap = new Map();
@@ -437,6 +441,9 @@ function renderHeritageMap() {
     const path = document.createElementNS(svgNS, 'path');
     path.setAttribute('d', data.d);
     path.setAttribute('data-region', key);
+    path.setAttribute('tabindex', '0');
+    path.setAttribute('role', 'button');
+    path.setAttribute('aria-label', `${data.label}非遗详情`);
     path.classList.add('province-path');
     // 本馆有馆藏的省份描金高亮
     if (regionMap.has(key)) path.classList.add('has-heritage');
@@ -454,15 +461,25 @@ function renderHeritageMap() {
     svg.appendChild(text);
   });
 
-  // 点击省份
-  svg.addEventListener('click', (e) => {
-    const path = e.target.closest('.province-path');
+  const activateRegion = (path) => {
     if (!path) return;
     const region = path.dataset.region;
     const crafts = regionMap.get(region) || [];
     svg.querySelectorAll('.province-path.active').forEach(p => p.classList.remove('active'));
     path.classList.add('active');
-    showRegionDetail(region, crafts, detail);
+    showRegionDetail(region, crafts, detail, PROVINCE_PATHS, PROVINCE_STATS);
+  };
+
+  // 点击或键盘选择省份
+  svg.addEventListener('click', (event) => {
+    activateRegion(event.target.closest('.province-path'));
+  });
+  svg.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const path = event.target.closest('.province-path');
+    if (!path) return;
+    event.preventDefault();
+    activateRegion(path);
   });
 
   // hover tooltip：官方统计（如有）+ 本馆馆藏数
@@ -518,9 +535,9 @@ function renderHeritageMap() {
   }
 }
 
-function showRegionDetail(region, crafts, detailEl) {
-  const provinceData = PROVINCE_PATHS[region];
-  const stats = PROVINCE_STATS[region];
+function showRegionDetail(region, crafts, detailEl, provincePaths, provinceStats) {
+  const provinceData = provincePaths[region];
+  const stats = provinceStats[region];
   const label = provinceData?.label || region;
   detailEl.innerHTML = `
     <h3 class="heritage-map-detail-title">${label}</h3>
@@ -546,124 +563,6 @@ function showRegionDetail(region, crafts, detailEl) {
   `;
 }
 
-// ===== F4: 灵宠聊天浮窗 =====
-function bindCompanionChat() {
-  const chat = document.getElementById('companion-chat');
-  const trigger = document.createElement('button');
-  trigger.className = 'companion-trigger';
-  trigger.setAttribute('aria-label', '打开小天犬导览');
-  trigger.innerHTML = '<span aria-hidden="true">灵</span>';
-  trigger.title = '按 C 键或点击打开小天犬导览员';
-  document.body.appendChild(trigger);
-
-  const messages = document.getElementById('companion-chat-messages');
-  const input = document.getElementById('companion-chat-input');
-  const sendBtn = document.getElementById('companion-chat-send');
-  const closeBtn = document.getElementById('companion-chat-close');
-  let chatHistory = [];
-
-  function openChat() {
-    chat.hidden = false;
-    trigger.hidden = true;
-    input?.focus();
-    if (!messages.children.length) {
-      addMessage('model', '汪汪！我是小天犬，这座非遗博物馆的导览员~ 有什么关于非遗的问题都可以问我哦！');
-    }
-  }
-
-  function closeChat() {
-    chat.hidden = true;
-    trigger.hidden = false;
-  }
-
-  function addMessage(role, text) {
-    const div = document.createElement('div');
-    div.className = `companion-chat-msg ${role}`;
-    div.textContent = text;
-    messages.appendChild(div);
-    messages.scrollTop = messages.scrollHeight;
-  }
-
-  function addThinking() {
-    const div = document.createElement('div');
-    div.className = 'companion-chat-msg thinking';
-    div.textContent = '小天犬正在思考…';
-    div.id = 'companion-thinking';
-    messages.appendChild(div);
-    messages.scrollTop = messages.scrollHeight;
-  }
-
-  function removeThinking() {
-    const el = document.getElementById('companion-thinking');
-    if (el) el.remove();
-  }
-
-  async function sendMessage() {
-    const text = input.value.trim();
-    if (!text) return;
-    input.value = '';
-    addMessage('user', text);
-    chatHistory.push({ role: 'user', text });
-
-    sendBtn.disabled = true;
-    input.disabled = true;
-    addThinking();
-
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, history: chatHistory })
-      });
-      const data = await response.json();
-      removeThinking();
-      if (data.success && data.reply) {
-        addMessage('model', data.reply);
-        chatHistory.push({ role: 'model', text: data.reply });
-      } else {
-        addMessage('model', getFallbackReply());
-      }
-    } catch {
-      removeThinking();
-      addMessage('model', getFallbackReply());
-    } finally {
-      sendBtn.disabled = false;
-      input.disabled = false;
-      input.focus();
-    }
-  }
-
-  function getFallbackReply() {
-    const replies = [
-      '哎呀，我好像走神了~ 你可以问我关于剪纸、皮影、陶瓷等非遗技艺的问题哦！',
-      '汪汪！试试问我："剪纸是怎么做的？"或者"推荐一个展厅给我吧"~',
-      '现在博物馆里最受欢迎的是景德镇陶瓷展厅，要不要去看看？',
-      '你知道吗？中国有44项非遗入选联合国教科文组织人类非物质文化遗产代表作名录哦！'
-    ];
-    return replies[Math.floor(Math.random() * replies.length)];
-  }
-
-  trigger.addEventListener('click', openChat);
-  companionChatOpener = openChat;
-  closeBtn.addEventListener('click', closeChat);
-  sendBtn.addEventListener('click', sendMessage);
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') sendMessage();
-  });
-
-  // 快捷键 C 切换聊天
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'c' || e.key === 'C') {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-      if (chat.hidden) openChat();
-      else closeChat();
-    }
-    if (e.key === 'Escape' && !chat.hidden) {
-      closeChat();
-    }
-  });
-}
-
 function detectExperienceMode() {
   const saved = window.localStorage?.getItem('museum-experience-mode');
   if (saved === 'still' || saved === 'cinematic') return saved;
@@ -676,14 +575,120 @@ function detectExperienceMode() {
   });
 }
 
-// 暗夜展厅 3D 长廊：仅 cinematic 模式动态挂载，Three.js 保持在首页入口 bundle 之外；
-// 挂载失败（WebGL 不可用等）静默回退到静态丝绢 hero。
+function setExteriorInteractionEnabled(enabled) {
+  document.querySelectorAll('.museum-stage-copy, .heritage-guide, .museum-entry-panel').forEach((node) => {
+    node.toggleAttribute('inert', !enabled);
+    if (enabled) node.removeAttribute('aria-hidden');
+    else node.setAttribute('aria-hidden', 'true');
+  });
+}
+
+function setCorridorInteractionEnabled(enabled) {
+  const corridor = document.getElementById('sketch-corridor');
+  if (!corridor) return;
+  corridor.toggleAttribute('inert', !enabled);
+  corridor.setAttribute('tabindex', enabled ? '0' : '-1');
+  if (enabled) corridor.removeAttribute('aria-hidden');
+  else corridor.setAttribute('aria-hidden', 'true');
+}
+
+function syncExperienceModeToggle() {
+  const button = document.getElementById('experience-mode-toggle');
+  if (!button) return;
+  const isStill = document.body.dataset.experienceMode === 'still';
+  button.textContent = isStill ? '动态效果：关' : '动态效果：开';
+  button.setAttribute('aria-pressed', String(isStill));
+}
+
+function bindMuseumEntry() {
+  const stage = document.getElementById('museum-stage');
+  const loader = document.getElementById('sketch-corridor-loader');
+  const retry = loader?.querySelector('[data-action="retry-museum"]');
+
+  const enterMuseum = async (chapterId = null) => {
+    if (!stage) return;
+    if (document.body.dataset.experienceMode === 'still') {
+      document.body.dataset.experienceMode = 'cinematic';
+      syncExperienceModeToggle();
+    }
+    pendingChapterId = chapterId || pendingChapterId;
+
+    // 长廊已挂载时直接复用，避免重复点击把可用场景卡回 loading。
+    if (sketchCorridorScene) {
+      stage.dataset.museumState = 'open';
+      stage.classList.remove('is-entering', 'is-corridor-loading', 'is-corridor-error');
+      stage.classList.add('is-corridor-live', 'has-entered');
+      setExteriorInteractionEnabled(false);
+      setCorridorInteractionEnabled(true);
+      sketchCorridorScene.setRenderPaused(false);
+      if (loader) loader.hidden = true;
+      if (retry) retry.hidden = true;
+      if (pendingChapterId) {
+        const nextChapter = pendingChapterId;
+        pendingChapterId = null;
+        sketchCorridorScene.switchChapter(nextChapter);
+      }
+      return;
+    }
+
+    stage.dataset.museumState = 'loading';
+    stage.classList.remove('is-corridor-error');
+    stage.classList.add('is-entering', 'is-corridor-loading');
+    if (loader) {
+      loader.hidden = false;
+      const copy = loader.querySelector('p');
+      if (copy) copy.textContent = '馆门开启，正在点亮百工长廊…';
+    }
+    if (retry) retry.hidden = true;
+
+    try {
+      const scene = await bindSketchCorridor();
+      if (!scene) throw new Error('当前设备未能开启三维展厅');
+      stage.dataset.museumState = 'open';
+      if (pendingChapterId) {
+        const nextChapter = pendingChapterId;
+        pendingChapterId = null;
+        window.setTimeout(() => scene.switchChapter(nextChapter), 420);
+      }
+    } catch {
+      stage.dataset.museumState = 'error';
+      stage.classList.remove('is-entering', 'is-corridor-loading');
+      stage.classList.add('is-corridor-error');
+      if (loader) {
+        loader.hidden = false;
+        const copy = loader.querySelector('p');
+        if (copy) copy.textContent = '展厅暂未点亮，馆舍外景仍可继续浏览。';
+      }
+      if (retry) retry.hidden = false;
+    }
+  };
+
+  document.querySelectorAll('[data-action="enter-museum"]').forEach((control) => {
+    control.dataset.museumEntryBound = 'true';
+    control.addEventListener('click', (event) => {
+      event.preventDefault();
+      enterMuseum();
+    });
+  });
+
+  document.querySelectorAll('[data-heritage-guide]').forEach((guide) => {
+    guide.addEventListener('click', () => {
+      const chapterId = guide.dataset.heritageGuide === 'shadow' ? 'paper' : 'thread';
+      enterMuseum(chapterId);
+    });
+  });
+
+  retry?.addEventListener('click', () => enterMuseum(pendingChapterId));
+}
+
+// 三维长廊只在用户明确推门后动态挂载，首页首帧永远保留静态馆舍。
 function bindSketchCorridor() {
-  if (sketchCorridorScene || sketchCorridorPromise) return;
+  if (sketchCorridorScene) return Promise.resolve(sketchCorridorScene);
+  if (sketchCorridorPromise) return sketchCorridorPromise;
   const stage = document.getElementById('museum-stage');
   const container = document.getElementById('sketch-corridor');
-  if (!stage || !container) return;
-  if (document.body.dataset.experienceMode !== 'cinematic') return;
+  const loader = document.getElementById('sketch-corridor-loader');
+  if (!stage || !container) return Promise.resolve(null);
 
   stage.classList.add('is-corridor-loading');
   sketchCorridorPromise = import('./components/SketchCorridorScene.js')
@@ -709,12 +714,15 @@ function bindSketchCorridor() {
         onOpenFeature: (featureId) => {
           openFeatureOverlay(featureId);
         },
-        onCompanion: () => {
-          companionChatOpener?.();
-        },
         onReady: () => {
-          stage.classList.remove('is-corridor-loading');
-          stage.classList.add('is-corridor-live');
+          stage.classList.remove('is-entering', 'is-corridor-loading');
+          stage.classList.add('is-corridor-live', 'has-entered');
+          setExteriorInteractionEnabled(false);
+          setCorridorInteractionEnabled(true);
+          const headerEntry = document.querySelector('.museum-nav-entry');
+          if (headerEntry) headerEntry.textContent = '馆门已开';
+          if (loader) loader.hidden = true;
+          container.focus({ preventScroll: true });
         }
       });
 
@@ -729,13 +737,17 @@ function bindSketchCorridor() {
       });
       return sketchCorridorScene;
     })
-    .catch(() => {
+    .catch((error) => {
       stage.classList.remove('is-corridor-loading');
-      return null;
+      sketchCorridorScene?.dispose?.();
+      sketchCorridorScene = null;
+      throw error;
     })
     .finally(() => {
       sketchCorridorPromise = null;
     });
+
+  return sketchCorridorPromise;
 }
 
 function updateCorridorHud(text) {
@@ -743,14 +755,28 @@ function updateCorridorHud(text) {
   if (hud) hud.textContent = text;
 }
 
-// ===== 功能展厅覆盖层（共创画廊 / 山河图志，由长廊功能门开启） =====
-let companionChatOpener = null;
+// ===== 功能展厅覆盖层（共创画廊 / 山河图志） =====
 let openOverlayId = null;
+
+function ensureFeatureOverlayContent(featureId) {
+  if (loadedFeatureContent.has(featureId)) return;
+  loadedFeatureContent.add(featureId);
+  if (featureId === 'map') {
+    renderHeritageMap();
+  } else if (featureId === 'gallery') {
+    bindCommunityGalleryTabs();
+    loadCommunityGallery();
+  }
+}
 
 function openFeatureOverlay(featureId) {
   const dialog = document.getElementById(`${featureId}-overlay`);
   if (!dialog) return;
+  if (openOverlayId && openOverlayId !== featureId) {
+    closeModalElement(document.getElementById(`${openOverlayId}-overlay`));
+  }
   openOverlayId = featureId;
+  ensureFeatureOverlayContent(featureId);
   // 覆盖层打开期间暂停走廊渲染，避免 WebGL 循环在弹层下空转
   sketchCorridorScene?.setRenderPaused(true);
   openModalElement(dialog);
@@ -758,6 +784,25 @@ function openFeatureOverlay(featureId) {
 }
 
 function bindFeatureOverlays() {
+  const openFromLocation = () => {
+    const requestedView = new URLSearchParams(window.location.search).get('view');
+    if (requestedView === 'map' || requestedView === 'gallery') {
+      openFeatureOverlay(requestedView);
+    } else if (openOverlayId) closeModalElement(document.getElementById(`${openOverlayId}-overlay`));
+  };
+
+  document.querySelectorAll('[data-open-feature]').forEach((control) => {
+    control.addEventListener('click', (event) => {
+      const featureId = control.dataset.openFeature;
+      if (featureId !== 'map' && featureId !== 'gallery') return;
+      event.preventDefault();
+      const url = new URL(window.location.href);
+      url.searchParams.set('view', featureId);
+      window.history.pushState({ featureId }, '', url);
+      openFeatureOverlay(featureId);
+    });
+  });
+
   document.querySelectorAll('.feature-overlay').forEach((dialog) => {
     dialog.querySelector('[data-close-overlay]')?.addEventListener('click', () => closeModalElement(dialog));
     dialog.addEventListener('click', (event) => {
@@ -767,11 +812,19 @@ function bindFeatureOverlays() {
     dialog.addEventListener('close', () => {
       const featureId = openOverlayId;
       openOverlayId = null;
+      const url = new URL(window.location.href);
+      if (url.searchParams.get('view') === featureId) {
+        url.searchParams.delete('view');
+        window.history.replaceState({}, '', url);
+      }
       // 把长廊里那扇功能门带回关上，再视情况恢复渲染
       sketchCorridorScene?.closeFeatureDoor(featureId);
       resumeCorridorIfVisible();
     });
   });
+
+  window.addEventListener('popstate', openFromLocation);
+  window.requestAnimationFrame(openFromLocation);
 }
 
 // 详情弹窗内的 3D 模型查看器：复用活态展厅的 ArtifactStage（拖拽旋转 + 滚轮缩放），
@@ -787,14 +840,30 @@ async function loadArtifact3dStage() {
       artifact3dStage = new ArtifactStage(container, {
         onLoadingChange: (loading) => {
           const loader = document.getElementById('artifact-3d-loader');
-          if (loader) loader.hidden = !loading;
+          if (loader) {
+            loader.hidden = !loading;
+            const copy = loader.querySelector('p');
+            const retryArtifact = loader.querySelector('[data-action="retry-artifact"]');
+            if (copy && loading) copy.textContent = '正在唤醒三维馆藏…';
+            if (retryArtifact) retryArtifact.hidden = true;
+          }
         },
         onError: () => {
           const loader = document.getElementById('artifact-3d-loader');
-          if (loader) loader.hidden = true;
+          if (loader) {
+            loader.hidden = false;
+            const copy = loader.querySelector('p');
+            const retryArtifact = loader.querySelector('[data-action="retry-artifact"]');
+            if (copy) copy.textContent = '三维馆藏未能载入，请重试。';
+            if (retryArtifact) retryArtifact.hidden = false;
+          }
         }
       });
       artifact3dStage.init();
+      artifact3dStage.setAutoMotionEnabled(
+        document.body.dataset.experienceMode === 'cinematic'
+        && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+      );
       return artifact3dStage;
     })
     .catch(() => null)
@@ -808,8 +877,12 @@ async function loadArtifact3dStage() {
 function bindDialog() {
   const dialog = document.getElementById('artifact-dialog');
   if (!dialog) return;
+  const retryArtifact = dialog.querySelector('[data-action="retry-artifact"]');
 
   dialog.querySelector('[data-close-dialog]')?.addEventListener('click', () => closeModalElement(dialog));
+  retryArtifact?.addEventListener('click', () => {
+    if (selectedCraft?.modelUrl) artifact3dStage?.setModel(selectedCraft.modelUrl);
+  });
   dialog.addEventListener('click', (event) => {
     if (event.target === dialog) closeModalElement(dialog);
   });
@@ -824,7 +897,7 @@ function bindDialog() {
 // 详情弹窗关闭后，仅当走廊仍停留在首屏视口内才恢复渲染（省流模式下不恢复）
 function resumeCorridorIfVisible() {
   if (!sketchCorridorScene) return;
-  if (document.body.dataset.experienceMode !== 'cinematic') return;
+  if (document.body.dataset.experienceMode === 'still') return;
   const stage = document.getElementById('museum-stage');
   if (!stage) return;
   const rect = stage.getBoundingClientRect();
@@ -850,7 +923,13 @@ function openArtifact(craft, trigger = document.activeElement) {
 
   // 左侧换成可旋转的真实 3D 模型（复用 ArtifactStage，弹窗关闭时其渲染循环自动停止）
   if (craft.modelUrl) {
-    loadArtifact3dStage().then((stage) => stage?.setModel(craft.modelUrl));
+    loadArtifact3dStage().then((stage) => {
+      stage?.setAutoMotionEnabled(
+        document.body.dataset.experienceMode === 'cinematic'
+        && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+      );
+      stage?.setModel(craft.modelUrl);
+    });
   }
 
   const craftLink = document.getElementById('artifact-craft-link');
@@ -866,27 +945,30 @@ function bindModeToggle() {
   const button = document.getElementById('experience-mode-toggle');
   if (!button) return;
 
-  const syncLabel = () => {
-    const isStill = document.body.dataset.experienceMode === 'still';
-    button.textContent = isStill ? '开启动态场景' : '切换省流模式';
-    button.setAttribute('aria-pressed', String(isStill));
-  };
-
-  syncLabel();
+  syncExperienceModeToggle();
   button.addEventListener('click', () => {
     const nextMode = document.body.dataset.experienceMode === 'still' ? 'cinematic' : 'still';
     document.body.dataset.experienceMode = nextMode;
     window.localStorage?.setItem('museum-experience-mode', nextMode);
     const stage = document.getElementById('museum-stage');
     if (nextMode === 'cinematic') {
-      bindSketchCorridor();
       sketchCorridorScene?.setRenderPaused(false);
       stage?.classList.toggle('is-corridor-live', Boolean(sketchCorridorScene));
+      if (sketchCorridorScene) {
+        setExteriorInteractionEnabled(false);
+        setCorridorInteractionEnabled(true);
+      }
     } else {
       sketchCorridorScene?.setRenderPaused(true);
       stage?.classList.remove('is-corridor-live');
+      setExteriorInteractionEnabled(true);
+      setCorridorInteractionEnabled(false);
     }
-    syncLabel();
+    artifact3dStage?.setAutoMotionEnabled(
+      nextMode === 'cinematic'
+      && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    );
+    syncExperienceModeToggle();
   });
 }
 

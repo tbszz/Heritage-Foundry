@@ -24,6 +24,7 @@ export class ArtifactStage {
     this.modelBaseY = 0;
     this.visible = false;
     this.motionEnabled = true;
+    this.autoMotionEnabled = true;
     this.interacting = false;
     this.animationId = 0;
     this.loadToken = 0;
@@ -127,6 +128,14 @@ export class ArtifactStage {
     }
   }
 
+  setAutoMotionEnabled(enabled) {
+    this.autoMotionEnabled = Boolean(enabled);
+    if (!this.autoMotionEnabled && this.model) {
+      this.model.position.y = this.modelBaseY;
+      this.renderOnce();
+    }
+  }
+
   setModel(url) {
     const token = ++this.loadToken;
     this.onLoadingChange(true);
@@ -201,7 +210,7 @@ export class ArtifactStage {
 
       const delta = Math.min((now - this.lastTime) / 1000, 0.05);
       this.lastTime = now;
-      if (this.model && !this.interacting) {
+      if (this.autoMotionEnabled && this.model && !this.interacting) {
         this.model.rotation.y += delta * 0.28;
         this.model.position.y = this.modelBaseY + Math.sin(now * 0.0011) * 0.045;
       }

@@ -11,7 +11,7 @@
   <title>非遗造物局 | 数字非遗博物馆</title>
   <link rel="preload" href="/fonts/SourceHanSerifSC-Heavy.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/LXGWWenKai-Regular.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/assets/generated/museum-cinematic.webp" as="image" type="image/webp" fetchpriority="high">
+  <link rel="preload" href="/assets/generated/museum-copper-exterior.webp" as="image" type="image/webp" fetchpriority="high">
   <link rel="icon" href="/assets/generated/seal-mark-nav.webp" type="image/webp">
   <link rel="stylesheet" href="museum-experience.css">
 </head>
@@ -23,41 +23,80 @@
       <img src="/assets/generated/seal-mark-nav.webp" alt="" width="40" height="40">
       <span>
         <strong>非遗造物局</strong>
-        <small>Heritage Foundry</small>
+        <small>百工数字博物馆</small>
       </span>
     </a>
 
     <nav class="museum-nav-links" aria-label="站点导航">
-      <a href="index.html">首页</a>
-      <a href="crafts.html">非遗技艺</a>
-      <a href="generator.html">创意生成</a>
-      <a href="ar.html">AR 体验</a>
+      <a href="#museum-stage" data-action="enter-museum">云上展厅</a>
+      <a href="crafts.html">百工典藏</a>
+      <a href="?view=map" data-open-feature="map">山河图志</a>
+      <a href="generator.html">AI 造物</a>
+      <a href="?view=gallery" data-open-feature="gallery">共创画廊</a>
     </nav>
 
-    <button id="experience-mode-toggle" class="mode-toggle" type="button" aria-pressed="false">
-      切换省流模式
+    <button class="museum-nav-entry" type="button" data-action="enter-museum">
+      推门入馆
     </button>
   </header>
 
   <main id="museum-content">
     <section id="museum-stage" class="museum-stage" aria-labelledby="museum-stage-title">
-      <div class="museum-stage-image" role="img" aria-label="巨幅丝绢垂落在当代非遗博物馆大厅"></div>
+      <div class="museum-stage-image" role="img" aria-label="夜色中灯火点亮的铜织非遗博物馆"></div>
       <div class="museum-stage-shade" aria-hidden="true"></div>
-      <div class="museum-stage-veil museum-stage-veil-left" aria-hidden="true"></div>
-      <div class="museum-stage-veil museum-stage-veil-right" aria-hidden="true"></div>
 
-      <div id="sketch-corridor" class="sketch-corridor" aria-hidden="true"></div>
-      <div id="sketch-corridor-loader" class="sketch-corridor-loader" role="status" aria-live="polite">
-        <span class="sketch-corridor-loader-mark" aria-hidden="true"></span>
-        <p>正在点亮展厅…</p>
+      <div class="museum-stage-copy">
+        <p class="museum-stage-preface"><span>今夜开馆</span> 百工在此苏醒</p>
+        <h1 id="museum-stage-title">
+          <span>非遗</span>
+          <span>造物局</span>
+        </h1>
       </div>
 
-      <h1 id="museum-stage-title" class="sr-only">非遗造物局 · 数字非遗博物馆</h1>
+      <div class="museum-building-mask" aria-hidden="true"></div>
+      <div class="museum-stage-grain" aria-hidden="true"></div>
 
-      <div class="museum-stage-index stats-panel" aria-label="馆藏数据">
+      <button class="heritage-guide heritage-guide-shadow" type="button" data-heritage-guide="shadow" aria-label="跟随皮影进入纸上万象展厅">
+        <img src="/assets/generated/craft-icons-webp/shadow.webp" alt="" width="116" height="116">
+        <span><small>皮影引路</small>纸上万象</span>
+      </button>
+      <button class="heritage-guide heritage-guide-tiger" type="button" data-heritage-guide="tiger-head" aria-label="跟随布老虎进入经纬成章展厅">
+        <img src="/assets/generated/craft-icons-webp/tiger-head.webp" alt="" width="116" height="116">
+        <span><small>布虎守门</small>经纬成章</span>
+      </button>
+
+      <div class="museum-entry-panel">
+        <div class="museum-manifesto">
+          <blockquote>
+            <p>一馆藏百艺，一念续千年</p>
+          </blockquote>
+          <span>从铜织门庭出发，回望纸、线、土与木留下的中国手艺。</span>
+        </div>
+        <button id="museum-entry-trigger" class="museum-entry-trigger" type="button" data-action="enter-museum">
+          <span>推门入馆</span>
+          <i aria-hidden="true">入</i>
+        </button>
+      </div>
+
+      <div
+        id="sketch-corridor"
+        class="sketch-corridor"
+        role="application"
+        tabindex="-1"
+        aria-hidden="true"
+        inert
+        aria-label="三维百工长廊。方向键前后移动，数字一至四进入展厅；展厅内按数字选择藏品，Escape 返回长廊。"
+      ></div>
+      <div id="sketch-corridor-loader" class="sketch-corridor-loader" role="status" aria-live="polite" hidden>
+        <span class="sketch-corridor-loader-mark" aria-hidden="true"></span>
+        <p>馆门开启，正在点亮百工长廊…</p>
+        <button type="button" data-action="retry-museum" hidden>重新推门</button>
+      </div>
+
+      <aside class="museum-stage-index stats-panel" aria-label="馆藏数据">
         <div class="stats-panel-heading">
           <span>馆藏数据</span>
-          <small>实时更新</small>
+          <small>百工档案</small>
         </div>
         <div class="stats-metrics" aria-label="馆藏概览">
           <span class="stats-metric"><strong id="stat-craft-count">18</strong> 项非遗技艺</span>
@@ -66,10 +105,13 @@
           <span class="stats-metric"><strong id="stat-3d-count">—</strong> 3D 模型</span>
         </div>
         <div id="stats-distribution" class="stats-distribution" hidden></div>
-      </div>
+      </aside>
 
       <p class="sketch-corridor-hud" id="sketch-corridor-hud" aria-hidden="true">滚轮逛长廊 · 点击木门进入展厅</p>
       <button id="corridor-back" class="corridor-back" type="button" hidden>← 返回长廊</button>
+      <button id="experience-mode-toggle" class="mode-toggle" type="button" aria-pressed="false">
+        省流设置
+      </button>
     </section>
 
   </main>
@@ -81,6 +123,7 @@
       <div id="artifact-3d-loader" class="artifact-3d-loader" role="status" aria-live="polite" hidden>
         <span class="sketch-corridor-loader-mark" aria-hidden="true"></span>
         <p>正在唤醒三维馆藏…</p>
+        <button type="button" data-action="retry-artifact" hidden>重新加载</button>
       </div>
       <p class="artifact-3d-hint" aria-hidden="true">拖动旋转 · 滚轮缩放</p>
     </div>
@@ -133,16 +176,5 @@
     </div>
   </dialog>
 
-  <div id="companion-chat" class="companion-chat" hidden>
-    <div class="companion-chat-header">
-      <span>小天犬 · 非遗导览员</span>
-      <button id="companion-chat-close" type="button" aria-label="关闭对话">×</button>
-    </div>
-    <div id="companion-chat-messages" class="companion-chat-messages"></div>
-    <div class="companion-chat-input">
-      <input id="companion-chat-input" type="text" placeholder="问问小天犬关于非遗的问题…" maxlength="200">
-      <button id="companion-chat-send" type="button">发送</button>
-    </div>
-  </div>
 </body>
 </html>
