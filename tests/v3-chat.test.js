@@ -1,54 +1,22 @@
-import express from 'express';
+import { createRequire } from 'node:module';
+import { existsSync, readFileSync } from 'node:fs';
 import request from 'supertest';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-async function buildApp() {
-  vi.resetModules();
-  delete process.env.GEMINI_API_KEY;
+const require = createRequire(import.meta.url);
+const serverSource = readFileSync(new URL('../server.js', import.meta.url), 'utf8');
 
-  const chatHandler = await import('../api/chat.js');
-  const app = express();
-  app.use(express.json());
-  const handler = chatHandler.default || chatHandler;
-  app.post('/api/chat', handler);
-  return app;
-}
+describe('retired spirit-pet chat surface', () => {
+  it('removes the production chat handler and route', async () => {
+    expect(existsSync(new URL('../api/chat.js', import.meta.url))).toBe(false);
+    expect(serverSource).not.toContain("require('./api/chat')");
+    expect(serverSource).not.toContain("app.post('/api/chat'");
 
-describe('F4 POST /api/chat', () => {
-  it('rejects empty message with 400', async () => {
-    const app = await buildApp();
-    for (const body of [{}, { message: '' }, { message: '   ' }]) {
-      const response = await request(app).post('/api/chat').send(body);
-      expect(response.status).toBe(400);
-      expect(response.body).toMatchObject({ success: false, code: 400 });
-    }
-  });
-
-  it('returns 405 for non-POST methods', async () => {
-    const app = await buildApp();
-    const response = await request(app).get('/api/chat');
-    // 未注册 GET，Express 默认 404；直接调用 handler 验证 405 逻辑
-    expect([404, 405]).toContain(response.status);
-
-    const handlerModule = await import('../api/chat.js');
-    const handler = handlerModule.default || handlerModule;
-    const app2 = express();
-    app2.use(express.json());
-    app2.all('/api/chat', handler);
-    const response2 = await request(app2).get('/api/chat');
-    expect(response2.status).toBe(405);
-  });
-
-  it('returns 503 NOT_CONFIGURED when GEMINI_API_KEY is missing', async () => {
-    const app = await buildApp();
-    const response = await request(app)
+    const { createApp } = require('../server.js');
+    const response = await request(createApp())
       .post('/api/chat')
-      .send({ message: '剪纸的历史是什么？' });
+      .send({ message: '你好' });
 
-    expect(response.status).toBe(503);
-    expect(response.body).toMatchObject({
-      success: false,
-      code: 'NOT_CONFIGURED'
-    });
+    expect(response.status).toBe(404);
   });
 });
