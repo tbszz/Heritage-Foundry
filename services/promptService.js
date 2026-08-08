@@ -12,6 +12,26 @@ const CRAFT_LIBRARY = Object.fromEntries(
 );
 
 const IP_LIBRARY = {
+  'auspicious-beast': {
+    name: '瑞兽',
+    traits: '麒麟、白泽与狻猊等祥瑞兽形，云雷纹、昂首护佑姿态与对称守望构图'
+  },
+  'opera-character': {
+    name: '戏曲人物',
+    traits: '水袖、靠旗、脸谱、盔头与程式化亮相身段，强调舞台节奏和人物神采'
+  },
+  'shanhai-legend': {
+    name: '山海传说',
+    traits: '《山海经》异兽、神木、层叠云海与远古山川，兼具神秘感和清晰主体轮廓'
+  },
+  'flying-apsara': {
+    name: '敦煌飞天',
+    traits: '反弹琵琶、舒展飘带、莲花与壁画矿物色，形成轻盈连续的飞行动势'
+  },
+  'jiangnan-flora': {
+    name: '江南花鸟',
+    traits: '莲荷、白鹭、梅枝、燕子与水乡四时景致，留白含蓄而生机细腻'
+  },
   doraemon: {
     name: '哆啦A梦',
     traits: '圆润蓝白猫型轮廓、铃铛、口袋、亲和表情'
@@ -109,7 +129,7 @@ function resolveLibraryItem(library, key, fallbackName) {
   return {
     name: fallbackName || key || '非遗技艺',
     language: `${fallbackName || key || '非遗'}的传统视觉元素`,
-    traits: `${fallbackName || key || '流行 IP'}的核心角色特征`,
+    traits: `${fallbackName || key || '文化题材'}的核心视觉特征`,
     constraint: '适合文创产品落地'
   };
 }
@@ -158,11 +178,11 @@ function buildCreativePrompt({ basePrompt = '', style = 'default', craftType, ip
   const carrierOutputInstruction = buildCarrierOutputInstruction(carrierItem);
 
   const promptLines = [
-    '你是一位脑洞大开的国潮非遗视觉导演，创作一张非常吸引注意力的非遗 × 流行 IP 跨界主视觉。',
+    '你是一位脑洞大开的国潮非遗视觉导演，创作一张非常吸引注意力的非遗 × 中国文化题材跨界主视觉。',
     `核心任务：${task}。`,
-    `跨界组合：${craft.name}非遗语言 + ${ipItem.name}流行 IP 角色特征 + ${carrierItem.name}。`,
+    `跨界组合：${craft.name}非遗语言 + ${ipItem.name}文化题材意象 + ${carrierItem.name}。`,
     `非遗视觉：${craft.language}，${craft.twist || '传统技艺以超现实方式重组'}。`,
-    `IP特征：保留${ipItem.name}的可识别神态与轮廓关键词：${ipItem.traits}，避免官方 logo 和文字商标。`,
+    `题材意象：提炼${ipItem.name}的视觉关键词：${ipItem.traits}，避免官方 logo 和文字商标。`,
     `产品方向：${carrierItem.constraint}，${styleText}。`,
     carrierOutputInstruction,
     `画面要求：${carrierItem.aspectInstruction || '1:1 方形画幅'}，干净背景、纯色背景，无文字，无水印，无 UI mockup，高清产品级渲染，动态感强，奇思妙想但形体明确。`

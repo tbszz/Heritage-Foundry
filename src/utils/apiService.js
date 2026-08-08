@@ -2,6 +2,11 @@ import { getCraftById } from './craftData.js';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const IP_MAP = {
+  'auspicious-beast': '瑞兽',
+  'opera-character': '戏曲人物',
+  'shanhai-legend': '山海传说',
+  'flying-apsara': '敦煌飞天',
+  'jiangnan-flora': '江南花鸟',
   doraemon: '哆啦A梦',
   bears: '熊大熊二',
   nezha: '哪吒',
@@ -12,6 +17,14 @@ const IP_MAP = {
   spiderMan: '蜘蛛侠',
   batman: '蝙蝠侠',
   pokemon: '宝可梦'
+};
+
+const IP_PROMPT_MAP = {
+  'auspicious-beast': '瑞兽的祥瑞兽形、云雷纹与昂首守望姿态',
+  'opera-character': '戏曲人物的水袖、脸谱、盔头与程式化亮相身段',
+  'shanhai-legend': '山海传说中的异兽、神木、云海与远古山川',
+  'flying-apsara': '敦煌飞天的飘带、莲花、乐舞与壁画矿物色',
+  'jiangnan-flora': '江南花鸟的莲荷、白鹭、梅枝与水乡四时景致'
 };
 
 const STYLE_MAP = {
@@ -45,13 +58,14 @@ export function generatePrompt(craft, ip, style, carrier = 'keychain') {
   const craftName = craftData?.promptTitle || craftData?.name || craft;
   const craftDetail = craftData?.promptLanguage || `${craftName}的传统纹样与材质`;
   const ipName = IP_MAP[ip] || ip;
+  const ipDetail = IP_PROMPT_MAP[ip] || `${ipName}的可识别轮廓与核心特征`;
   const styleName = STYLE_MAP[style] || style;
   const carrierName = CARRIER_MAP[carrier] || carrier;
   const carrierConstraint = CARRIER_PROMPT_MAP[carrier] || CARRIER_PROMPT_MAP.keychain;
   
   return [
-    `脑洞大开的非遗 × 流行 IP 跨界设计：${craftName} × ${ipName} × ${carrierName}`,
-    `把${ipName}的可识别轮廓与${craftDetail}融合，${styleName}，奇思妙想但主体清晰`,
+    `脑洞大开的非遗 × 文化题材跨界设计：${craftName} × ${ipName} × ${carrierName}`,
+    `把${ipDetail}与${craftDetail}融合，${styleName}，奇思妙想但主体清晰`,
     '单个主体居中，高对比色块，清晰轮廓，保留中等细节，干净纯色背景，无文字，无水印',
     carrierConstraint
   ].join('，');
@@ -342,6 +356,11 @@ export function getCraftInfo(craft) {
 
 export function getIPInfo(ip) {
   const info = {
+    'auspicious-beast': { name: '瑞兽', origin: '麒麟、白泽、狻猊等祥瑞意象与传统护佑纹样' },
+    'opera-character': { name: '戏曲人物', origin: '水袖、靠旗、脸谱与程式化身段构成的中国戏曲意象' },
+    'shanhai-legend': { name: '山海传说', origin: '《山海经》异兽、神木、云海与远古想象' },
+    'flying-apsara': { name: '敦煌飞天', origin: '敦煌壁画中的飘带、莲花、乐舞与矿物色彩' },
+    'jiangnan-flora': { name: '江南花鸟', origin: '莲荷、白鹭、梅枝与水乡四时景致' },
     doraemon: { name: '哆啦A梦', origin: '日本动漫《哆啦A梦》' },
     bears: { name: '熊大熊二', origin: '国产动画《熊出没》' },
     nezha: { name: '哪吒', origin: '中国神话《封神演义》' },

@@ -370,13 +370,13 @@ async function handleGenerateImage() {
   resetThreeDResult();
   updateThreeDActionState();
   btn.disabled = true;
-  btn.textContent = '生成中...';
+  btn.textContent = '炼成中…';
   setWorkflowStep('image');
 
   imagePreview.innerHTML = `
     <div class="loading-overlay">
       <div class="loading-spinner"></div>
-      <p>AI正在创作中...</p>
+      <p>作品图正在炼成…</p>
     </div>
   `;
 
@@ -635,7 +635,7 @@ function updateGenerateButtonLabel() {
   const selection = getCurrentSelection();
   const button = document.getElementById('generateBtn');
   if (!selection || !button || button.disabled) return;
-  button.textContent = selection.carrierId === 'figurine' ? '生成3D参考图' : '生成AI图案';
+  button.textContent = selection.carrierId === 'figurine' ? '炼成 3D 参考图' : '炼成作品图';
 }
 
 function resetThreeDResult() {
@@ -683,8 +683,8 @@ function resetImagePreview() {
   if (!imagePreview) return;
   imagePreview.innerHTML = `
     <div class="preview-placeholder">
-      <p>点击“生成AI图案”按钮</p>
-      <p>生成适配当前载体的非遗文创设计</p>
+      <p>点击“炼成作品图”</p>
+      <p>图像与载体将在同一作品台上呈现</p>
     </div>
   `;
 }
@@ -719,10 +719,10 @@ async function handleGeneratePattern() {
   if (!sourceImageUrl) {
     patternContainer.innerHTML = `
       <div class="pattern-placeholder">
-        <p>请先生成 AI 图像，再转译为拼豆图纸</p>
+        <p>请先炼成作品图，再转译为拼豆图谱</p>
       </div>
     `;
-    showToast('请先生成 AI 图像');
+    showToast('请先炼成作品图');
     return;
   }
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>创意生成 - 非遗造物局</title>
+  <title>造物案台 - 非遗造物局</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="generator-museum.css">
 </head>
@@ -13,139 +13,216 @@
       <div class="logo">
         <img class="logo-seal" src="assets/generated/seal-mark-nav.webp" alt="" aria-hidden="true">
         <div>
-          <h1>非遗造物局</h1>
+          <h1>造物案台</h1>
         </div>
       </div>
-      <nav class="nav">
-        <a href="index.html" class="nav-link">首页</a>
-        <a href="crafts.html" class="nav-link">非遗技艺</a>
-        <a href="generator.html" class="nav-link active">创意生成</a>
-        <a href="ar.html" class="nav-link">AR 体验</a>
+      <nav class="nav" aria-label="博物馆主导航">
+        <a href="index.html" class="nav-link">云上展厅</a>
+        <a href="crafts.html" class="nav-link">百工典藏</a>
+        <a href="generator.html" class="nav-link active" aria-current="page">AI 造物</a>
+        <a href="ar.html" class="nav-link">AR 看展</a>
       </nav>
     </header>
 
     <main class="main generator-main" data-component="GeneratorWorkbench">
       <div id="generator-page" class="page active">
         <div class="generator-pattern" aria-hidden="true"></div>
-        <div class="page-header">
-          <span class="generator-kicker">HERITAGE CREATION LAB · 非遗数字造物台</span>
-          <h2>拼出你的非遗新灵感</h2>
-          <p>从千年技艺中取一枚纹样，与当代想象共同熔铸成可制作、可分享的新作品。</p>
-          <div class="workflow-rail" aria-label="生成流程">
-            <span class="workflow-step active" data-step="idea">1 选灵感</span>
-            <span class="workflow-step" data-step="image">2 生成图像</span>
-            <span class="workflow-step" data-step="model">3 真实 3D</span>
-            <span class="workflow-step" data-step="pattern">4 拼豆图纸</span>
-            <span class="workflow-step" data-step="save">5 保存作品</span>
-          </div>
-        </div>
-        
-        <div class="control-panel" data-component="InspirationConsole">
-          <div class="console-heading">
-            <span>灵感参数</span>
-            <small>选择四项造物因子</small>
-          </div>
-          <div class="control-group">
-            <label for="craft">非遗技艺</label>
-            <!-- 选项由 generator.js 从 src/data/crafts.json 动态生成 -->
-            <select id="craft"></select>
-          </div>
 
-          <div class="control-group">
-            <label for="ip">流行IP</label>
-            <select id="ip">
-              <option value="doraemon">哆啦A梦 - 经典日本动漫角色</option>
-              <option value="bears">熊大熊二 - 国产动画《熊出没》角色</option>
-              <option value="nezha">哪吒 - 中国神话人物，国漫热门角色</option>
-              <option value="monkey">孙悟空 - 中国神话经典角色</option>
-              <option value="pikachu">皮卡丘 - 精灵宝可梦热门角色</option>
-              <option value="mickey">米老鼠 - 迪士尼经典动画角色</option>
-              <option value="helloKitty">Hello Kitty - 日本三丽鸥卡通形象</option>
-              <option value="spiderMan">蜘蛛侠 - 漫威超级英雄</option>
-              <option value="batman">蝙蝠侠 - DC超级英雄</option>
-              <option value="pokemon">宝可梦 - 精灵宝可梦系列角色</option>
-            </select>
-          </div>
+        <header class="page-header atelier-intro">
+          <span class="generator-kicker">百工新作 · 一案炼成</span>
+          <h2>让旧纹样，长成今日新物</h2>
+          <p>从一门技艺取纹样、定题材与载体，再把作品炼成图像、立体模型和可制作图谱。</p>
+        </header>
 
-          <div class="control-group">
-            <label for="carrier">文创载体</label>
-            <select id="carrier">
-              <option value="keychain">拼豆挂件 - 用拼豆制作的挂饰</option>
-              <option value="bag">帆布包 - 印有非遗纹样的帆布包</option>
-              <option value="phone">手机壳 - 印有非遗纹样的手机壳</option>
-              <option value="sticker">贴纸套组 - 非遗主题贴纸套装</option>
-              <option value="magnet">冰箱贴 - 非遗主题冰箱贴</option>
-              <option value="figurine">3D手办 - 从概念图生成可旋转的真实三维模型</option>
-            </select>
-          </div>
-
-          <div class="control-group">
-            <label for="style">风格</label>
-            <select id="style">
-              <option value="chinese">国潮明亮 - 高饱和度配色，现代国潮风格</option>
-              <option value="cute">可爱校园 - 圆润线条，可爱卡通风格</option>
-              <option value="vintage">复古市集 - 怀旧色调，复古文艺风格</option>
-              <option value="minimal">极简日常 - 简约线条，低饱和度配色</option>
-              <option value="festive">节日礼物 - 喜庆配色，节日氛围</option>
-            </select>
-          </div>
-
-          <div class="control-group custom-prompt-group">
-            <label for="custom-prompt">自定义描述 <small>（可选）</small></label>
-            <textarea
-              id="custom-prompt"
-              rows="3"
-              maxlength="500"
-              placeholder="输入你的创意描述，例如：角色穿着汉服站在元宵节灯会中、背景加上敦煌飞天纹样、整体色调偏暖金色……"
-            ></textarea>
-            <small class="custom-prompt-hint" id="custom-prompt-hint">剩余 500 字</small>
-          </div>
-
-          <div class="button-group">
-            <button id="generateBtn" class="btn btn-primary">生成AI图像</button>
-            <button id="patternBtn" class="btn btn-secondary">生成拼豆图纸</button>
-            <button id="saveCreationBtn" class="btn btn-secondary" disabled>保存作品</button>
-          </div>
-        </div>
-
-        <div class="preview-section" data-component="CreationStage">
-          <div class="section-heading">
-            <div>
-              <span class="section-eyebrow">实时造物预演</span>
-              <h3>数字展台</h3>
+        <div class="atelier-grid">
+          <aside class="control-panel atelier-slips" data-component="InspirationConsole" aria-labelledby="craft-slip-title">
+            <div class="console-heading">
+              <span class="panel-index">工艺签</span>
+              <h3 id="craft-slip-title">取纹样</h3>
+              <small>依次选择技艺、题材、载体与气质</small>
             </div>
-            <span class="stage-status"><i></i> 引擎已就绪</span>
-          </div>
-          <div class="preview-container">
-            <div id="three-container" class="three-container" aria-label="文创载体三维预览">
-              <span class="stage-corner stage-corner-a" aria-hidden="true"></span>
-              <span class="stage-corner stage-corner-b" aria-hidden="true"></span>
+
+            <div class="control-group">
+              <label for="craft">非遗技艺</label>
+              <!-- 选项由 generator.js 从 src/data/crafts.json 动态生成 -->
+              <select id="craft"></select>
             </div>
-            <div id="image-preview" class="image-preview">
-              <div class="preview-placeholder">
-                <p>点击“生成AI图案”按钮</p>
-                <p>生成适配当前载体的非遗文创设计</p>
+
+            <div class="control-group">
+              <label for="ip">文化题材</label>
+              <select id="ip">
+                <option value="auspicious-beast">瑞兽 · 祥瑞守望</option>
+                <option value="opera-character">戏曲人物 · 水袖华彩</option>
+                <option value="shanhai-legend">山海传说 · 远古奇想</option>
+                <option value="flying-apsara">敦煌飞天 · 飘带乐舞</option>
+                <option value="jiangnan-flora">江南花鸟 · 四时清韵</option>
+              </select>
+            </div>
+
+            <div class="control-group">
+              <label for="carrier">文创载体</label>
+              <select id="carrier">
+                <option value="keychain">拼豆挂件 - 用拼豆制作的挂饰</option>
+                <option value="bag">帆布包 - 印有非遗纹样的帆布包</option>
+                <option value="phone">手机壳 - 印有非遗纹样的手机壳</option>
+                <option value="sticker">贴纸套组 - 非遗主题贴纸套装</option>
+                <option value="magnet">冰箱贴 - 非遗主题冰箱贴</option>
+                <option value="figurine">3D手办 - 从概念图生成可旋转的真实三维模型</option>
+              </select>
+            </div>
+
+            <div class="control-group">
+              <label for="style">作品气质</label>
+              <select id="style">
+                <option value="chinese">国潮明亮 - 高饱和度配色，现代国潮风格</option>
+                <option value="cute">可爱校园 - 圆润线条，可爱卡通风格</option>
+                <option value="vintage">复古市集 - 怀旧色调，复古文艺风格</option>
+                <option value="minimal">极简日常 - 简约线条，低饱和度配色</option>
+                <option value="festive">节日礼物 - 喜庆配色，节日氛围</option>
+              </select>
+            </div>
+
+            <div class="control-group custom-prompt-group">
+              <label for="custom-prompt">自定义描述 <small>可选</small></label>
+              <textarea
+                id="custom-prompt"
+                rows="4"
+                maxlength="500"
+                placeholder="例如：加入莲花与如意云纹，主体使用暖金与朱砂色，保留手工材质感。"
+              ></textarea>
+              <small class="custom-prompt-hint" id="custom-prompt-hint">剩余 500 字</small>
+            </div>
+          </aside>
+
+          <section class="preview-section atelier-stage" data-component="CreationStage" aria-labelledby="creation-stage-title">
+            <div class="section-heading">
+              <div>
+                <span class="section-eyebrow">中央作品台</span>
+                <h3 id="creation-stage-title">炼成像</h3>
+              </div>
+              <span class="stage-status"><i></i> 案台已备妥</span>
+            </div>
+
+            <button id="generateBtn" class="btn btn-primary stage-generate-btn">炼成作品图</button>
+
+            <div class="preview-container">
+              <div id="three-container" class="three-container" aria-label="文创载体三维预览">
+                <span class="stage-corner stage-corner-a" aria-hidden="true"></span>
+                <span class="stage-corner stage-corner-b" aria-hidden="true"></span>
+              </div>
+              <div id="image-preview" class="image-preview" aria-label="生成图像预览">
+                <div class="preview-placeholder">
+                  <p>选定工艺签后，点击“炼成作品图”</p>
+                  <p>图像与载体将在同一作品台上呈现</p>
+                </div>
               </div>
             </div>
-          </div>
-          <div class="three-d-workflow" data-component="Real3DWorkflow">
-            <div class="three-d-copy">
-              <span class="three-d-kicker">REAL MESH · GLB / PBR</span>
-              <strong>生成真实 3D</strong>
-              <p id="three-d-status" role="status" aria-live="polite">选择“3D手办”并先生成参考图，即可创建真正的 GLB 模型。</p>
-              <progress id="three-d-progress" max="100" value="0" hidden>0%</progress>
+            <p class="stage-caption">作品台保留图像原稿与可旋转载体；选择 3D 手办后，可继续生成真实立体模型。</p>
+          </section>
+
+          <aside class="atelier-ledger" aria-labelledby="ledger-title">
+            <header class="ledger-heading">
+              <span class="panel-index">工序谱</span>
+              <h3 id="ledger-title">作品档案</h3>
+            </header>
+
+            <ol class="workflow-rail" aria-label="造物工序">
+              <li class="workflow-step active" data-step="idea"><span>一</span>取纹样</li>
+              <li class="workflow-step active" data-step="idea"><span>二</span>定载体</li>
+              <li class="workflow-step" data-step="image"><span>三</span>炼成像</li>
+              <li class="workflow-step" data-step="model"><span>四</span>生立体</li>
+              <li class="workflow-step" data-step="save"><span>五</span>入画廊</li>
+            </ol>
+
+            <section class="ledger-section three-d-workflow" data-component="Real3DWorkflow" aria-labelledby="three-d-title">
+              <div class="three-d-copy">
+                <span class="three-d-kicker">立体工序</span>
+                <strong id="three-d-title">生成真实 3D</strong>
+                <p id="three-d-status" role="status" aria-live="polite">选择“3D手办”并先生成参考图，即可创建真正的三维模型。</p>
+                <progress id="three-d-progress" max="100" value="0" hidden>0%</progress>
+              </div>
+              <div class="three-d-actions">
+                <button id="generate3dBtn" class="btn btn-secondary" disabled>生成真实 3D</button>
+                <button id="export-product-glb-btn" class="btn btn-secondary" hidden disabled>下载产品 GLB</button>
+                <a id="download-glb-link" class="btn btn-secondary" href="#" download="heritage-figurine.glb" hidden>下载 GLB</a>
+              </div>
+            </section>
+
+            <section class="product-section ledger-section" aria-labelledby="archive-title">
+              <span class="ledger-label">作品题名</span>
+              <div class="product-card">
+                <h4 id="product-name">请选择参数生成作品名称</h4>
+                <p id="product-desc">选择非遗技艺、文化题材和文创载体后，案台将生成对应的作品说明。</p>
+                <div class="story-card">
+                  <h5 id="archive-title">技艺故事</h5>
+                  <p id="story-content">每种非遗技艺都有独特的历史背景和文化内涵，选择技艺后可在此查看。</p>
+                </div>
+              </div>
+            </section>
+
+            <section id="material-list" class="material-list ledger-section" aria-labelledby="material-title">
+              <h4 id="material-title">材料清单</h4>
+              <div class="materials">
+                <div class="material-item">
+                  <div class="color-dot" style="background: #d3382f"></div>
+                  <span>朱砂红 (A-12)</span>
+                  <span class="count">0 颗</span>
+                </div>
+                <div class="material-item">
+                  <div class="color-dot" style="background: #1f7a6d"></div>
+                  <span>孔雀绿 (C-34)</span>
+                  <span class="count">0 颗</span>
+                </div>
+                <div class="material-item">
+                  <div class="color-dot" style="background: #c99a2e"></div>
+                  <span>鎏金黄 (S-08)</span>
+                  <span class="count">0 颗</span>
+                </div>
+                <div class="material-item">
+                  <div class="color-dot" style="background: #2f5f9f"></div>
+                  <span>靛青蓝 (M-22)</span>
+                  <span class="count">0 颗</span>
+                </div>
+              </div>
+            </section>
+
+            <div id="stats" class="stats ledger-stats" aria-label="制作统计">
+              <div class="stat-item">
+                <strong id="bead-count">0</strong>
+                <span>豆子数量</span>
+              </div>
+              <div class="stat-item">
+                <strong id="color-count">0 色</strong>
+                <span>匹配色号</span>
+              </div>
+              <div class="stat-item">
+                <strong id="time-cost">0 分钟</strong>
+                <span>制作时长</span>
+              </div>
+              <div class="stat-item">
+                <strong id="difficulty">入门</strong>
+                <span>制作难度</span>
+              </div>
             </div>
-            <div class="three-d-actions">
-              <button id="generate3dBtn" class="btn btn-primary" disabled>生成真实 3D</button>
-              <button id="export-product-glb-btn" class="btn btn-primary" hidden disabled>下载产品 GLB</button>
-              <a id="download-glb-link" class="btn btn-secondary" href="#" download="heritage-figurine.glb" hidden>下载 GLB</a>
-            </div>
-          </div>
+
+            <section class="ledger-section archive-actions" aria-labelledby="archive-actions-title">
+              <h4 id="archive-actions-title">归档与下载</h4>
+              <div class="button-group">
+                <button id="patternBtn" class="btn btn-secondary">转译拼豆图谱</button>
+                <button id="saveCreationBtn" class="btn btn-secondary" disabled>保存作品</button>
+                <button id="download-image-btn" class="btn btn-secondary btn-small" disabled>下载图纸</button>
+                <button id="download-csv-btn" class="btn btn-secondary btn-small" disabled>下载CSV</button>
+              </div>
+            </section>
+          </aside>
         </div>
 
-        <div class="pattern-section">
+        <section class="pattern-section atelier-second-act" aria-labelledby="pattern-title">
           <div class="section-toolbar">
-            <h3>拼豆图纸</h3>
+            <div>
+              <span class="section-eyebrow">案台第二幕</span>
+              <h3 id="pattern-title">拼豆图谱</h3>
+            </div>
             <div class="tool-actions">
               <label class="tool-field" for="pattern-resolution-select">
                 <span>图纸精度</span>
@@ -157,94 +234,40 @@
                   <option value="128x128">128 × 128 · 极清细节</option>
                 </select>
               </label>
-              <select id="color-system-select" class="tool-select" aria-label="选择拼豆色号体系">
-                <option value="MARD">MARD 拼豆</option>
-                <option value="COCO">COCO 拼豆</option>
-                <option value="漫漫">漫漫拼豆</option>
-                <option value="盼盼">盼盼拼豆</option>
-                <option value="咪小窝">咪小窝拼豆</option>
-              </select>
-              <button id="download-image-btn" class="btn btn-secondary btn-small" disabled>下载图纸</button>
-              <button id="download-csv-btn" class="btn btn-secondary btn-small" disabled>下载CSV</button>
+              <label class="tool-field" for="color-system-select">
+                <span>色号体系</span>
+                <select id="color-system-select" class="tool-select" aria-label="选择拼豆色号体系">
+                  <option value="MARD">MARD 拼豆</option>
+                  <option value="COCO">COCO 拼豆</option>
+                  <option value="漫漫">漫漫拼豆</option>
+                  <option value="盼盼">盼盼拼豆</option>
+                  <option value="咪小窝">咪小窝拼豆</option>
+                </select>
+              </label>
             </div>
           </div>
           <div id="pattern-container" class="pattern-container">
             <div class="pattern-placeholder">
-              <p>点击"生成拼豆图纸"按钮</p>
-              <p>将AI图像转译为拼豆图纸</p>
+              <p>先炼成作品图，再从工序谱中转译拼豆图谱</p>
             </div>
           </div>
+        </section>
 
-          <div id="material-list" class="material-list">
-            <h3>材料清单</h3>
-            <div class="materials">
-              <div class="material-item">
-                <div class="color-dot" style="background: #d3382f"></div>
-                <span>朱砂红 (A-12)</span>
-                <span class="count">0 颗</span>
-              </div>
-              <div class="material-item">
-                <div class="color-dot" style="background: #1f7a6d"></div>
-                <span>孔雀绿 (C-34)</span>
-                <span class="count">0 颗</span>
-              </div>
-              <div class="material-item">
-                <div class="color-dot" style="background: #c99a2e"></div>
-                <span>鎏金黄 (S-08)</span>
-                <span class="count">0 颗</span>
-              </div>
-              <div class="material-item">
-                <div class="color-dot" style="background: #2f5f9f"></div>
-                <span>靛青蓝 (M-22)</span>
-                <span class="count">0 颗</span>
-              </div>
-            </div>
-          </div>
-
-          <div id="stats" class="stats">
-            <div class="stat-item">
-              <strong id="bead-count">0</strong>
-              <span>预计豆子数量</span>
-            </div>
-            <div class="stat-item">
-              <strong id="color-count">0 色</strong>
-              <span>智能匹配色号</span>
-            </div>
-            <div class="stat-item">
-              <strong id="time-cost">0 分钟</strong>
-              <span>制作时长</span>
-            </div>
-            <div class="stat-item">
-              <strong id="difficulty">入门</strong>
-              <span>制作难度</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="product-section">
-          <h3>商品文案</h3>
-          <div class="product-card">
-            <h4 id="product-name">请选择参数生成商品名称</h4>
-            <p id="product-desc">选择非遗技艺、流行IP和文创载体后，系统将为您生成独特的商品卖点文案。</p>
-            <div class="story-card">
-              <h5>非遗故事</h5>
-              <p id="story-content">每种非遗技艺都有独特的历史背景和文化内涵，选择非遗技艺后查看详细故事。</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="recent-section" id="recent-section" hidden>
+        <section class="recent-section" id="recent-section" hidden>
           <div class="section-toolbar">
-            <h3>最近作品</h3>
+            <div>
+              <span class="section-eyebrow">共创存档</span>
+              <h3>最近作品</h3>
+            </div>
             <button id="refreshCreationsBtn" class="btn btn-secondary btn-small">刷新</button>
           </div>
           <div id="recent-creations" class="recent-creations"></div>
-        </div>
+        </section>
       </div>
     </main>
 
     <footer class="footer">
-      <p>非遗造物局 - 让非遗走进年轻人的日常生活</p>
+      <p>非遗造物局 · 让一门老手艺，成为一件今日新物</p>
     </footer>
   </div>
 
