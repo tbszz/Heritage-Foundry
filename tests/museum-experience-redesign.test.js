@@ -75,10 +75,25 @@ describe('cinematic digital museum redesign', () => {
     expect(museumCss).toMatch(/\.museum-manifesto blockquote p\s*\{[\s\S]*?font-family:\s*"Source Han Serif Regular", serif;[\s\S]*?font-weight:\s*400;/);
   });
 
-  it('lets the 3D corridor own the first screen, keeping only a screen-reader title', () => {
-    // 左侧营销文案块已移除：首屏由 3D 长廊本身呈现，标题仅供无障碍朗读
-    expect(indexHtml).not.toContain('museum-stage-copy');
-    expect(indexHtml).toContain('id="museum-stage-title" class="sr-only"');
-    expect(indexHtml).toContain('aria-labelledby="museum-stage-title"');
+  it('keeps the museum hero title and manifesto visible before the 3D hall starts', () => {
+    const heroTitle = indexHtml.match(/<h1[^>]*id="museum-stage-title"[^>]*>/)?.[0] || '';
+
+    expect(heroTitle).not.toContain('sr-only');
+    expect(indexHtml).toContain('museum-stage-copy');
+    expect(indexHtml).toContain('一馆藏百艺，一念续千年');
+  });
+
+  it('offers one explicit museum-entry action from the exterior hero', () => {
+    expect(indexHtml).toContain('id="museum-entry-trigger"');
+  });
+
+  it('presents the shadow-puppet and cloth-tiger heritage guides as buttons', () => {
+    expect(indexHtml).toMatch(/<button[^>]*data-heritage-guide="shadow"/);
+    expect(indexHtml).toMatch(/<button[^>]*data-heritage-guide="tiger-head"/);
+  });
+
+  it('keeps the map and co-creation gallery reachable from top-level controls', () => {
+    expect(indexHtml).toMatch(/<(?:a|button)[^>]*data-open-feature="map"/);
+    expect(indexHtml).toMatch(/<(?:a|button)[^>]*data-open-feature="gallery"/);
   });
 });

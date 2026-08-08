@@ -35,6 +35,21 @@ describe('generator museum workspace', () => {
     expect(generatorHtml).toContain('id="patternBtn"');
   });
 
+  it('arranges the creation stage and process record as a museum atelier', () => {
+    expect(generatorHtml).toContain('atelier-grid');
+    expect(generatorHtml).toContain('atelier-ledger');
+  });
+
+  it('offers culture-led topics instead of making licensed characters the default brief', () => {
+    const topicOptions = generatorHtml.match(/<select id="ip">([\s\S]*?)<\/select>/)?.[1] || '';
+
+    expect(topicOptions).toMatch(/<option[^>]*>[^<]*瑞兽/);
+    expect(topicOptions).toMatch(/<option[^>]*>[^<]*戏曲人物/);
+    expect(topicOptions).toMatch(/<option[^>]*>[^<]*山海传说/);
+    expect(topicOptions).toMatch(/<option[^>]*>[^<]*敦煌飞天/);
+    expect(topicOptions).toMatch(/<option[^>]*>[^<]*江南花鸟/);
+  });
+
   it('exposes a real 3D figurine workflow instead of presenting the reference image as 3D', () => {
     expect(generatorHtml).toContain('<option value="figurine">');
     expect(generatorHtml).toContain('id="generate3dBtn"');

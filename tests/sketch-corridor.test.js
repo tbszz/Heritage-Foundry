@@ -118,7 +118,10 @@ describe('sketch corridor scene', () => {
     expect(getRoomStandLayout([])).toHaveLength(0);
   });
 
-  it('mounts lazily from the homepage only through a dynamic import', () => {
+  it('keeps the dynamic corridor dormant during homepage initialization', () => {
+    const initBlock = homeJs.match(/async function initHomePage\(\) \{([\s\S]*?)\n\}/)?.[1] || '';
+
+    expect(initBlock).not.toContain('bindSketchCorridor();');
     expect(homeJs).toContain("import('./components/SketchCorridorScene.js')");
     expect(homeJs).not.toContain("from './components/SketchCorridorScene.js'");
     expect(homeJs).toContain("document.getElementById('sketch-corridor')");
