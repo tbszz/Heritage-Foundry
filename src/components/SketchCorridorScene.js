@@ -674,11 +674,19 @@ export class SketchCorridorScene {
     const aliases = {
       shadow: 'paper',
       textile: 'thread',
-      tiger: 'thread'
+      tiger: 'thread',
+      'tiger-head': 'thread'
     };
     const resolvedId = aliases[chapterId] || chapterId;
     const door = this.doors.find((item) => item.kind === 'chapter' && item.id === resolvedId);
-    if (!door || this.activeDoor || this.viewState !== 'corridor') return false;
+    if (
+      !door
+      || this.disposed
+      || !this.inputEnabled
+      || this.renderPaused
+      || this.activeDoor
+      || this.viewState !== 'corridor'
+    ) return false;
 
     this.activeDoor = door;
     door.opened = true;
@@ -1167,6 +1175,27 @@ export class SketchCorridorScene {
         return;
       }
       if (!this.inputEnabled || this.renderPaused) return;
+
+      const numericShortcut = event.code.match(/^Digit([1-9])$/);
+      if (numericShortcut) {
+        const index = Number(numericShortcut[1]) - 1;
+        if (this.viewState === 'room') {
+          const stand = this.currentDoor?.roomStands?.[index];
+          if (stand?.craft) {
+            event.preventDefault();
+            this.callbacks.onSelectCraft?.(stand.craft);
+          }
+        } else if (this.viewState === 'corridor') {
+          const chapterDoors = this.doors.filter((door) => door.kind === 'chapter');
+          const door = chapterDoors[index];
+          if (door) {
+            event.preventDefault();
+            this.enterChapter(door.id);
+          }
+        }
+        return;
+      }
+
       const step = { ArrowDown: 2.6, PageDown: 7, ArrowUp: -2.6, PageUp: -7 }[event.code];
       if (!step) return;
       event.preventDefault();
@@ -1383,7 +1412,7 @@ export class SketchCorridorScene {
     }
 
     // 展厅模型：缓慢自旋 + 悬浮
-    if (this.viewState === 'room' && this.currentDoor) {
+    if (!this.reducedMotion && this.viewState === 'room' && this.currentDoor) {
       this.currentDoor.roomStands.forEach((stand, index) => {
         if (!stand.modelAnchor.children.length) return;
         stand.modelAnchor.rotation.y += dt * 0.4;

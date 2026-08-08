@@ -1,8 +1,9 @@
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   CORRIDOR,
   ROOM,
+  SketchCorridorScene,
   clampCorridorZ,
   getCorridorDoorLayout,
   getCorridorRailBounds,
@@ -15,6 +16,7 @@ import {
 const indexHtml = readFileSync(new URL('../src/index.html', import.meta.url), 'utf8');
 const homeJs = readFileSync(new URL('../src/home.js', import.meta.url), 'utf8');
 const generatorHtml = readFileSync(new URL('../src/generator.html', import.meta.url), 'utf8');
+const corridorJs = readFileSync(new URL('../src/components/SketchCorridorScene.js', import.meta.url), 'utf8');
 
 const chapters = [
   { id: 'thread', title: '经纬成章', subtitle: '线与布的记忆' },
@@ -118,6 +120,41 @@ describe('sketch corridor scene', () => {
     expect(getRoomStandLayout([])).toHaveLength(0);
   });
 
+  it('routes heritage guide IDs through the same guarded chapter entrance', () => {
+    const scene = Object.create(SketchCorridorScene.prototype);
+    scene.doors = getCorridorDoorLayout(chapters);
+    scene.activeDoor = null;
+    scene.viewState = 'corridor';
+    scene.inputEnabled = true;
+    scene.renderPaused = false;
+    scene.disposed = false;
+    scene.enterRoom = vi.fn();
+
+    expect(scene.enterChapter('tiger-head')).toBe(true);
+    expect(scene.activeDoor.id).toBe('thread');
+    expect(scene.enterRoom).toHaveBeenCalledOnce();
+
+    scene.activeDoor = null;
+    scene.enterRoom.mockClear();
+    expect(scene.enterChapter('shadow')).toBe(true);
+    expect(scene.activeDoor.id).toBe('paper');
+
+    scene.activeDoor = null;
+    scene.inputEnabled = false;
+    expect(scene.enterChapter('paper')).toBe(false);
+
+    scene.inputEnabled = true;
+    scene.renderPaused = true;
+    expect(scene.enterChapter('paper')).toBe(false);
+
+    scene.renderPaused = false;
+    scene.disposed = true;
+    expect(scene.enterChapter('paper')).toBe(false);
+
+    scene.disposed = false;
+    expect(scene.enterChapter('unknown')).toBe(false);
+  });
+
   it('keeps the dynamic corridor dormant during homepage initialization', () => {
     const initBlock = homeJs.match(/async function initHomePage\(\) \{([\s\S]*?)\n\}/)?.[1] || '';
 
@@ -150,6 +187,17 @@ describe('sketch corridor scene', () => {
     expect(indexHtml).toContain('id="artifact-dialog"');
     expect(indexHtml).not.toContain('museum-container');
     expect(indexHtml).not.toContain('WASD');
+  });
+
+  it('offers numeric keyboard shortcuts for halls and room artifacts', () => {
+    expect(corridorJs).toContain("event.code.match(/^Digit([1-9])$/)");
+    expect(corridorJs).toContain("this.doors.filter((door) => door.kind === 'chapter')");
+    expect(corridorJs).toContain('this.currentDoor?.roomStands');
+    expect(corridorJs).toContain('this.callbacks.onSelectCraft?.(stand.craft)');
+  });
+
+  it('does not auto-spin or float room models when reduced motion is requested', () => {
+    expect(corridorJs).toContain("if (!this.reducedMotion && this.viewState === 'room' && this.currentDoor)");
   });
 
   it('themes the generator workspace with the same museum language', () => {
