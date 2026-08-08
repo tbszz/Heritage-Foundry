@@ -19,7 +19,9 @@
       <nav class="nav" aria-label="博物馆主导航">
         <a href="index.html" class="nav-link">云上展厅</a>
         <a href="crafts.html" class="nav-link">百工典藏</a>
+        <a href="index.html?view=map" class="nav-link">山河图志</a>
         <a href="generator.html" class="nav-link active" aria-current="page">AI 造物</a>
+        <a href="index.html?view=gallery" class="nav-link">共创画廊</a>
         <a href="ar.html" class="nav-link">AR 看展</a>
       </nav>
     </header>
@@ -30,7 +32,7 @@
 
         <header class="page-header atelier-intro">
           <span class="generator-kicker">百工新作 · 一案炼成</span>
-          <h2>让旧纹样，长成今日新物</h2>
+          <h2><span>让旧纹样，</span><span>长成今日新物</span></h2>
           <p>从一门技艺取纹样、定题材与载体，再把作品炼成图像、立体模型和可制作图谱。</p>
         </header>
 
@@ -160,51 +162,6 @@
               </div>
             </section>
 
-            <section id="material-list" class="material-list ledger-section" aria-labelledby="material-title">
-              <h4 id="material-title">材料清单</h4>
-              <div class="materials">
-                <div class="material-item">
-                  <div class="color-dot" style="background: #d3382f"></div>
-                  <span>朱砂红 (A-12)</span>
-                  <span class="count">0 颗</span>
-                </div>
-                <div class="material-item">
-                  <div class="color-dot" style="background: #1f7a6d"></div>
-                  <span>孔雀绿 (C-34)</span>
-                  <span class="count">0 颗</span>
-                </div>
-                <div class="material-item">
-                  <div class="color-dot" style="background: #c99a2e"></div>
-                  <span>鎏金黄 (S-08)</span>
-                  <span class="count">0 颗</span>
-                </div>
-                <div class="material-item">
-                  <div class="color-dot" style="background: #2f5f9f"></div>
-                  <span>靛青蓝 (M-22)</span>
-                  <span class="count">0 颗</span>
-                </div>
-              </div>
-            </section>
-
-            <div id="stats" class="stats ledger-stats" aria-label="制作统计">
-              <div class="stat-item">
-                <strong id="bead-count">0</strong>
-                <span>豆子数量</span>
-              </div>
-              <div class="stat-item">
-                <strong id="color-count">0 色</strong>
-                <span>匹配色号</span>
-              </div>
-              <div class="stat-item">
-                <strong id="time-cost">0 分钟</strong>
-                <span>制作时长</span>
-              </div>
-              <div class="stat-item">
-                <strong id="difficulty">入门</strong>
-                <span>制作难度</span>
-              </div>
-            </div>
-
             <section class="ledger-section archive-actions" aria-labelledby="archive-actions-title">
               <h4 id="archive-actions-title">归档与下载</h4>
               <div class="button-group">
@@ -249,6 +206,53 @@
           <div id="pattern-container" class="pattern-container">
             <div class="pattern-placeholder">
               <p>先炼成作品图，再从工序谱中转译拼豆图谱</p>
+            </div>
+          </div>
+
+          <div class="atelier-materials" aria-label="图谱材料与制作统计">
+            <section id="material-list" class="material-list" aria-labelledby="material-title">
+              <h4 id="material-title">材料清单</h4>
+              <div class="materials">
+                <div class="material-item">
+                  <div class="color-dot" style="background: #d3382f"></div>
+                  <span>朱砂红 (A-12)</span>
+                  <span class="count">0 颗</span>
+                </div>
+                <div class="material-item">
+                  <div class="color-dot" style="background: #1f7a6d"></div>
+                  <span>孔雀绿 (C-34)</span>
+                  <span class="count">0 颗</span>
+                </div>
+                <div class="material-item">
+                  <div class="color-dot" style="background: #c99a2e"></div>
+                  <span>鎏金黄 (S-08)</span>
+                  <span class="count">0 颗</span>
+                </div>
+                <div class="material-item">
+                  <div class="color-dot" style="background: #2f5f9f"></div>
+                  <span>靛青蓝 (M-22)</span>
+                  <span class="count">0 颗</span>
+                </div>
+              </div>
+            </section>
+
+            <div id="stats" class="stats ledger-stats" aria-label="制作统计">
+              <div class="stat-item">
+                <strong id="bead-count">0</strong>
+                <span>豆子数量</span>
+              </div>
+              <div class="stat-item">
+                <strong id="color-count">0 色</strong>
+                <span>匹配色号</span>
+              </div>
+              <div class="stat-item">
+                <strong id="time-cost">0 分钟</strong>
+                <span>制作时长</span>
+              </div>
+              <div class="stat-item">
+                <strong id="difficulty">入门</strong>
+                <span>制作难度</span>
+              </div>
             </div>
           </div>
         </section>

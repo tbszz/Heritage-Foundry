@@ -3,6 +3,21 @@ import { describe, expect, it } from 'vitest';
 import { generatePrompt } from '../src/utils/apiService.js';
 
 describe('frontend AI prompt builder', () => {
+  it.each([
+    ['auspicious-beast', '瑞兽'],
+    ['opera-character', '戏曲人物'],
+    ['shanhai-legend', '山海传说'],
+    ['flying-apsara', '敦煌飞天'],
+    ['jiangnan-flora', '江南花鸟']
+  ])('builds culture-led prompt language for %s', (topicId, topicName) => {
+    const prompt = generatePrompt('papercut', topicId, 'minimal', 'bag');
+
+    expect(prompt).toContain(topicName);
+    expect(prompt).toContain('文化题材');
+    expect(prompt).toContain('剪纸');
+    expect(prompt).toContain('帆布包');
+  });
+
   it('adds wild heritage/IP crossover and perler-bead constraints', () => {
     const prompt = generatePrompt('tangka', 'doraemon', 'chinese', 'keychain');
 

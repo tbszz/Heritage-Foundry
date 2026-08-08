@@ -38,6 +38,19 @@ describe('generator museum workspace', () => {
   it('arranges the creation stage and process record as a museum atelier', () => {
     expect(generatorHtml).toContain('atelier-grid');
     expect(generatorHtml).toContain('atelier-ledger');
+    expect(generatorHtml.indexOf('id="material-list"')).toBeGreaterThan(
+      generatorHtml.indexOf('class="pattern-section atelier-second-act"')
+    );
+  });
+
+  it('keeps the bead pattern branch from falsely marking or regressing the 3D step', () => {
+    const workflowBlock = generatorJs.match(/function setWorkflowStep\(step\) \{([\s\S]*?)\n\}/)?.[1] || '';
+
+    expect(workflowBlock).toContain("step === 'pattern' ? 'image' : step");
+    expect(workflowBlock).not.toContain("['idea', 'image', 'model', 'pattern', 'save']");
+    expect(workflowBlock).toContain('Math.max(highestWorkflowStepIndex, requestedIndex)');
+    expect(workflowBlock).toContain("step === 'idea'");
+    expect(workflowBlock).toContain('? 0');
   });
 
   it('offers culture-led topics instead of making licensed characters the default brief', () => {

@@ -52,6 +52,7 @@ let productExportActive = false;
 let patternImageExportActive = false;
 let current3DModelUrl = null;
 let currentThreeDErrorMessage = '';
+let highestWorkflowStepIndex = 0;
 let threeDCapabilities = {
   loaded: false,
   configured: false,
@@ -1010,11 +1011,20 @@ async function loadRecentCreations() {
 }
 
 function setWorkflowStep(step) {
-  const order = ['idea', 'image', 'model', 'pattern', 'save'];
-  const activeIndex = order.indexOf(step);
+  const order = ['idea', 'image', 'model', 'save'];
+  // 拼豆是图像炼成后的平行工序，不应误点亮“生立体”。
+  const displayStep = step === 'pattern' ? 'image' : step;
+  const requestedIndex = order.indexOf(displayStep);
+  if (requestedIndex < 0) return;
+
+  // 新题材从“立意”重新起步；同一件作品的平行工序不能倒退既有进度。
+  highestWorkflowStepIndex = step === 'idea'
+    ? 0
+    : Math.max(highestWorkflowStepIndex, requestedIndex);
+
   document.querySelectorAll('.workflow-step').forEach((item) => {
     const index = order.indexOf(item.dataset.step);
-    item.classList.toggle('active', index <= activeIndex);
+    item.classList.toggle('active', index <= highestWorkflowStepIndex);
   });
 }
 
