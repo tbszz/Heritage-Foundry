@@ -1606,8 +1606,21 @@ body.crafts-shell .footer { border-top-color: var(--line); color: var(--muted); 
 
 @media (max-width: 760px) {
   body.crafts-shell .header { padding: 14px 18px; }
-  body.crafts-shell .nav { gap: 18px; }
-  body.crafts-shell .nav-link { padding: 12px 0; font-size: 14px; }
+  body.crafts-shell .nav {
+    width: 100%;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 18px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  body.crafts-shell .nav::-webkit-scrollbar { display: none; }
+  body.crafts-shell .nav-link {
+    flex: 0 0 auto;
+    padding: 12px 0;
+    font-size: 14px;
+    white-space: nowrap;
+  }
   body.crafts-shell #crafts-page { grid-template-columns: 1fr; }
   body.crafts-shell .right-panel { grid-column: auto; grid-template-columns: 1fr; }
   body.crafts-shell .craft-sidebar-list { max-height: 300px; }
