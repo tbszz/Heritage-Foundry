@@ -64,7 +64,7 @@ export function generatePrompt(craft, ip, style, carrier = 'keychain') {
   const carrierConstraint = CARRIER_PROMPT_MAP[carrier] || CARRIER_PROMPT_MAP.keychain;
   
   return [
-    `脑洞大开的非遗 × 文化题材跨界设计：${craftName} × ${ipName} × ${carrierName}`,
+    `脑洞大开的非遗 × 流行 IP 跨界设计：${craftName} × ${ipName} × ${carrierName}`,
     `把${ipDetail}与${craftDetail}融合，${styleName}，奇思妙想但主体清晰`,
     '单个主体居中，高对比色块，清晰轮廓，保留中等细节，干净纯色背景，无文字，无水印',
     carrierConstraint

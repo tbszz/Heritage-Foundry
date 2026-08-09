@@ -4,16 +4,22 @@ import { generatePrompt } from '../src/utils/apiService.js';
 
 describe('frontend AI prompt builder', () => {
   it.each([
-    ['auspicious-beast', '瑞兽'],
-    ['opera-character', '戏曲人物'],
-    ['shanhai-legend', '山海传说'],
-    ['flying-apsara', '敦煌飞天'],
-    ['jiangnan-flora', '江南花鸟']
-  ])('builds culture-led prompt language for %s', (topicId, topicName) => {
-    const prompt = generatePrompt('papercut', topicId, 'minimal', 'bag');
+    ['doraemon', '哆啦A梦'],
+    ['bears', '熊大熊二'],
+    ['nezha', '哪吒'],
+    ['monkey', '孙悟空'],
+    ['pikachu', '皮卡丘'],
+    ['mickey', '米老鼠'],
+    ['helloKitty', 'Hello Kitty'],
+    ['spiderMan', '蜘蛛侠'],
+    ['batman', '蝙蝠侠'],
+    ['pokemon', '宝可梦']
+  ])('builds popular IP prompt language for %s', (ipId, ipName) => {
+    const prompt = generatePrompt('papercut', ipId, 'minimal', 'bag');
 
-    expect(prompt).toContain(topicName);
-    expect(prompt).toContain('文化题材');
+    expect(prompt).toContain(ipName);
+    expect(prompt).toContain('流行 IP');
+    expect(prompt).not.toContain('文化题材');
     expect(prompt).toContain('剪纸');
     expect(prompt).toContain('帆布包');
   });

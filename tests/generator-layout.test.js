@@ -53,14 +53,22 @@ describe('generator museum workspace', () => {
     expect(workflowBlock).toContain('? 0');
   });
 
-  it('offers culture-led topics instead of making licensed characters the default brief', () => {
-    const topicOptions = generatorHtml.match(/<select id="ip">([\s\S]*?)<\/select>/)?.[1] || '';
+  it('restores the original popular IP choices in place of culture topics', () => {
+    const ipOptions = generatorHtml.match(/<select id="ip">([\s\S]*?)<\/select>/)?.[1] || '';
 
-    expect(topicOptions).toMatch(/<option[^>]*>[^<]*瑞兽/);
-    expect(topicOptions).toMatch(/<option[^>]*>[^<]*戏曲人物/);
-    expect(topicOptions).toMatch(/<option[^>]*>[^<]*山海传说/);
-    expect(topicOptions).toMatch(/<option[^>]*>[^<]*敦煌飞天/);
-    expect(topicOptions).toMatch(/<option[^>]*>[^<]*江南花鸟/);
+    expect(generatorHtml).toContain('<label for="ip">流行 IP</label>');
+    expect(ipOptions).toContain('<option value="doraemon">哆啦A梦');
+    expect(ipOptions).toContain('<option value="bears">熊大熊二');
+    expect(ipOptions).toContain('<option value="nezha">哪吒');
+    expect(ipOptions).toContain('<option value="monkey">孙悟空');
+    expect(ipOptions).toContain('<option value="pikachu">皮卡丘');
+    expect(ipOptions).toContain('<option value="mickey">米老鼠');
+    expect(ipOptions).toContain('<option value="helloKitty">Hello Kitty');
+    expect(ipOptions).toContain('<option value="spiderMan">蜘蛛侠');
+    expect(ipOptions).toContain('<option value="batman">蝙蝠侠');
+    expect(ipOptions).toContain('<option value="pokemon">宝可梦');
+    expect(ipOptions).not.toContain('auspicious-beast');
+    expect(ipOptions).not.toContain('shanhai-legend');
   });
 
   it('exposes a real 3D figurine workflow instead of presenting the reference image as 3D', () => {

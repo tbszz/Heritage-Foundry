@@ -2,21 +2,28 @@ import { describe, expect, it } from 'vitest';
 
 describe('creative prompt service', () => {
   it.each([
-    ['auspicious-beast', '瑞兽'],
-    ['opera-character', '戏曲人物'],
-    ['shanhai-legend', '山海传说'],
-    ['flying-apsara', '敦煌飞天'],
-    ['jiangnan-flora', '江南花鸟']
-  ])('keeps the %s culture topic meaningful in the server prompt', async (topicId, topicName) => {
+    ['doraemon', '哆啦A梦'],
+    ['bears', '熊大熊二'],
+    ['nezha', '哪吒'],
+    ['monkey', '孙悟空'],
+    ['pikachu', '皮卡丘'],
+    ['mickey', '米老鼠'],
+    ['helloKitty', 'Hello Kitty'],
+    ['spiderMan', '蜘蛛侠'],
+    ['batman', '蝙蝠侠'],
+    ['pokemon', '宝可梦']
+  ])('keeps the %s popular IP meaningful in the server prompt', async (ipId, ipName) => {
     const { buildCreativePrompt } = await import('../services/promptService.js');
     const prompt = buildCreativePrompt({
       craftType: 'papercut',
-      ip: topicId,
+      ip: ipId,
       carrier: 'bag',
       style: 'minimal'
     });
 
-    expect(prompt).toContain(topicName);
+    expect(prompt).toContain(ipName);
+    expect(prompt).toContain('流行 IP');
+    expect(prompt).not.toContain('文化题材');
     expect(prompt).toContain('剪纸');
     expect(prompt).toContain('帆布包');
   });

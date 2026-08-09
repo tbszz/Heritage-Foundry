@@ -129,7 +129,7 @@ function resolveLibraryItem(library, key, fallbackName) {
   return {
     name: fallbackName || key || '非遗技艺',
     language: `${fallbackName || key || '非遗'}的传统视觉元素`,
-    traits: `${fallbackName || key || '文化题材'}的核心视觉特征`,
+    traits: `${fallbackName || key || '流行 IP'}的核心视觉特征`,
     constraint: '适合文创产品落地'
   };
 }
@@ -178,11 +178,11 @@ function buildCreativePrompt({ basePrompt = '', style = 'default', craftType, ip
   const carrierOutputInstruction = buildCarrierOutputInstruction(carrierItem);
 
   const promptLines = [
-    '你是一位脑洞大开的国潮非遗视觉导演，创作一张非常吸引注意力的非遗 × 中国文化题材跨界主视觉。',
+    '你是一位脑洞大开的国潮非遗视觉导演，创作一张非常吸引注意力的非遗 × 流行 IP 跨界主视觉。',
     `核心任务：${task}。`,
-    `跨界组合：${craft.name}非遗语言 + ${ipItem.name}文化题材意象 + ${carrierItem.name}。`,
+    `跨界组合：${craft.name}非遗语言 + ${ipItem.name}流行 IP 视觉 + ${carrierItem.name}。`,
     `非遗视觉：${craft.language}，${craft.twist || '传统技艺以超现实方式重组'}。`,
-    `题材意象：提炼${ipItem.name}的视觉关键词：${ipItem.traits}，避免官方 logo 和文字商标。`,
+    `IP 视觉：提炼${ipItem.name}的视觉关键词：${ipItem.traits}，避免官方 logo 和文字商标。`,
     `产品方向：${carrierItem.constraint}，${styleText}。`,
     carrierOutputInstruction,
     `画面要求：${carrierItem.aspectInstruction || '1:1 方形画幅'}，干净背景、纯色背景，无文字，无水印，无 UI mockup，高清产品级渲染，动态感强，奇思妙想但形体明确。`
