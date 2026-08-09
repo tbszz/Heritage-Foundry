@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CRAFTS_DATA } from '../src/utils/craftData.js';
 import {
@@ -9,6 +9,7 @@ import {
 const homeJs = readFileSync(new URL('../src/home.js', import.meta.url), 'utf8');
 const indexHtml = readFileSync(new URL('../src/index.html', import.meta.url), 'utf8');
 const museumCss = readFileSync(new URL('../src/museum-experience.css', import.meta.url), 'utf8');
+const museumVideoUrl = new URL('../public/assets/generated/museum-night-loop.mp4', import.meta.url);
 
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -193,6 +194,19 @@ describe('cinematic digital museum redesign', () => {
     expect(heroVideo).toContain('src="/assets/generated/museum-night-loop.mp4"');
   });
 
+  it('ships a real non-empty MP4 container for the museum-night background', () => {
+    const assetExists = existsSync(museumVideoUrl);
+
+    expect(assetExists).toBe(true);
+    if (!assetExists) return;
+
+    const bytes = readFileSync(museumVideoUrl);
+    expect(bytes.byteLength).toBeGreaterThan(1024);
+    expect(bytes.subarray(4, 8).toString('ascii')).toBe('ftyp');
+    expect(bytes.includes(Buffer.from('moov'))).toBe(true);
+    expect(bytes.includes(Buffer.from('mdat'))).toBe(true);
+  });
+
   it('plays the museum background only for an active cinematic experience', async () => {
     const homeModule = await import('../src/home.js');
 
@@ -291,6 +305,22 @@ describe('cinematic digital museum redesign', () => {
     expect(documentTarget.body.dataset.experienceMode).toBe('cinematic');
     expect(calls.play).toBe(1);
     expect(video.dataset.playbackState).toBe('playing');
+  });
+
+  it('keeps the mobile motion toggle reachable above the museum entry button', () => {
+    const mobileModeToggleRule = getCssRuleWithinAny(
+      museumCss,
+      '@media (max-width: 760px)',
+      '.mode-toggle'
+    );
+
+    expect(mobileModeToggleRule).toContain('display: inline-flex;');
+    expect(mobileModeToggleRule).toContain('align-items: center;');
+    expect(mobileModeToggleRule).toContain('justify-content: center;');
+    expect(mobileModeToggleRule).toContain('right: 12px;');
+    expect(mobileModeToggleRule).toContain('bottom: 122px;');
+    expect(mobileModeToggleRule).toContain('min-height: 44px;');
+    expect(mobileModeToggleRule).not.toContain('display: none;');
   });
 
   it('shows the moving layer only in cinematic mode without reduced motion', () => {
