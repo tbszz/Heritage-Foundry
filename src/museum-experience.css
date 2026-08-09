@@ -2576,10 +2576,22 @@ body[data-experience-mode="still"] .reveal {
   z-index: 1;
   width: 100%;
   height: 100%;
+  opacity: 0;
+  visibility: hidden;
   object-fit: cover;
   object-position: 50% 52%;
   pointer-events: none;
   transition: opacity 900ms var(--premium-ease), transform 1500ms var(--premium-ease), filter 1500ms var(--premium-ease);
+}
+
+body[data-experience-mode="cinematic"] .museum-stage-video {
+  opacity: 1;
+  visibility: visible;
+}
+
+body[data-experience-mode="still"] .museum-stage-video {
+  opacity: 0;
+  visibility: hidden;
 }
 
 .museum-stage-shade {
@@ -3127,6 +3139,11 @@ body[data-experience-mode="cinematic"] .museum-stage-index {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .museum-stage-video {
+    opacity: 0 !important;
+    visibility: hidden !important;
+  }
+
   .heritage-guide-figure {
     animation: none !important;
   }

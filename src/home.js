@@ -142,8 +142,11 @@ export function shouldPlayMuseumBackgroundVideo({
   return experienceMode === 'cinematic' && !reducedMotion && !documentHidden;
 }
 
+let museumBackgroundVideoRequestId = 0;
+
 export function syncMuseumBackgroundVideo() {
   if (typeof document === 'undefined') return;
+  const requestId = ++museumBackgroundVideoRequestId;
   const video = document.querySelector('[data-museum-background-video]');
   if (!video) return;
 
@@ -162,9 +165,38 @@ export function syncMuseumBackgroundVideo() {
   const playAttempt = video.play();
   if (playAttempt && typeof playAttempt.catch === 'function') {
     playAttempt.catch(() => {
+      const playbackIsStillExpected = shouldPlayMuseumBackgroundVideo({
+        experienceMode: document.body?.dataset.experienceMode,
+        reducedMotion: Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches),
+        documentHidden: document.hidden
+      });
+      if (
+        requestId !== museumBackgroundVideoRequestId
+        || !playbackIsStillExpected
+        || video.dataset.playbackState !== 'playing'
+      ) return;
       video.dataset.playbackState = 'blocked';
     });
   }
+}
+
+export function bindMuseumBackgroundVideoLifecycle() {
+  if (typeof document === 'undefined' || typeof window === 'undefined') return () => {};
+  const reducedMotionQuery = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+  const syncVisibility = () => {
+    if (document.body) document.body.dataset.paused = document.hidden ? 'true' : 'false';
+    syncMuseumBackgroundVideo();
+  };
+  const syncReducedMotion = () => syncMuseumBackgroundVideo();
+
+  syncVisibility();
+  document.addEventListener('visibilitychange', syncVisibility);
+  reducedMotionQuery?.addEventListener?.('change', syncReducedMotion);
+
+  return () => {
+    document.removeEventListener('visibilitychange', syncVisibility);
+    reducedMotionQuery?.removeEventListener?.('change', syncReducedMotion);
+  };
 }
 
 export function openModalElement(dialog) {
@@ -201,8 +233,7 @@ async function initHomePage() {
 
   const mode = detectExperienceMode();
   document.body.dataset.experienceMode = mode;
-  document.body.dataset.paused = document.hidden ? 'true' : 'false';
-  syncMuseumBackgroundVideo();
+  bindMuseumBackgroundVideoLifecycle();
   bindDialog();
   bindMuseumEntry();
   bindModeToggle();
@@ -215,10 +246,6 @@ async function initHomePage() {
     window.setTimeout(() => openArtifact(initialCraft), 250);
   }
 
-  document.addEventListener('visibilitychange', () => {
-    document.body.dataset.paused = document.hidden ? 'true' : 'false';
-    syncMuseumBackgroundVideo();
-  });
 }
 
 function animateNumber(el, target, duration = 1200) {
