@@ -45,6 +45,13 @@ function getCssRuleWithinAny(source, container, selector) {
     .find(Boolean) || '';
 }
 
+function getNumericCssDeclaration(rule, property) {
+  const match = rule.match(new RegExp(
+    `(?:^|\\n)\\s*${escapeRegExp(property)}\\s*:\\s*(-?\\d+(?:\\.\\d+)?)\\s*;`
+  ));
+  return match ? Number(match[1]) : Number.NaN;
+}
+
 function installMuseumVideoHarness({ play = () => Promise.resolve() } = {}) {
   const calls = { play: 0, pause: 0 };
   const video = {
@@ -65,13 +72,23 @@ function installMuseumVideoHarness({ play = () => Promise.resolve() } = {}) {
   );
   const reducedMotionQuery = new EventTarget();
   reducedMotionQuery.matches = false;
+  const modeToggle = new EventTarget();
+  const modeToggleAttributes = new Map();
+  modeToggle.textContent = '';
+  modeToggle.setAttribute = (name, value) => modeToggleAttributes.set(name, value);
+  modeToggle.getAttribute = (name) => modeToggleAttributes.get(name) ?? null;
+  documentTarget.getElementById = (id) => (
+    id === 'experience-mode-toggle' ? modeToggle : null
+  );
+  documentTarget.querySelectorAll = () => [];
 
   vi.stubGlobal('document', documentTarget);
   vi.stubGlobal('window', {
+    localStorage: { setItem() {} },
     matchMedia: () => reducedMotionQuery
   });
 
-  return { calls, documentTarget, reducedMotionQuery, video };
+  return { calls, documentTarget, modeToggle, reducedMotionQuery, video };
 }
 
 afterEach(() => {
@@ -159,8 +176,9 @@ describe('cinematic digital museum redesign', () => {
     expect(indexHtml).toContain('一馆藏百艺，一念续千年');
     expect(indexHtml).not.toContain('museum-building-mask');
     expect(museumCss).not.toContain('.museum-building-mask');
-    expect(stageCopyRule).toMatch(/z-index:\s*[5-9]/);
+    expect(getNumericCssDeclaration(stageCopyRule, 'z-index')).toBeGreaterThanOrEqual(5);
     expect(titleRule).toContain('padding-block:');
+    expect(titleRule).toContain('line-height: 0.96;');
   });
 
   it('ships a muted inline museum-night video with the static exterior as its fallback', () => {
@@ -257,6 +275,24 @@ describe('cinematic digital museum redesign', () => {
     expect(video.dataset.playbackState).toBe('playing');
   });
 
+  it('pauses and resumes the museum video through real mode-toggle clicks', async () => {
+    const { calls, documentTarget, modeToggle, video } = installMuseumVideoHarness();
+    const homeModule = await import('../src/home.js');
+
+    expect(typeof homeModule.bindModeToggle).toBe('function');
+    homeModule.bindModeToggle();
+
+    modeToggle.dispatchEvent(new Event('click'));
+    expect(documentTarget.body.dataset.experienceMode).toBe('still');
+    expect(calls.pause).toBe(1);
+    expect(video.dataset.playbackState).toBe('paused');
+
+    modeToggle.dispatchEvent(new Event('click'));
+    expect(documentTarget.body.dataset.experienceMode).toBe('cinematic');
+    expect(calls.play).toBe(1);
+    expect(video.dataset.playbackState).toBe('playing');
+  });
+
   it('shows the moving layer only in cinematic mode without reduced motion', () => {
     const baseVideoRule = getCssRule(museumCss, '.museum-stage-video');
     const cinematicVideoRule = getCssRule(
@@ -302,6 +338,20 @@ describe('cinematic digital museum redesign', () => {
       '@media (prefers-reduced-motion: reduce)',
       '.heritage-guide-figure'
     );
+    const stillFigureRule = getCssRule(
+      museumCss,
+      'body[data-experience-mode="still"] .heritage-guide-figure'
+    );
+    const shadowImageMotionRule = getCssRule(
+      museumCss,
+      'body[data-experience-mode="cinematic"][data-paused="false"] .heritage-guide-shadow img'
+    );
+    const tigerImageMotionRule = getCssRule(
+      museumCss,
+      'body[data-experience-mode="cinematic"][data-paused="false"] .heritage-guide-tiger img'
+    );
+    const hoverImageRule = getCssRule(museumCss, '.heritage-guide:hover img');
+    const hoverFigureRule = getCssRule(museumCss, '.heritage-guide:hover .heritage-guide-figure');
 
     expect(indexHtml).toMatch(/<button[^>]*data-heritage-guide="shadow"/);
     expect(indexHtml).toMatch(/<button[^>]*data-heritage-guide="tiger-head"/);
@@ -310,7 +360,15 @@ describe('cinematic digital museum redesign', () => {
     expect(tigerKeyframes).toContain('scale(1.015)');
     expect(shadowMotionRule).toContain('animation: heritage-shadow-sway 6.8s');
     expect(tigerMotionRule).toContain('animation: heritage-tiger-breathe 5.2s 620ms');
+    expect(museumCss.match(/animation:\s*heritage-shadow-sway\b/g)).toHaveLength(1);
+    expect(museumCss.match(/animation:\s*heritage-tiger-breathe\b/g)).toHaveLength(1);
+    expect(stillFigureRule).toContain('animation: none !important;');
     expect(reducedFigureRule).toContain('animation: none !important;');
+    expect(shadowImageMotionRule).toBe('');
+    expect(tigerImageMotionRule).toBe('');
+    expect(hoverImageRule).toContain('transform: rotate(-1.5deg) scale(1.025);');
+    expect(hoverFigureRule).toBe('');
+    expect(museumCss.match(/transform:\s*rotate\(-1\.5deg\) scale\(1\.025\);/g)).toHaveLength(1);
   });
 
   it('keeps the map and co-creation gallery reachable from top-level controls', () => {

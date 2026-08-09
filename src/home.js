@@ -1005,7 +1005,7 @@ function openArtifact(craft, trigger = document.activeElement) {
   dialog.querySelector('[data-close-dialog]')?.focus({ preventScroll: true });
 }
 
-function bindModeToggle() {
+export function bindModeToggle() {
   const button = document.getElementById('experience-mode-toggle');
   if (!button) return;
 
