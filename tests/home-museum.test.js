@@ -27,6 +27,20 @@ describe('museum entry lifecycle', () => {
     expect(homeJs).toContain("retry?.addEventListener('click', () => enterMuseum(pendingChapterId))");
     expect(homeJs).toContain("copy.textContent = '馆门开启，正在点亮百工长廊…'");
   });
+
+  it('resumes the exterior video after corridor initialization fails', () => {
+    const start = homeJs.indexOf('const enterMuseum = async');
+    const end = homeJs.indexOf("document.querySelectorAll('[data-action=\"enter-museum\"]')", start);
+    const entryBlock = homeJs.slice(start, end);
+    const catchBlock = entryBlock.slice(entryBlock.indexOf('} catch {'));
+    const clearEnteringIndex = catchBlock.indexOf(
+      "stage.classList.remove('is-entering', 'is-corridor-loading')"
+    );
+    const resumeVideoIndex = catchBlock.indexOf('syncMuseumBackgroundVideo()');
+
+    expect(clearEnteringIndex).toBeGreaterThanOrEqual(0);
+    expect(resumeVideoIndex).toBeGreaterThan(clearEnteringIndex);
+  });
 });
 
 describe('museum mobile navigation', () => {

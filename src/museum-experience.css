@@ -2584,6 +2584,48 @@ body[data-experience-mode="still"] .reveal {
   transition: opacity 900ms var(--premium-ease), transform 1500ms var(--premium-ease), filter 1500ms var(--premium-ease);
 }
 
+.museum-stage-artisan-video {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  visibility: hidden;
+  object-fit: cover;
+  object-position: 50% 45%;
+  pointer-events: none;
+  filter: saturate(0.92) contrast(1.04) brightness(0.94) drop-shadow(0 0 24px rgb(201 154 46 / 0.22));
+  -webkit-mask-image: radial-gradient(
+    ellipse 25% 31% at var(--museum-reveal-x, 50%) var(--museum-reveal-y, 38%),
+    #000 0 46%,
+    rgb(0 0 0 / 0.82) 64%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(
+    ellipse 25% 31% at var(--museum-reveal-x, 50%) var(--museum-reveal-y, 38%),
+    #000 0 46%,
+    rgb(0 0 0 / 0.82) 64%,
+    transparent 100%
+  );
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  transition:
+    opacity 420ms var(--premium-ease),
+    visibility 0s linear 420ms;
+  will-change: opacity, -webkit-mask-image, mask-image;
+}
+
+@supports ((-webkit-mask-image: radial-gradient(circle, #000, transparent)) or (mask-image: radial-gradient(circle, #000, transparent))) {
+  body[data-experience-mode="cinematic"][data-paused="false"] .museum-stage.is-artisan-revealing:not(.is-entering):not(.is-corridor-live) .museum-stage-artisan-video {
+    opacity: 0.74;
+    visibility: visible;
+    transition:
+      opacity 520ms var(--premium-ease),
+      visibility 0s linear 0s;
+  }
+}
+
 body[data-experience-mode="cinematic"] .museum-stage-video {
   opacity: 1;
   visibility: visible;
@@ -2595,10 +2637,26 @@ body[data-experience-mode="still"] .museum-stage-video {
 }
 
 .museum-stage-shade {
-  z-index: 2;
+  z-index: 3;
   background:
     linear-gradient(180deg, rgb(8 9 11 / 0.56) 0%, transparent 24%, transparent 64%, rgb(8 9 11 / 0.82) 100%),
     linear-gradient(90deg, rgb(8 9 11 / 0.28), transparent 28%, transparent 72%, rgb(8 9 11 / 0.28));
+}
+
+.museum-artisan-reveal-zone {
+  position: absolute;
+  z-index: 3;
+  top: 20%;
+  right: 7%;
+  left: 7%;
+  height: 42%;
+  pointer-events: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  body[data-experience-mode="cinematic"] .museum-stage.has-artisan-reveal:not(.is-entering):not(.is-corridor-live) .museum-artisan-reveal-zone {
+    pointer-events: auto;
+  }
 }
 
 .museum-stage-copy {
@@ -2939,8 +2997,10 @@ body[data-experience-mode="cinematic"] .museum-stage-index {
 }
 
 .museum-stage.is-corridor-live .museum-stage-video,
+.museum-stage.is-corridor-live .museum-stage-artisan-video,
 .museum-stage.is-corridor-live .museum-stage-image,
 .museum-stage.is-corridor-live .museum-stage-shade,
+.museum-stage.is-corridor-live .museum-artisan-reveal-zone,
 .museum-stage.is-corridor-live .museum-stage-grain,
 .museum-stage.is-corridor-live .museum-stage-copy,
 .museum-stage.is-corridor-live .heritage-guide,
@@ -3055,6 +3115,10 @@ body[data-experience-mode="cinematic"] .museum-stage-index {
     object-position: 50% 50%;
   }
 
+  .museum-stage-artisan-video {
+    object-position: 50% 45%;
+  }
+
   .museum-stage-copy {
     inset: 15vh 0 auto;
   }
@@ -3152,11 +3216,21 @@ body[data-experience-mode="cinematic"] .museum-stage-index {
     visibility: hidden !important;
   }
 
+  .museum-stage-artisan-video {
+    opacity: 0 !important;
+    visibility: hidden !important;
+  }
+
+  .museum-artisan-reveal-zone {
+    pointer-events: none !important;
+  }
+
   .heritage-guide-figure {
     animation: none !important;
   }
 
   .museum-stage-video,
+  .museum-stage-artisan-video,
   .museum-stage-image,
   .museum-stage-copy,
   .heritage-guide,

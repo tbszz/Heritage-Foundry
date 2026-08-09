@@ -10,6 +10,8 @@ const homeJs = readFileSync(new URL('../src/home.js', import.meta.url), 'utf8');
 const indexHtml = readFileSync(new URL('../src/index.html', import.meta.url), 'utf8');
 const museumCss = readFileSync(new URL('../src/museum-experience.css', import.meta.url), 'utf8');
 const museumVideoUrl = new URL('../public/assets/generated/museum-night-loop.mp4', import.meta.url);
+const museumArtisanVideoUrl = new URL('../public/assets/generated/museum-artisans-reveal.mp4', import.meta.url);
+const museumArtisan4kVideoUrl = new URL('../public/assets/generated/museum-artisans-reveal-4k.mp4', import.meta.url);
 
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -53,8 +55,30 @@ function getNumericCssDeclaration(rule, property) {
   return match ? Number(match[1]) : Number.NaN;
 }
 
-function installMuseumVideoHarness({ play = () => Promise.resolve() } = {}) {
+function createClassList(initial = []) {
+  const values = new Set(initial);
+  return {
+    add: (...names) => names.forEach((name) => values.add(name)),
+    contains: (name) => values.has(name),
+    remove: (...names) => names.forEach((name) => values.delete(name)),
+    toggle(name, force) {
+      const shouldAdd = force ?? !values.has(name);
+      if (shouldAdd) values.add(name);
+      else values.delete(name);
+      return shouldAdd;
+    }
+  };
+}
+
+function installMuseumVideoHarness({
+  play = () => Promise.resolve(),
+  includeArtisanVideo = false,
+  artisanPlay = () => Promise.resolve(),
+  finePointer = true,
+  artisanRevealActive = true
+} = {}) {
   const calls = { play: 0, pause: 0 };
+  const artisanCalls = { play: 0, pause: 0 };
   const video = {
     dataset: {},
     play() {
@@ -65,31 +89,168 @@ function installMuseumVideoHarness({ play = () => Promise.resolve() } = {}) {
       calls.pause += 1;
     }
   };
+  const artisanVideo = {
+    currentTime: 2,
+    dataset: {},
+    play() {
+      artisanCalls.play += 1;
+      return artisanPlay();
+    },
+    pause() {
+      artisanCalls.pause += 1;
+    }
+  };
+  const stage = {
+    classList: createClassList(artisanRevealActive ? ['is-artisan-revealing'] : [])
+  };
   const documentTarget = new EventTarget();
   documentTarget.body = { dataset: { experienceMode: 'cinematic' } };
   documentTarget.hidden = false;
-  documentTarget.querySelector = (selector) => (
-    selector === '[data-museum-background-video]' ? video : null
-  );
+  documentTarget.querySelector = (selector) => {
+    if (selector === '[data-museum-background-video]') return video;
+    if (selector === '[data-museum-artisan-video]') {
+      return includeArtisanVideo ? artisanVideo : null;
+    }
+    return null;
+  };
   const reducedMotionQuery = new EventTarget();
   reducedMotionQuery.matches = false;
+  const finePointerQuery = new EventTarget();
+  finePointerQuery.matches = finePointer;
   const modeToggle = new EventTarget();
   const modeToggleAttributes = new Map();
   modeToggle.textContent = '';
   modeToggle.setAttribute = (name, value) => modeToggleAttributes.set(name, value);
   modeToggle.getAttribute = (name) => modeToggleAttributes.get(name) ?? null;
-  documentTarget.getElementById = (id) => (
-    id === 'experience-mode-toggle' ? modeToggle : null
-  );
+  documentTarget.getElementById = (id) => {
+    if (id === 'experience-mode-toggle') return modeToggle;
+    if (id === 'museum-stage') return stage;
+    return null;
+  };
   documentTarget.querySelectorAll = () => [];
 
   vi.stubGlobal('document', documentTarget);
   vi.stubGlobal('window', {
     localStorage: { setItem() {} },
-    matchMedia: () => reducedMotionQuery
+    matchMedia: (query) => (
+      query.includes('prefers-reduced-motion') ? reducedMotionQuery : finePointerQuery
+    )
   });
 
-  return { calls, documentTarget, modeToggle, reducedMotionQuery, video };
+  return {
+    artisanCalls,
+    artisanVideo,
+    calls,
+    documentTarget,
+    finePointerQuery,
+    modeToggle,
+    reducedMotionQuery,
+    stage,
+    video
+  };
+}
+
+function createPointerEvent(type, { clientX, clientY }) {
+  const event = new Event(type);
+  Object.defineProperties(event, {
+    clientX: { value: clientX },
+    clientY: { value: clientY }
+  });
+  return event;
+}
+
+function installMuseumArtisanRevealHarness() {
+  const frameCallbacks = new Map();
+  const timerCallbacks = new Map();
+  const styleProperties = new Map();
+  let nextFrameId = 0;
+  let nextTimerId = 0;
+  const stage = {
+    classList: createClassList(),
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 1000, height: 600 }),
+    style: {
+      setProperty: (name, value) => styleProperties.set(name, value)
+    }
+  };
+  const zone = new EventTarget();
+  const calls = { exteriorPlay: 0, exteriorPause: 0, artisanPlay: 0, artisanPause: 0 };
+  const exteriorVideo = {
+    dataset: {},
+    play: () => {
+      calls.exteriorPlay += 1;
+      return Promise.resolve();
+    },
+    pause: () => {
+      calls.exteriorPause += 1;
+    }
+  };
+  const artisanVideo = {
+    currentTime: 0,
+    dataset: {},
+    duration: 8.25,
+    ended: false,
+    play: () => {
+      calls.artisanPlay += 1;
+      return Promise.resolve();
+    },
+    pause: () => {
+      calls.artisanPause += 1;
+    }
+  };
+  const reducedMotionQuery = new EventTarget();
+  reducedMotionQuery.matches = false;
+  const finePointerQuery = new EventTarget();
+  finePointerQuery.matches = true;
+  const documentTarget = new EventTarget();
+  documentTarget.body = { dataset: { experienceMode: 'cinematic', paused: 'false' } };
+  documentTarget.hidden = false;
+  documentTarget.getElementById = (id) => (id === 'museum-stage' ? stage : null);
+  documentTarget.querySelector = (selector) => {
+    if (selector === '[data-museum-background-video]') return exteriorVideo;
+    if (selector === '[data-museum-artisan-video]') return artisanVideo;
+    if (selector === '[data-museum-artisan-reveal-zone]') return zone;
+    return null;
+  };
+  documentTarget.querySelectorAll = () => [];
+
+  vi.stubGlobal('document', documentTarget);
+  vi.stubGlobal('window', {
+    cancelAnimationFrame: (id) => frameCallbacks.delete(id),
+    clearTimeout: (id) => timerCallbacks.delete(id),
+    matchMedia: (query) => (
+      query.includes('prefers-reduced-motion') ? reducedMotionQuery : finePointerQuery
+    ),
+    requestAnimationFrame: (callback) => {
+      const id = ++nextFrameId;
+      frameCallbacks.set(id, callback);
+      return id;
+    },
+    setTimeout: (callback) => {
+      const id = ++nextTimerId;
+      timerCallbacks.set(id, callback);
+      return id;
+    }
+  });
+  vi.stubGlobal('CSS', { supports: () => true });
+
+  return {
+    artisanVideo,
+    calls,
+    finePointerQuery,
+    flushFrames() {
+      const callbacks = [...frameCallbacks.values()];
+      frameCallbacks.clear();
+      callbacks.forEach((callback) => callback());
+    },
+    flushTimers() {
+      const callbacks = [...timerCallbacks.values()];
+      timerCallbacks.clear();
+      callbacks.forEach((callback) => callback());
+    },
+    stage,
+    styleProperties,
+    zone
+  };
 }
 
 afterEach(() => {
@@ -186,7 +347,7 @@ describe('cinematic digital museum redesign', () => {
     const heroVideo = indexHtml.match(/<video[\s\S]*?<\/video>/)?.[0] || '';
 
     expect(heroVideo).toContain('data-museum-background-video');
-    expect(heroVideo).toContain('autoplay');
+    expect(heroVideo).not.toContain('autoplay');
     expect(heroVideo).toContain('muted');
     expect(heroVideo).toContain('loop');
     expect(heroVideo).toContain('playsinline');
@@ -201,10 +362,173 @@ describe('cinematic digital museum redesign', () => {
     if (!assetExists) return;
 
     const bytes = readFileSync(museumVideoUrl);
+    expect(bytes.byteLength).toBeGreaterThan(12 * 1024 * 1024);
+    expect(bytes.subarray(4, 8).toString('ascii')).toBe('ftyp');
+    expect(bytes.includes(Buffer.from('moov'))).toBe(true);
+    expect(bytes.includes(Buffer.from('mdat'))).toBe(true);
+  });
+
+  it('layers a muted artisan video behind the hero copy for pointer reveal', () => {
+    const heroVideos = [...indexHtml.matchAll(/<video[\s\S]*?<\/video>/g)].map((match) => match[0]);
+    const artisanVideo = heroVideos.find((markup) => markup.includes('data-museum-artisan-video')) || '';
+
+    expect(heroVideos).toHaveLength(2);
+    expect(artisanVideo).toContain('class="museum-stage-artisan-video"');
+    expect(artisanVideo).toContain('muted');
+    expect(artisanVideo).not.toContain('loop');
+    expect(artisanVideo).toContain('playsinline');
+    expect(artisanVideo).toContain('preload="none"');
+    expect(artisanVideo).toContain('aria-hidden="true"');
+    expect(artisanVideo).not.toContain('autoplay');
+    expect(artisanVideo).toContain('src="/assets/generated/museum-artisans-reveal-4k.mp4"');
+    expect(artisanVideo).toContain('codecs="hvc1"');
+    expect(artisanVideo).toContain('src="/assets/generated/museum-artisans-reveal.mp4"');
+    expect(artisanVideo).toContain('codecs="avc1.640034"');
+    expect(indexHtml).toContain('data-museum-artisan-reveal-zone');
+  });
+
+  it('keeps the original 4K artisan source as the preferred reveal layer', () => {
+    const assetExists = existsSync(museumArtisan4kVideoUrl);
+
+    expect(assetExists).toBe(true);
+    if (!assetExists) return;
+
+    const bytes = readFileSync(museumArtisan4kVideoUrl);
+    expect(bytes.byteLength).toBeGreaterThan(20 * 1024 * 1024);
+    expect(bytes.subarray(4, 8).toString('ascii')).toBe('ftyp');
+    expect(bytes.includes(Buffer.from('hvc1'))).toBe(true);
+    expect(bytes.includes(Buffer.from('moov'))).toBe(true);
+    expect(bytes.includes(Buffer.from('mdat'))).toBe(true);
+  });
+
+  it('ships the artisan reveal as a real non-empty MP4 container', () => {
+    const assetExists = existsSync(museumArtisanVideoUrl);
+
+    expect(assetExists).toBe(true);
+    if (!assetExists) return;
+
+    const bytes = readFileSync(museumArtisanVideoUrl);
     expect(bytes.byteLength).toBeGreaterThan(1024);
     expect(bytes.subarray(4, 8).toString('ascii')).toBe('ftyp');
     expect(bytes.includes(Buffer.from('moov'))).toBe(true);
     expect(bytes.includes(Buffer.from('mdat'))).toBe(true);
+  });
+
+  it('allows the artisan layer only for an active fine-pointer cinematic reveal', async () => {
+    const homeModule = await import('../src/home.js');
+    const shouldPlay = homeModule.shouldPlayMuseumArtisanVideo;
+
+    expect(typeof shouldPlay).toBe('function');
+    if (typeof shouldPlay !== 'function') return;
+
+    expect(shouldPlay({
+      experienceMode: 'cinematic',
+      reducedMotion: false,
+      documentHidden: false,
+      finePointer: true,
+      revealActive: true,
+      exteriorActive: true
+    })).toBe(true);
+    expect(shouldPlay({
+      experienceMode: 'cinematic',
+      reducedMotion: false,
+      documentHidden: false,
+      finePointer: false,
+      revealActive: true,
+      exteriorActive: true
+    })).toBe(false);
+    expect(shouldPlay({
+      experienceMode: 'cinematic',
+      reducedMotion: false,
+      documentHidden: false,
+      finePointer: true,
+      revealActive: false,
+      exteriorActive: true
+    })).toBe(false);
+    expect(shouldPlay({
+      experienceMode: 'cinematic',
+      reducedMotion: true,
+      documentHidden: false,
+      finePointer: true,
+      revealActive: true,
+      exteriorActive: true
+    })).toBe(false);
+    expect(shouldPlay({
+      experienceMode: 'cinematic',
+      reducedMotion: false,
+      documentHidden: false,
+      finePointer: true,
+      revealActive: true,
+      exteriorActive: false
+    })).toBe(false);
+  });
+
+  it('maps the pointer to stage-local reveal coordinates without leaving the stage', async () => {
+    const homeModule = await import('../src/home.js');
+    const getPosition = homeModule.getMuseumArtisanRevealPosition;
+
+    expect(typeof getPosition).toBe('function');
+    if (typeof getPosition !== 'function') return;
+
+    expect(getPosition({
+      clientX: 500,
+      clientY: 200,
+      bounds: { left: 0, top: 0, width: 1000, height: 600 }
+    })).toEqual({ x: 50, y: 33.33 });
+    expect(getPosition({
+      clientX: -100,
+      clientY: 900,
+      bounds: { left: 0, top: 0, width: 1000, height: 600 }
+    })).toEqual({ x: 0, y: 100 });
+  });
+
+  it('plays and pauses the artisan video independently from the exterior loop', async () => {
+    const { artisanCalls, calls, stage } = installMuseumVideoHarness({
+      includeArtisanVideo: true
+    });
+    const homeModule = await import('../src/home.js');
+
+    homeModule.syncMuseumBackgroundVideo();
+    expect(calls.play).toBe(1);
+    expect(artisanCalls.play).toBe(1);
+
+    stage.classList.remove('is-artisan-revealing');
+    homeModule.syncMuseumBackgroundVideo();
+    expect(calls.play).toBe(2);
+    expect(artisanCalls.pause).toBe(1);
+  });
+
+  it('disables the artisan reveal when fine-pointer capability disappears', async () => {
+    const {
+      calls,
+      finePointerQuery,
+      flushFrames,
+      stage,
+      styleProperties,
+      zone
+    } = installMuseumArtisanRevealHarness();
+    const homeModule = await import('../src/home.js');
+
+    expect(typeof homeModule.bindMuseumArtisanReveal).toBe('function');
+    const unbind = homeModule.bindMuseumArtisanReveal();
+
+    zone.dispatchEvent(createPointerEvent('pointerenter', { clientX: 500, clientY: 200 }));
+    flushFrames();
+
+    expect(stage.classList.contains('has-artisan-reveal')).toBe(true);
+    expect(stage.classList.contains('is-artisan-revealing')).toBe(true);
+    expect(styleProperties.get('--museum-reveal-x')).toBe('50%');
+    expect(styleProperties.get('--museum-reveal-y')).toBe('33.33%');
+    expect(calls.artisanPlay).toBe(1);
+
+    finePointerQuery.matches = false;
+    finePointerQuery.dispatchEvent(new Event('change'));
+
+    expect(stage.classList.contains('has-artisan-reveal')).toBe(false);
+    expect(stage.classList.contains('is-artisan-revealing')).toBe(false);
+    expect(calls.artisanPause).toBe(1);
+
+    unbind();
   });
 
   it('plays the museum background only for an active cinematic experience', async () => {
@@ -231,6 +555,30 @@ describe('cinematic digital museum redesign', () => {
       reducedMotion: false,
       documentHidden: true
     })).toBe(false);
+    expect(homeModule.shouldPlayMuseumBackgroundVideo({
+      experienceMode: 'cinematic',
+      reducedMotion: false,
+      documentHidden: false,
+      exteriorActive: false
+    })).toBe(false);
+  });
+
+  it('pauses and rewinds both museum videos while the 3D corridor is active', async () => {
+    const { artisanCalls, artisanVideo, calls, stage } = installMuseumVideoHarness({
+      includeArtisanVideo: true
+    });
+    const homeModule = await import('../src/home.js');
+
+    homeModule.syncMuseumBackgroundVideo();
+    stage.classList.add('is-corridor-live');
+    homeModule.syncMuseumBackgroundVideo();
+
+    expect(calls.play).toBe(1);
+    expect(calls.pause).toBe(1);
+    expect(artisanCalls.play).toBe(1);
+    expect(artisanCalls.pause).toBe(1);
+    expect(stage.classList.contains('is-artisan-revealing')).toBe(false);
+    expect(artisanVideo.currentTime).toBe(0);
   });
 
   it('keeps a stale play rejection from overwriting a newer paused state', async () => {
@@ -255,13 +603,14 @@ describe('cinematic digital museum redesign', () => {
   });
 
   it('pauses and resumes the museum video on document visibility changes', async () => {
-    const { calls, documentTarget, video } = installMuseumVideoHarness();
+    const { calls, documentTarget, stage, video } = installMuseumVideoHarness();
     const homeModule = await import('../src/home.js');
 
     expect(typeof homeModule.bindMuseumBackgroundVideoLifecycle).toBe('function');
     const unbind = homeModule.bindMuseumBackgroundVideoLifecycle();
     documentTarget.hidden = true;
     documentTarget.dispatchEvent(new Event('visibilitychange'));
+    expect(stage.classList.contains('is-artisan-revealing')).toBe(false);
     documentTarget.hidden = false;
     documentTarget.dispatchEvent(new Event('visibilitychange'));
     unbind();
@@ -346,6 +695,37 @@ describe('cinematic digital museum redesign', () => {
     expect(stillVideoRule).toContain('visibility: hidden;');
     expect(reducedVideoRule).toContain('opacity: 0 !important;');
     expect(reducedVideoRule).toContain('visibility: hidden !important;');
+  });
+
+  it('reveals artisans through a soft masked layer without covering the hero copy', () => {
+    const artisanVideoRule = getCssRule(museumCss, '.museum-stage-artisan-video');
+    const activeArtisanRule = getCssRule(
+      museumCss,
+      'body[data-experience-mode="cinematic"][data-paused="false"] .museum-stage.is-artisan-revealing:not(.is-entering):not(.is-corridor-live) .museum-stage-artisan-video'
+    );
+    const revealZoneRule = getCssRuleWithinAny(
+      museumCss,
+      '@media (hover: hover) and (pointer: fine)',
+      'body[data-experience-mode="cinematic"] .museum-stage.has-artisan-reveal:not(.is-entering):not(.is-corridor-live) .museum-artisan-reveal-zone'
+    );
+    const reducedArtisanRule = getCssRuleWithinAny(
+      museumCss,
+      '@media (prefers-reduced-motion: reduce)',
+      '.museum-stage-artisan-video'
+    );
+    const stageCopyRule = getCssRule(museumCss, '.museum-stage-copy');
+
+    expect(artisanVideoRule).toContain('z-index: 2;');
+    expect(artisanVideoRule).toContain('pointer-events: none;');
+    expect(artisanVideoRule).toContain('-webkit-mask-image: radial-gradient(');
+    expect(artisanVideoRule).toContain('mask-image: radial-gradient(');
+    expect(activeArtisanRule).toContain('opacity: 0.74;');
+    expect(activeArtisanRule).toContain('visibility: visible;');
+    expect(revealZoneRule).toContain('pointer-events: auto;');
+    expect(reducedArtisanRule).toContain('opacity: 0 !important;');
+    expect(reducedArtisanRule).toContain('visibility: hidden !important;');
+    expect(getNumericCssDeclaration(stageCopyRule, 'z-index')).toBeGreaterThan(2);
+    expect(museumCss).not.toContain('.museum-building-mask');
   });
 
   it('offers one explicit museum-entry action from the exterior hero', () => {

@@ -45,7 +45,6 @@
       <video
         class="museum-stage-video"
         data-museum-background-video
-        autoplay
         muted
         loop
         playsinline
@@ -55,8 +54,21 @@
       >
         <source src="/assets/generated/museum-night-loop.mp4" type="video/mp4">
       </video>
+      <video
+        class="museum-stage-artisan-video"
+        data-museum-artisan-video
+        muted
+        playsinline
+        preload="none"
+      poster="/assets/generated/museum-copper-exterior.webp"
+      aria-hidden="true"
+      >
+        <source src="/assets/generated/museum-artisans-reveal-4k.mp4" type='video/mp4; codecs="hvc1"'>
+        <source src="/assets/generated/museum-artisans-reveal.mp4" type='video/mp4; codecs="avc1.640034"'>
+      </video>
       <div class="museum-stage-image" role="img" aria-label="夜色中灯火点亮的铜织非遗博物馆"></div>
       <div class="museum-stage-shade" aria-hidden="true"></div>
+      <div class="museum-artisan-reveal-zone" data-museum-artisan-reveal-zone aria-hidden="true"></div>
 
       <div class="museum-stage-copy">
         <p class="museum-stage-preface"><span>今夜开馆</span> 百工在此苏醒</p>

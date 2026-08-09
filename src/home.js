@@ -137,24 +137,54 @@ export function getMuseumExperienceMode({
 export function shouldPlayMuseumBackgroundVideo({
   experienceMode,
   reducedMotion = false,
-  documentHidden = false
+  documentHidden = false,
+  exteriorActive = true
 } = {}) {
-  return experienceMode === 'cinematic' && !reducedMotion && !documentHidden;
+  return Boolean(
+    experienceMode === 'cinematic'
+    && !reducedMotion
+    && !documentHidden
+    && exteriorActive
+  );
 }
 
-let museumBackgroundVideoRequestId = 0;
+export function shouldPlayMuseumArtisanVideo({
+  finePointer = false,
+  revealActive = false,
+  exteriorActive = false,
+  ...backgroundState
+} = {}) {
+  return Boolean(
+    finePointer
+    && revealActive
+    && exteriorActive
+    && shouldPlayMuseumBackgroundVideo(backgroundState)
+  );
+}
 
-export function syncMuseumBackgroundVideo() {
-  if (typeof document === 'undefined') return;
-  const requestId = ++museumBackgroundVideoRequestId;
-  const video = document.querySelector('[data-museum-background-video]');
+export function getMuseumArtisanRevealPosition({ clientX, clientY, bounds } = {}) {
+  const width = Number(bounds?.width);
+  const height = Number(bounds?.height);
+  if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) {
+    return { x: 50, y: 38 };
+  }
+
+  const localX = ((Number(clientX) - Number(bounds.left || 0)) / width) * 100;
+  const localY = ((Number(clientY) - Number(bounds.top || 0)) / height) * 100;
+  const clampPercent = (value) => Math.min(100, Math.max(0, value));
+
+  return {
+    x: Number(clampPercent(localX).toFixed(2)),
+    y: Number(clampPercent(localY).toFixed(2))
+  };
+}
+
+const museumVideoRequestIds = new WeakMap();
+
+function syncManagedMuseumVideo(video, shouldPlay, playbackIsStillExpected) {
   if (!video) return;
-
-  const shouldPlay = shouldPlayMuseumBackgroundVideo({
-    experienceMode: document.body?.dataset.experienceMode,
-    reducedMotion: Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches),
-    documentHidden: document.hidden
-  });
+  const requestId = (museumVideoRequestIds.get(video) || 0) + 1;
+  museumVideoRequestIds.set(video, requestId);
 
   video.dataset.playbackState = shouldPlay ? 'playing' : 'paused';
   if (!shouldPlay) {
@@ -163,21 +193,71 @@ export function syncMuseumBackgroundVideo() {
   }
 
   const playAttempt = video.play();
-  if (playAttempt && typeof playAttempt.catch === 'function') {
-    playAttempt.catch(() => {
-      const playbackIsStillExpected = shouldPlayMuseumBackgroundVideo({
-        experienceMode: document.body?.dataset.experienceMode,
-        reducedMotion: Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches),
-        documentHidden: document.hidden
-      });
-      if (
-        requestId !== museumBackgroundVideoRequestId
-        || !playbackIsStillExpected
-        || video.dataset.playbackState !== 'playing'
-      ) return;
-      video.dataset.playbackState = 'blocked';
-    });
+  if (!playAttempt || typeof playAttempt.catch !== 'function') return;
+
+  playAttempt.catch(() => {
+    if (
+      requestId !== museumVideoRequestIds.get(video)
+      || !playbackIsStillExpected()
+      || video.dataset.playbackState !== 'playing'
+    ) return;
+    video.dataset.playbackState = 'blocked';
+  });
+}
+
+function getMuseumPlaybackState() {
+  const stage = document.getElementById('museum-stage');
+  return {
+    experienceMode: document.body?.dataset.experienceMode,
+    reducedMotion: Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches),
+    documentHidden: document.hidden,
+    exteriorActive: Boolean(
+      stage
+      && !stage.classList.contains('is-entering')
+      && !stage.classList.contains('is-corridor-live')
+    )
+  };
+}
+
+function getMuseumArtisanPlaybackState() {
+  const stage = document.getElementById('museum-stage');
+  return {
+    ...getMuseumPlaybackState(),
+    finePointer: Boolean(window.matchMedia?.('(hover: hover) and (pointer: fine)').matches),
+    revealActive: Boolean(stage?.classList.contains('is-artisan-revealing'))
+  };
+}
+
+export function syncMuseumBackgroundVideo() {
+  if (typeof document === 'undefined' || typeof window === 'undefined') return;
+  const exteriorVideo = document.querySelector('[data-museum-background-video]');
+  const artisanVideo = document.querySelector('[data-museum-artisan-video]');
+  const stage = document.getElementById('museum-stage');
+  const backgroundState = getMuseumPlaybackState();
+  const finePointer = Boolean(window.matchMedia?.('(hover: hover) and (pointer: fine)').matches);
+  const exteriorShouldPlay = shouldPlayMuseumBackgroundVideo(backgroundState);
+
+  if ((!exteriorShouldPlay || !finePointer) && stage?.classList.contains('is-artisan-revealing')) {
+    stage.classList.remove('is-artisan-revealing');
+    try {
+      artisanVideo.currentTime = 0;
+    } catch {
+      // The source may not have loaded yet; a later pointer entry starts from its initial frame.
+    }
   }
+
+  const artisanShouldPlay = shouldPlayMuseumArtisanVideo(getMuseumArtisanPlaybackState());
+
+  syncManagedMuseumVideo(
+    exteriorVideo,
+    exteriorShouldPlay,
+    () => shouldPlayMuseumBackgroundVideo(getMuseumPlaybackState())
+  );
+  syncManagedMuseumVideo(
+    artisanVideo,
+    artisanShouldPlay,
+    () => shouldPlayMuseumArtisanVideo(getMuseumArtisanPlaybackState())
+  );
 }
 
 export function bindMuseumBackgroundVideoLifecycle() {
@@ -196,6 +276,116 @@ export function bindMuseumBackgroundVideoLifecycle() {
   return () => {
     document.removeEventListener('visibilitychange', syncVisibility);
     reducedMotionQuery?.removeEventListener?.('change', syncReducedMotion);
+  };
+}
+
+export function bindMuseumArtisanReveal() {
+  if (typeof document === 'undefined' || typeof window === 'undefined') return () => {};
+  const stage = document.getElementById('museum-stage');
+  const zone = document.querySelector('[data-museum-artisan-reveal-zone]');
+  const video = document.querySelector('[data-museum-artisan-video]');
+  const finePointerQuery = window.matchMedia?.('(hover: hover) and (pointer: fine)');
+  const maskProbe = 'radial-gradient(circle at 50% 50%, #000, transparent)';
+  const maskSupported = Boolean(
+    globalThis.CSS?.supports?.('mask-image', maskProbe)
+    || globalThis.CSS?.supports?.('-webkit-mask-image', maskProbe)
+  );
+
+  if (!stage || !zone || !video || !finePointerQuery || !maskSupported) {
+    return () => {};
+  }
+
+  const scheduleFrame = window.requestAnimationFrame?.bind(window)
+    || ((callback) => window.setTimeout(callback, 16));
+  const cancelFrame = window.cancelAnimationFrame?.bind(window)
+    || ((frameId) => window.clearTimeout(frameId));
+  let frameId = 0;
+  let resetTimer = 0;
+  let pendingPointer = null;
+
+  const cancelReset = () => {
+    if (!resetTimer) return;
+    window.clearTimeout(resetTimer);
+    resetTimer = 0;
+  };
+
+  const rewindVideo = () => {
+    try {
+      video.currentTime = 0;
+    } catch {
+      // Metadata may not be ready yet; the next pointer entry will retry.
+    }
+  };
+
+  const writePointerPosition = () => {
+    frameId = 0;
+    if (!pendingPointer) return;
+    const position = getMuseumArtisanRevealPosition({
+      ...pendingPointer,
+      bounds: stage.getBoundingClientRect()
+    });
+    stage.style.setProperty('--museum-reveal-x', `${position.x}%`);
+    stage.style.setProperty('--museum-reveal-y', `${position.y}%`);
+  };
+
+  const queuePointerPosition = (event) => {
+    pendingPointer = { clientX: event.clientX, clientY: event.clientY };
+    if (frameId) return;
+    frameId = scheduleFrame(writePointerPosition);
+  };
+
+  const showArtisans = (event) => {
+    if (!finePointerQuery.matches) return;
+    cancelReset();
+    if (video.ended || (Number.isFinite(video.duration) && video.currentTime >= video.duration - 0.05)) {
+      rewindVideo();
+    }
+    stage.classList.add('is-artisan-revealing');
+    queuePointerPosition(event);
+    syncMuseumBackgroundVideo();
+  };
+
+  const moveArtisanReveal = (event) => {
+    if (!finePointerQuery.matches) return;
+    if (!stage.classList.contains('is-artisan-revealing')) {
+      showArtisans(event);
+      return;
+    }
+    queuePointerPosition(event);
+  };
+
+  const hideArtisans = () => {
+    stage.classList.remove('is-artisan-revealing');
+    syncMuseumBackgroundVideo();
+    cancelReset();
+    resetTimer = window.setTimeout(() => {
+      resetTimer = 0;
+      if (!stage.classList.contains('is-artisan-revealing')) rewindVideo();
+    }, 440);
+  };
+
+  const syncPointerCapability = () => {
+    stage.classList.toggle('has-artisan-reveal', finePointerQuery.matches);
+    if (!finePointerQuery.matches) hideArtisans();
+  };
+
+  syncPointerCapability();
+  finePointerQuery.addEventListener?.('change', syncPointerCapability);
+  zone.addEventListener('pointerenter', showArtisans);
+  zone.addEventListener('pointermove', moveArtisanReveal);
+  zone.addEventListener('pointerleave', hideArtisans);
+  zone.addEventListener('pointercancel', hideArtisans);
+
+  return () => {
+    finePointerQuery.removeEventListener?.('change', syncPointerCapability);
+    zone.removeEventListener('pointerenter', showArtisans);
+    zone.removeEventListener('pointermove', moveArtisanReveal);
+    zone.removeEventListener('pointerleave', hideArtisans);
+    zone.removeEventListener('pointercancel', hideArtisans);
+    if (frameId) cancelFrame(frameId);
+    cancelReset();
+    stage.classList.remove('has-artisan-reveal', 'is-artisan-revealing');
+    video.pause();
   };
 }
 
@@ -234,6 +424,7 @@ async function initHomePage() {
   const mode = detectExperienceMode();
   document.body.dataset.experienceMode = mode;
   bindMuseumBackgroundVideoLifecycle();
+  bindMuseumArtisanReveal();
   bindDialog();
   bindMuseumEntry();
   bindModeToggle();
@@ -639,6 +830,9 @@ function detectExperienceMode() {
 }
 
 function setExteriorInteractionEnabled(enabled) {
+  if (!enabled) {
+    document.getElementById('museum-stage')?.classList.remove('is-artisan-revealing');
+  }
   document.querySelectorAll('.museum-stage-copy, .heritage-guide, .museum-entry-panel').forEach((node) => {
     node.toggleAttribute('inert', !enabled);
     if (enabled) node.removeAttribute('aria-hidden');
@@ -684,6 +878,7 @@ function bindMuseumEntry() {
       stage.classList.add('is-corridor-live', 'has-entered');
       setExteriorInteractionEnabled(false);
       setCorridorInteractionEnabled(true);
+      syncMuseumBackgroundVideo();
       sketchCorridorScene.setRenderPaused(false);
       if (loader) loader.hidden = true;
       if (retry) retry.hidden = true;
@@ -698,6 +893,7 @@ function bindMuseumEntry() {
     stage.dataset.museumState = 'loading';
     stage.classList.remove('is-corridor-error');
     stage.classList.add('is-entering', 'is-corridor-loading');
+    syncMuseumBackgroundVideo();
     if (loader) {
       loader.hidden = false;
       const copy = loader.querySelector('p');
@@ -718,6 +914,7 @@ function bindMuseumEntry() {
       stage.dataset.museumState = 'error';
       stage.classList.remove('is-entering', 'is-corridor-loading');
       stage.classList.add('is-corridor-error');
+      syncMuseumBackgroundVideo();
       if (loader) {
         loader.hidden = false;
         const copy = loader.querySelector('p');
@@ -783,6 +980,7 @@ function bindSketchCorridor() {
           stage.classList.add('is-corridor-live', 'has-entered');
           setExteriorInteractionEnabled(false);
           setCorridorInteractionEnabled(true);
+          syncMuseumBackgroundVideo();
           const headerEntry = document.querySelector('.museum-nav-entry');
           if (headerEntry) headerEntry.textContent = '馆门已开';
           if (loader) loader.hidden = true;
