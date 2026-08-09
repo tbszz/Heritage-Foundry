@@ -42,6 +42,19 @@
 
   <main id="museum-content">
     <section id="museum-stage" class="museum-stage" aria-labelledby="museum-stage-title">
+      <video
+        class="museum-stage-video"
+        data-museum-background-video
+        autoplay
+        muted
+        loop
+        playsinline
+        preload="metadata"
+        poster="/assets/generated/museum-copper-exterior.webp"
+        aria-hidden="true"
+      >
+        <source src="/assets/generated/museum-night-loop.mp4" type="video/mp4">
+      </video>
       <div class="museum-stage-image" role="img" aria-label="夜色中灯火点亮的铜织非遗博物馆"></div>
       <div class="museum-stage-shade" aria-hidden="true"></div>
 
@@ -53,16 +66,15 @@
         </h1>
       </div>
 
-      <div class="museum-building-mask" aria-hidden="true"></div>
       <div class="museum-stage-grain" aria-hidden="true"></div>
 
       <button class="heritage-guide heritage-guide-shadow" type="button" data-heritage-guide="shadow" aria-label="跟随皮影进入纸上万象展厅">
-        <img src="/assets/generated/craft-icons-webp/shadow.webp" alt="" width="116" height="116">
-        <span><small>皮影引路</small>纸上万象</span>
+        <span class="heritage-guide-figure"><img src="/assets/generated/craft-icons-webp/shadow.webp" alt="" width="116" height="116"></span>
+        <span class="heritage-guide-label"><small>皮影引路</small>纸上万象</span>
       </button>
       <button class="heritage-guide heritage-guide-tiger" type="button" data-heritage-guide="tiger-head" aria-label="跟随布老虎进入经纬成章展厅">
-        <img src="/assets/generated/craft-icons-webp/tiger-head.webp" alt="" width="116" height="116">
-        <span><small>布虎守门</small>经纬成章</span>
+        <span class="heritage-guide-figure"><img src="/assets/generated/craft-icons-webp/tiger-head.webp" alt="" width="116" height="116"></span>
+        <span class="heritage-guide-label"><small>布虎守门</small>经纬成章</span>
       </button>
 
       <div class="museum-entry-panel">

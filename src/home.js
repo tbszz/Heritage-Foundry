@@ -134,6 +134,39 @@ export function getMuseumExperienceMode({
   return 'cinematic';
 }
 
+export function shouldPlayMuseumBackgroundVideo({
+  experienceMode,
+  reducedMotion = false,
+  documentHidden = false
+} = {}) {
+  return experienceMode === 'cinematic' && !reducedMotion && !documentHidden;
+}
+
+export function syncMuseumBackgroundVideo() {
+  if (typeof document === 'undefined') return;
+  const video = document.querySelector('[data-museum-background-video]');
+  if (!video) return;
+
+  const shouldPlay = shouldPlayMuseumBackgroundVideo({
+    experienceMode: document.body?.dataset.experienceMode,
+    reducedMotion: Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches),
+    documentHidden: document.hidden
+  });
+
+  video.dataset.playbackState = shouldPlay ? 'playing' : 'paused';
+  if (!shouldPlay) {
+    video.pause();
+    return;
+  }
+
+  const playAttempt = video.play();
+  if (playAttempt && typeof playAttempt.catch === 'function') {
+    playAttempt.catch(() => {
+      video.dataset.playbackState = 'blocked';
+    });
+  }
+}
+
 export function openModalElement(dialog) {
   if (!dialog || dialog.open) return;
   if (typeof dialog.showModal === 'function') {
@@ -168,6 +201,8 @@ async function initHomePage() {
 
   const mode = detectExperienceMode();
   document.body.dataset.experienceMode = mode;
+  document.body.dataset.paused = document.hidden ? 'true' : 'false';
+  syncMuseumBackgroundVideo();
   bindDialog();
   bindMuseumEntry();
   bindModeToggle();
@@ -182,6 +217,7 @@ async function initHomePage() {
 
   document.addEventListener('visibilitychange', () => {
     document.body.dataset.paused = document.hidden ? 'true' : 'false';
+    syncMuseumBackgroundVideo();
   });
 }
 
@@ -610,6 +646,7 @@ function bindMuseumEntry() {
     if (document.body.dataset.experienceMode === 'still') {
       document.body.dataset.experienceMode = 'cinematic';
       syncExperienceModeToggle();
+      syncMuseumBackgroundVideo();
     }
     pendingChapterId = chapterId || pendingChapterId;
 
@@ -969,6 +1006,7 @@ function bindModeToggle() {
       && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     );
     syncExperienceModeToggle();
+    syncMuseumBackgroundVideo();
   });
 }
 
