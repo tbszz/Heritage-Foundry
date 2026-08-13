@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 720" font-family="'PingFang SC','Noto Sans SC','Microsoft YaHei',sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#9a917e"/>
+    </marker>
+    <marker id="arrowRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#c03a24"/>
+    </marker>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="960" height="720" fill="#f7f2e7"/>
+  <text x="480" y="44" text-anchor="middle" font-size="24" font-weight="700" fill="#10131a">「遗见」技术架构 · AR 非遗数字博物馆 × AI 文创共创平台</text>
+  <text x="480" y="68" text-anchor="middle" font-size="12" fill="#6b6558">Heritage Foundry · 鸿蒙赛道 · 用户体验创新方向</text>
+
+  <!-- ===== 终端层 ===== -->
+  <rect x="40" y="92" width="880" height="118" rx="10" fill="#ffffff" stroke="#c9a25e" stroke-width="1.5"/>
+  <text x="60" y="118" font-size="14" font-weight="700" fill="#9a2b18">终端层 · HarmonyOS 多设备</text>
+
+  <rect x="70" y="132" width="230" height="60" rx="8" fill="#fdf7ec" stroke="#c9a25e"/>
+  <text x="185" y="157" text-anchor="middle" font-size="14" font-weight="600" fill="#10131a">📱 手机 · AR 观展</text>
+  <text x="185" y="177" text-anchor="middle" font-size="11" fill="#6b6558">文物以真实尺寸落进房间</text>
+
+  <rect x="365" y="132" width="230" height="60" rx="8" fill="#fdf7ec" stroke="#c9a25e"/>
+  <text x="480" y="157" text-anchor="middle" font-size="14" font-weight="600" fill="#10131a">💻 平板 · 文创共创</text>
+  <text x="480" y="177" text-anchor="middle" font-size="11" fill="#6b6558">大屏继续设计拼豆图纸</text>
+
+  <rect x="660" y="132" width="230" height="60" rx="8" fill="#fdf7ec" stroke="#c9a25e"/>
+  <text x="775" y="157" text-anchor="middle" font-size="14" font-weight="600" fill="#10131a">📺 智慧屏 · 全家共赏</text>
+  <text x="775" y="177" text-anchor="middle" font-size="11" fill="#6b6558">成品投屏围观</text>
+
+  <!-- 流转箭头 -->
+  <line x1="300" y1="162" x2="363" y2="162" stroke="#c03a24" stroke-width="2" marker-end="url(#arrowRed)"/>
+  <line x1="595" y1="162" x2="658" y2="162" stroke="#c03a24" stroke-width="2" marker-end="url(#arrowRed)"/>
+  <text x="480" y="206" text-anchor="middle" font-size="11.5" font-weight="600" fill="#c03a24">鸿蒙分布式软总线 · 跨设备流转（Distributed Data / Continuation）</text>
+
+  <!-- ===== 应用层 ===== -->
+  <rect x="40" y="234" width="880" height="106" rx="10" fill="#ffffff" stroke="#1d5c55" stroke-width="1.5"/>
+  <text x="60" y="260" font-size="14" font-weight="700" fill="#1d5c55">应用层 · 混合壳（一次开发，多端部署）</text>
+
+  <rect x="70" y="274" width="360" height="50" rx="8" fill="#eef5f3" stroke="#1d5c55"/>
+  <text x="250" y="295" text-anchor="middle" font-size="13" font-weight="600" fill="#10131a">ArkTS 原生壳</text>
+  <text x="250" y="313" text-anchor="middle" font-size="11" fill="#6b6558">首页 / AR 入口 / 流转按钮 / 元服务卡片 / 小艺唤起</text>
+
+  <rect x="470" y="274" width="420" height="50" rx="8" fill="#eef5f3" stroke="#1d5c55"/>
+  <text x="680" y="295" text-anchor="middle" font-size="13" font-weight="600" fill="#10131a">ArkWeb 容器 · 复用 Web 前端</text>
+  <text x="680" y="313" text-anchor="middle" font-size="11" fill="#6b6558">技艺页 / 造物工作台整体复用，数据层 100% 保留</text>
+
+  <!-- ===== Web 前端层 ===== -->
+  <rect x="40" y="364" width="880" height="120" rx="10" fill="#ffffff" stroke="#c03a24" stroke-width="1.5"/>
+  <text x="60" y="390" font-size="14" font-weight="700" fill="#c03a24">Web 体验层 · Vite 多页应用（五幕故事线的载体）</text>
+
+  <rect x="70" y="404" width="196" height="64" rx="8" fill="#fbeeec" stroke="#c03a24"/>
+  <text x="168" y="427" text-anchor="middle" font-size="13" font-weight="600" fill="#10131a">粒子博物馆首页</text>
+  <text x="168" y="445" text-anchor="middle" font-size="10.5" fill="#6b6558">Three.js · 5 万粒子聚合</text>
+  <text x="168" y="460" text-anchor="middle" font-size="10.5" fill="#6b6558">幕一 · 见</text>
+
+  <rect x="286" y="404" width="196" height="64" rx="8" fill="#fbeeec" stroke="#c03a24"/>
+  <text x="384" y="427" text-anchor="middle" font-size="13" font-weight="600" fill="#10131a">AR 体验页</text>
+  <text x="384" y="445" text-anchor="middle" font-size="10.5" fill="#6b6558">model-viewer · WebXR</text>
+  <text x="384" y="460" text-anchor="middle" font-size="10.5" fill="#6b6558">幕二 · 懂（文化卡片）</text>
+
+  <rect x="502" y="404" width="196" height="64" rx="8" fill="#fbeeec" stroke="#c03a24"/>
+  <text x="600" y="427" text-anchor="middle" font-size="13" font-weight="600" fill="#10131a">造物工作台</text>
+  <text x="600" y="445" text-anchor="middle" font-size="10.5" fill="#6b6558">AI 生图 → 3D 实时贴图</text>
+  <text x="600" y="460" text-anchor="middle" font-size="10.5" fill="#6b6558">幕三 · 创</text>
+
+  <rect x="718" y="404" width="172" height="64" rx="8" fill="#fbeeec" stroke="#c03a24"/>
+  <text x="804" y="427" text-anchor="middle" font-size="13" font-weight="600" fill="#10131a">拼豆图纸引擎</text>
+  <text x="804" y="445" text-anchor="middle" font-size="10.5" fill="#6b6558">Oklab 感知配色 18×12</text>
+  <text x="804" y="460" text-anchor="middle" font-size="10.5" fill="#6b6558">幕四 · 作</text>
+
+  <!-- ===== 服务层 ===== -->
+  <rect x="40" y="508" width="560" height="118" rx="10" fill="#ffffff" stroke="#10131a" stroke-width="1.5"/>
+  <text x="60" y="534" font-size="14" font-weight="700" fill="#10131a">服务层 · Node.js / Express（限流 + CORS 白名单 + Docker）</text>
+
+  <rect x="70" y="548" width="240" height="60" rx="8" fill="#f2f1ee" stroke="#6b6558"/>
+  <text x="190" y="571" text-anchor="middle" font-size="13" font-weight="600" fill="#10131a">Prompt 工程库</text>
+  <text x="190" y="589" text-anchor="middle" font-size="10.5" fill="#6b6558">18 技艺 × 10 IP × 5 载体 × 8 风格</text>
+
+  <rect x="330" y="548" width="250" height="60" rx="8" fill="#f2f1ee" stroke="#6b6558"/>
+  <text x="455" y="571" text-anchor="middle" font-size="13" font-weight="600" fill="#10131a">AI 生图（可替换模块）</text>
+  <text x="455" y="589" text-anchor="middle" font-size="10.5" fill="#6b6558">Gemini ⇄ 华为云盘古 · 失败本地降级</text>
+
+  <!-- ===== 数据层 ===== -->
+  <rect x="624" y="508" width="296" height="118" rx="10" fill="#ffffff" stroke="#10131a" stroke-width="1.5"/>
+  <text x="644" y="534" font-size="14" font-weight="700" fill="#10131a">数据与资产层</text>
+  <text x="644" y="558" font-size="11.5" fill="#6b6558">· crafts.json 唯一数据源（前后端共享）</text>
+  <text x="644" y="578" font-size="11.5" fill="#6b6558">· 18 件 GLB：Draco+WebP 压缩 420MB→14MB</text>
+  <text x="644" y="598" font-size="11.5" fill="#6b6558">· Supabase：作品库 + Storage 图片桶</text>
+  <text x="644" y="618" font-size="11.5" fill="#6b6558">· 字体子集化 71MB→1.8MB · 离线可演示</text>
+
+  <!-- 层间连线 -->
+  <line x1="480" y1="210" x2="480" y2="232" stroke="#9a917e" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="480" y1="340" x2="480" y2="362" stroke="#9a917e" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="320" y1="484" x2="320" y2="506" stroke="#9a917e" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="772" y1="484" x2="772" y2="506" stroke="#9a917e" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="600" y1="567" x2="622" y2="567" stroke="#9a917e" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- 底注 -->
+  <text x="480" y="668" text-anchor="middle" font-size="11" fill="#6b6558">性能生死线已达标：首屏 ~90MB → 5MB 内 · 展品切换秒开 · AR / Draco 解码器全部自托管，现场演示不依赖外网</text>
+  <text x="480" y="692" text-anchor="middle" font-size="10" fill="#9a917e">Heritage Foundry · 2026-07 · 团队：子涵 / 绵阳 / 刘宇轩</text>
+</svg>

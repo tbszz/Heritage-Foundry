@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>让非遗走出展柜 · Heritage Foundry 项目发展建议书</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Noto+Sans+SC:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#10131a;
+  --night:#0a0c11;
+  --night-2:#141821;
+  --paper:#f7f2e7;
+  --paper-2:#efe6d3;
+  --cinnabar:#c03a24;
+  --cinnabar-deep:#9a2b18;
+  --gold:#c9a25e;
+  --gold-soft:#e6cd9a;
+  --peacock:#1d5c55;
+  --line:rgba(16,19,26,.14);
+  --line-light:rgba(247,242,231,.14);
+  --muted:#6b6558;
+  --muted-light:#9a917e;
+  --serif:"Noto Serif SC","Songti SC","STSong",serif;
+  --sans:"Noto Sans SC","PingFang SC",sans-serif;
+  --mono:"IBM Plex Mono","SF Mono",monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-weight:400;
+  line-height:1.85;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+::selection{background:var(--cinnabar);color:var(--paper)}
+
+/* ---------- grain ---------- */
+body::after{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:120;opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---------- nav ---------- */
+nav{
+  position:fixed;left:0;top:0;bottom:0;width:76px;z-index:100;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  border-right:1px solid var(--line);background:rgba(247,242,231,.86);backdrop-filter:blur(10px);
+}
+nav a{
+  writing-mode:vertical-rl;text-decoration:none;color:var(--muted);
+  font-family:var(--serif);font-size:13px;letter-spacing:.35em;padding:12px 0;
+  border-left:2px solid transparent;transition:all .3s;
+}
+nav a:hover{color:var(--cinnabar)}
+nav a.active{color:var(--cinnabar);border-left-color:var(--cinnabar)}
+nav .nav-mark{
+  writing-mode:horizontal-tb;font-family:var(--mono);font-size:10px;letter-spacing:.2em;
+  color:var(--gold);margin-bottom:18px;
+}
+@media(max-width:900px){nav{display:none}}
+
+main{margin-left:76px}
+@media(max-width:900px){main{margin-left:0}}
+
+.wrap{max-width:1060px;margin:0 auto;padding:0 clamp(24px,6vw,72px)}
+
+/* ---------- hero ---------- */
+.hero{
+  background:var(--night);color:var(--paper);
+  min-height:100vh;display:flex;flex-direction:column;justify-content:center;
+  position:relative;overflow:hidden;
+}
+.hero::before{
+  content:"";position:absolute;inset:0;
+  background:
+    radial-gradient(900px 500px at 85% -10%,rgba(201,162,94,.16),transparent 60%),
+    radial-gradient(700px 500px at -10% 110%,rgba(192,58,36,.14),transparent 60%);
+}
+.hero-grid-lines{
+  position:absolute;inset:0;opacity:.5;
+  background-image:linear-gradient(var(--line-light) 1px,transparent 1px),linear-gradient(90deg,var(--line-light) 1px,transparent 1px);
+  background-size:120px 120px;
+  mask-image:radial-gradient(closest-side at 50% 40%,black,transparent);
+  -webkit-mask-image:radial-gradient(closest-side at 50% 40%,black,transparent);
+}
+.hero-inner{position:relative;z-index:2;padding:120px clamp(24px,6vw,72px) 80px;max-width:1160px;margin:0 auto;width:100%}
+.hero .kicker{
+  font-family:var(--mono);font-size:12px;letter-spacing:.4em;color:var(--gold);
+  display:flex;align-items:center;gap:16px;margin-bottom:36px;
+}
+.hero .kicker::before{content:"";width:48px;height:1px;background:var(--gold)}
+.hero h1{
+  font-family:var(--serif);font-weight:900;
+  font-size:clamp(44px,7.5vw,96px);line-height:1.16;letter-spacing:.02em;
+}
+.hero h1 em{font-style:normal;color:var(--gold)}
+.hero h1 .zhu{color:var(--cinnabar);text-shadow:0 0 60px rgba(192,58,36,.45)}
+.hero-sub{
+  margin-top:28px;max-width:640px;color:rgba(247,242,231,.66);
+  font-size:clamp(15px,1.6vw,18px);font-weight:300;line-height:2;
+}
+.hero-meta{
+  margin-top:56px;display:flex;flex-wrap:wrap;gap:12px 40px;
+  font-family:var(--mono);font-size:12px;color:var(--muted-light);letter-spacing:.08em;
+}
+.hero-meta b{color:var(--paper);font-weight:500}
+.seal{
+  position:absolute;right:clamp(20px,7vw,110px);top:110px;z-index:3;
+  width:104px;height:104px;border:3px solid var(--cinnabar);border-radius:10px;
+  display:grid;place-items:center;transform:rotate(6deg);
+  color:var(--cinnabar);font-family:var(--serif);font-weight:900;font-size:30px;
+  line-height:1.15;text-align:center;opacity:.9;
+  box-shadow:inset 0 0 0 2px rgba(192,58,36,.25);
+}
+.vertical-deco{
+  position:absolute;right:clamp(8px,3vw,40px);bottom:80px;z-index:2;
+  writing-mode:vertical-rl;font-family:var(--serif);font-size:15px;
+  letter-spacing:.6em;color:rgba(201,162,94,.4);
+}
+.countdown{
+  margin-top:64px;display:inline-flex;align-items:baseline;gap:18px;
+  border:1px solid var(--line-light);padding:18px 28px;border-radius:4px;
+}
+.countdown .num{font-family:var(--serif);font-size:56px;font-weight:900;color:var(--cinnabar);line-height:1}
+.countdown .lab{font-size:13px;color:rgba(247,242,231,.6);letter-spacing:.2em}
+.countdown .lab b{display:block;color:var(--gold);font-family:var(--mono);font-size:11px;margin-top:4px}
+
+/* ---------- stat band ---------- */
+.statband{background:var(--cinnabar);color:var(--paper)}
+.statband .wrap{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(247,242,231,.2)}
+.stat{
+  background:var(--cinnabar);padding:30px 22px;
+}
+.stat .n{font-family:var(--serif);font-weight:900;font-size:clamp(26px,3.4vw,40px);line-height:1.1}
+.stat .n small{font-size:.45em;font-weight:600}
+.stat .t{font-size:12.5px;letter-spacing:.15em;opacity:.85;margin-top:8px}
+@media(max-width:800px){.statband .wrap{grid-template-columns:repeat(2,1fr)}}
+
+/* ---------- sections ---------- */
+section.chapter{padding:110px 0 90px;position:relative}
+section.dark{background:var(--night);color:var(--paper)}
+section.dark .sec-note{color:rgba(247,242,231,.55)}
+.chap-head{display:flex;align-items:flex-end;gap:26px;margin-bottom:14px}
+.chap-num{
+  font-family:var(--serif);font-weight:900;font-size:clamp(56px,7vw,88px);line-height:.9;
+  color:transparent;-webkit-text-stroke:1.5px var(--gold);
+}
+.chap-title h2{font-family:var(--serif);font-weight:900;font-size:clamp(28px,4vw,44px);letter-spacing:.04em}
+.chap-title .en{font-family:var(--mono);font-size:11px;letter-spacing:.35em;color:var(--cinnabar);margin-top:6px}
+section.dark .chap-title .en{color:var(--gold)}
+.sec-note{max-width:680px;color:var(--muted);font-size:15px;margin-bottom:48px}
+
+h3.sub{
+  font-family:var(--serif);font-weight:700;font-size:21px;margin:56px 0 18px;
+  display:flex;align-items:center;gap:14px;
+}
+h3.sub::before{content:"";width:22px;height:22px;flex:none;
+  background:conic-gradient(from 45deg,var(--cinnabar) 0 25%,transparent 25% 50%,var(--cinnabar) 50% 75%,transparent 75%);
+  border-radius:3px;opacity:.9}
+section.dark h3.sub::before{background:conic-gradient(from 45deg,var(--gold) 0 25%,transparent 25% 50%,var(--gold) 50% 75%,transparent 75%)}
+
+p.body{max-width:760px;margin-bottom:16px;font-size:15.5px}
+p.body b,section.dark p.body b{color:var(--cinnabar);font-weight:600}
+section.dark p.body b{color:var(--gold)}
+p.body code,li code{font-family:var(--mono);font-size:.86em;background:rgba(192,58,36,.1);color:var(--cinnabar-deep);padding:1px 6px;border-radius:3px}
+section.dark p.body code,section.dark li code{background:rgba(201,162,94,.14);color:var(--gold)}
+
+/* ---------- cards ---------- */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin:28px 0}
+.card{
+  border:1px solid var(--line);border-radius:6px;padding:26px 24px;background:rgba(255,255,255,.4);
+  position:relative;transition:transform .35s,box-shadow .35s;
+}
+.card:hover{transform:translateY(-4px);box-shadow:0 18px 40px -18px rgba(16,19,26,.25)}
+section.dark .card{background:var(--night-2);border-color:var(--line-light)}
+.card .card-tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.25em;color:var(--cinnabar)}
+section.dark .card .card-tag{color:var(--gold)}
+.card h4{font-family:var(--serif);font-size:18px;font-weight:700;margin:8px 0 10px}
+.card p{font-size:13.5px;color:var(--muted);line-height:1.8}
+section.dark .card p{color:rgba(247,242,231,.6)}
+
+/* ---------- flow ---------- */
+.flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:0;margin:30px 0}
+.flow .step{
+  flex:1 1 150px;border:1px solid var(--line);padding:22px 18px;position:relative;background:rgba(255,255,255,.35);
+}
+.flow .step+.step{border-left:none}
+.flow .step .no{font-family:var(--mono);font-size:11px;color:var(--cinnabar);letter-spacing:.2em}
+.flow .step h5{font-family:var(--serif);font-size:16px;margin:6px 0 6px;font-weight:700}
+.flow .step p{font-size:12.5px;color:var(--muted);line-height:1.7}
+@media(max-width:800px){.flow .step+.step{border-left:1px solid var(--line);border-top:none}}
+
+/* ---------- tables ---------- */
+.tbl-wrap{overflow-x:auto;margin:26px 0;border:1px solid var(--line);border-radius:6px}
+section.dark .tbl-wrap{border-color:var(--line-light)}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:640px}
+th{
+  font-family:var(--serif);font-weight:700;text-align:left;padding:14px 18px;
+  background:rgba(16,19,26,.05);border-bottom:1px solid var(--line);white-space:nowrap;
+}
+section.dark th{background:rgba(247,242,231,.06);border-bottom-color:var(--line-light)}
+td{padding:14px 18px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--muted)}
+section.dark td{border-bottom-color:var(--line-light);color:rgba(247,242,231,.62)}
+tr:last-child td{border-bottom:none}
+td:first-child{font-weight:600;color:var(--ink);white-space:nowrap}
+section.dark td:first-child{color:var(--paper)}
+tr.recommend td{background:rgba(192,58,36,.06)}
+section.dark tr.recommend td{background:rgba(201,162,94,.08)}
+.badge{
+  display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.15em;
+  padding:3px 10px;border-radius:99px;border:1px solid var(--cinnabar);color:var(--cinnabar);white-space:nowrap;
+}
+section.dark .badge{border-color:var(--gold);color:var(--gold)}
+
+/* ---------- checklist ---------- */
+.prio-list{list-style:none;margin:24px 0;counter-reset:prio}
+.prio-list li{
+  counter-increment:prio;display:flex;gap:22px;padding:22px 0;border-bottom:1px dashed var(--line);
+}
+section.dark .prio-list li{border-bottom-color:var(--line-light)}
+.prio-list li::before{
+  content:"P" counter(prio);font-family:var(--mono);font-size:12px;color:var(--paper);
+  background:var(--cinnabar);width:38px;height:38px;border-radius:50%;display:grid;place-items:center;flex:none;margin-top:2px;
+}
+section.dark .prio-list li::before{background:var(--gold);color:var(--night)}
+.prio-list h5{font-family:var(--serif);font-size:16.5px;font-weight:700;margin-bottom:4px}
+.prio-list p{font-size:13.5px;color:var(--muted)}
+section.dark .prio-list p{color:rgba(247,242,231,.58)}
+.prio-list .impact{font-family:var(--mono);font-size:11px;color:var(--peacock);margin-top:6px;display:block}
+section.dark .prio-list .impact{color:var(--gold)}
+
+/* ---------- timeline ---------- */
+.timeline{position:relative;margin:40px 0 20px;padding-left:34px}
+.timeline::before{content:"";position:absolute;left:8px;top:6px;bottom:6px;width:2px;background:linear-gradient(var(--cinnabar),var(--gold))}
+.tl-item{position:relative;padding:0 0 40px 20px}
+.tl-item::before{
+  content:"";position:absolute;left:-32px;top:8px;width:12px;height:12px;border-radius:50%;
+  background:var(--paper);border:3px solid var(--cinnabar);
+}
+.tl-item:nth-child(2)::before{border-color:var(--gold)}
+.tl-item:nth-child(3)::before{border-color:var(--peacock)}
+.tl-item .tl-date{font-family:var(--mono);font-size:11.5px;letter-spacing:.2em;color:var(--cinnabar)}
+.tl-item:nth-child(2) .tl-date{color:#a07c33}
+.tl-item:nth-child(3) .tl-date{color:var(--peacock)}
+.tl-item h4{font-family:var(--serif);font-size:19px;font-weight:700;margin:6px 0 8px}
+.tl-item p{font-size:14px;color:var(--muted);max-width:680px}
+.tl-item ul{margin:8px 0 0 18px;font-size:13.5px;color:var(--muted)}
+.tl-item li{margin-bottom:4px}
+
+/* ---------- day plan ---------- */
+.daygrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:26px 0}
+.day{
+  border:1px solid var(--line-light);border-radius:6px;padding:18px;background:var(--night-2);
+}
+.day .d{font-family:var(--mono);font-size:11px;color:var(--gold);letter-spacing:.2em}
+.day h5{font-family:var(--serif);font-size:15px;margin:6px 0 6px;color:var(--paper)}
+.day p{font-size:12.5px;color:rgba(247,242,231,.55);line-height:1.7}
+
+/* ---------- quote ---------- */
+.pull{
+  border-left:4px solid var(--cinnabar);padding:6px 0 6px 28px;margin:36px 0;
+  font-family:var(--serif);font-size:clamp(19px,2.6vw,26px);font-weight:700;line-height:1.7;max-width:720px;
+}
+section.dark .pull{border-left-color:var(--gold)}
+.pull small{display:block;font-family:var(--sans);font-weight:400;font-size:13px;color:var(--muted);margin-top:10px}
+section.dark .pull small{color:rgba(247,242,231,.5)}
+
+/* ---------- footer ---------- */
+footer{background:var(--night);color:rgba(247,242,231,.5);padding:70px 0 60px;font-size:13px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:24px;justify-content:space-between;align-items:flex-end}
+footer .f-title{font-family:var(--serif);font-weight:900;font-size:22px;color:var(--paper)}
+footer .f-title span{color:var(--cinnabar)}
+footer .src{max-width:560px;line-height:1.9;font-size:12.5px}
+footer a{color:var(--gold);text-decoration:none}
+footer a:hover{text-decoration:underline}
+
+/* ---------- reveal ---------- */
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1)}
+.reveal.in{opacity:1;transform:none}
+
+@media(max-width:700px){
+  .seal{width:78px;height:78px;font-size:22px;top:96px}
+  .countdown .num{font-size:42px}
+  section.chapter{padding:80px 0 64px}
+}
+@media(prefers-reduced-motion:reduce){
+  .reveal{opacity:1;transform:none;transition:none}
+  html{scroll-behavior:auto}
+}
+@media print{
+  .reveal{opacity:1 !important;transform:none !important}
+  nav{display:none}
+  main{margin-left:0}
+}
+</style>
+</head>
+<body>
+
+<nav id="nav">
+  <span class="nav-mark">HF·2026</span>
+  <a href="#ch1">壹·现状</a>
+  <a href="#ch2">贰·赛事</a>
+  <a href="#ch3">叁·定位</a>
+  <a href="#ch4">肆·技术</a>
+  <a href="#ch5">伍·冲刺</a>
+  <a href="#ch6">陆·路线</a>
+  <a href="#ch7">柒·风险</a>
+</nav>
+
+<main>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <div class="hero-grid-lines"></div>
+  <div class="seal">项目<br>建议</div>
+  <div class="vertical-deco">用户体验创新 · 鸿蒙赛道</div>
+  <div class="hero-inner">
+    <div class="kicker">HERITAGE FOUNDRY · 发展建议书 · 2026.07.16</div>
+    <h1>让非遗<em>走出展柜</em><br>从文创工具到 <span class="zhu">AR 数字博物馆</span></h1>
+    <p class="hero-sub">
+      基于对 Heritage-Foundry 仓库 90 个文件的完整代码审计、团队三次会议纪要与微信群聊记录的交叉分析，
+      本报告回答一个问题：接下来的 10 天、3 个月，这个项目该怎么走，才能在鸿蒙赛道「用户体验创新」方向拿到名次。
+    </p>
+    <div class="countdown">
+      <span class="num">10</span>
+      <span class="lab">天 · 距初赛提交截止<b>2026-07-26 24:00</b></span>
+    </div>
+    <div class="hero-meta">
+      <span>赛事 <b>中国高校计算机大赛 · 人工智能创意赛（鸿蒙赛道）</b></span>
+      <span>方向 <b>用户体验创新</b></span>
+      <span>团队 <b>子涵 / 绵阳 / 刘宇轩</b></span>
+      <span>仓库 <b>tbszz/Heritage-Foundry</b></span>
+    </div>
+  </div>
+</header>
+
+<!-- ============ STAT BAND ============ -->
+<div class="statband">
+  <div class="wrap">
+    <div class="stat"><div class="n">0 <small>行</small></div><div class="t">现有 AR / 鸿蒙代码</div></div>
+    <div class="stat"><div class="n">≈90<small>MB</small></div><div class="t">当前首页首屏加载体积</div></div>
+    <div class="stat"><div class="n">18<small>项</small></div><div class="t">非遗技艺 3D 资产已就位</div></div>
+    <div class="stat"><div class="n">5<small>步闭环</small></div><div class="t">看→生成→贴图→图纸→保存</div></div>
+  </div>
+</div>
+
+<!-- ============ CH1 现状 ============ -->
+<section class="chapter" id="ch1">
+  <div class="wrap">
+    <div class="chap-head reveal">
+      <div class="chap-num">壹</div>
+      <div class="chap-title"><h2>现状盘点</h2><div class="en">CODE AUDIT · WHERE WE ARE</div></div>
+    </div>
+    <p class="sec-note reveal">对仓库逐文件审计后的结论：这个项目比你们自己以为的更完整——但它是一座"建好了展厅、却没开门"的博物馆。</p>
+
+    <h3 class="sub reveal">已经建成的，是真资产</h3>
+    <p class="body reveal">
+      Heritage-Foundry（非遗造物局）不是半成品。它已经跑通了一条完整的产品闭环：
+      <b>18 项非遗技艺浏览 → Gemini AI 生成文创图 → Three.js 3D 载体实时贴图 → Oklab 色差拼豆图纸 → Supabase 作品保存</b>。
+      首页的粒子 morph 博物馆（5 万粒子在 18 件文物模型间形变）在视觉上已经具备"高端精致"的底子，这正是用户体验创新方向的第一评分关键词。
+    </p>
+    <div class="flow reveal">
+      <div class="step"><div class="no">01</div><h5>18 项技艺数据</h5><p>craftData.js 结构化故事卡：苗绣、剪纸、唐卡、陶瓷、云锦……每项含 story / 模型 / 图标</p></div>
+      <div class="step"><div class="no">02</div><h5>420MB GLB 模型</h5><p>18 件展品级模型，Git LFS 管理——AR 化最重的资产已经提前备齐</p></div>
+      <div class="step"><div class="no">03</div><h5>Prompt 工程库</h5><p>15 技艺 × 10 IP × 5 载体 × 8 风格的导演式 prompt 模板，服务端二次增强</p></div>
+      <div class="step"><div class="no">04</div><h5>拼豆算法</h5><p>图像 → 18×12 图纸 → Oklab 感知配色 → 材料清单，独家记忆点</p></div>
+      <div class="step"><div class="no">05</div><h5>降级容错</h5><p>无 Gemini / 无 Supabase 均可启动并明确报错，演示稳定性有保障</p></div>
+    </div>
+
+    <h3 class="sub reveal">但四个缺口，个个致命</h3>
+    <div class="card-grid reveal">
+      <div class="card"><div class="card-tag">GAP 01</div><h4>零 AR / 零鸿蒙</h4><p>全仓库无一行 WebXR、AR Engine、ArkUI 代码。3D 场景全部是"模型居中 + 轨道相机"的展示型组织，与 AR 需要的"真实尺度 + 平面锚定"范式不兼容——展示层必须重做，但数据层 100% 可复用。</p></div>
+      <div class="card"><div class="card-tag">GAP 02</div><h4>首屏 ≈ 90MB</h4><p>71MB 未子集化字体 + 14.7MB 首个 GLB + 4.5MB 首页配图 + three.js。切一件展品重新下载最大 63.8MB 模型，无 DRACO/KTX2 压缩、无缓存。"用户体验"赛道上，加载慢就是原罪。</p></div>
+      <div class="card"><div class="card-tag">GAP 03</div><h4>没有部署形态</h4><p>Express 不托管前端产物，无 Dockerfile、无 CI、无 LICENSE、CORS 全开。生图 API 无鉴权无限流——公开部署即烧钱。初赛要交演示链接，这条现在是空的。</p></div>
+      <div class="card"><div class="card-tag">GAP 04</div><h4>数据三处漂移</h4><p>同一项非遗的名称/故事在 craftData.js、apiService.js、promptService.js 各存一份，craft 映射表重复两份。加新品类要改三个地方，复赛迭代时一定会出 bug。</p></div>
+    </div>
+
+    <div class="pull reveal">
+      结论：数据层与算法是宝，展示层要重做，性能是生死线，部署是入场券。
+      <small>—— 代码审计总结，详见附录引用文件</small>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CH2 赛事 ============ -->
+<section class="chapter dark" id="ch2">
+  <div class="wrap">
+    <div class="chap-head reveal">
+      <div class="chap-num">贰</div>
+      <div class="chap-title"><h2>赛事解读</h2><div class="en">WHAT THE JUDGES WANT</div></div>
+    </div>
+    <p class="sec-note reveal">先搞清游戏规则，再决定怎么打。以下信息来自大赛官方通知与承办方公告。</p>
+
+    <h3 class="sub reveal">你报的是什么比赛</h3>
+    <p class="body reveal">
+      第十一届（2026）"中国高校计算机大赛—人工智能创意赛"<b>鸿蒙赛道</b>（即鸿蒙高校创新赛），由全国高等学校计算机教育研究会主办，<b>浙江大学与华为联合承办</b>，已列入全国普通高校学科竞赛排行榜（白名单，保研/综测认可度高）。
+      鸿蒙赛道设四个作品方向：应用创新、Agent 创新、<b>用户体验创新</b>、操作系统智能创新——你们选的"用户体验创新"，官方定义是"<b>围绕 UI/UX 设计创新，打造兼具高端精致视觉与自然高效交互的作品</b>"。
+    </p>
+    <div class="tbl-wrap reveal">
+      <table>
+        <tr><th>阶段</th><th>截止时间</th><th>形式</th><th>交付物</th><th>晋级逻辑</th></tr>
+        <tr class="recommend"><td>初赛 <span class="badge">当前</span></td><td>2026-07-26 24:00</td><td>线上评审</td><td>创意书 / 申报文档（+演示链接加分）</td><td>按报名比例择优晋级</td></tr>
+        <tr><td>复赛</td><td>2026-09-30 24:00</td><td>线上评审</td><td>可运行作品 + 演示视频 + 文档</td><td>评一/二/三等奖，≤ 有效队伍 1/3</td></tr>
+        <tr><td>总决赛</td><td>2026 年 11 月</td><td>现场答辩</td><td>现场 Demo + 路演</td><td>约 52 支队伍，综合排名</td></tr>
+      </table>
+    </div>
+
+    <h3 class="sub reveal">三条必须接受的赛制现实</h3>
+    <div class="card-grid reveal">
+      <div class="card"><div class="card-tag">现实一</div><h4>初赛拼的是文档，不是代码</h4><p>线上评审 + 报名队数庞大，刘宇轩在群里的判断大概率是对的：初筛高度依赖文本材料（很可能有 AI 辅助审阅）。<b>创意书的结构完整度与关键词覆盖率，直接决定能否进复赛。</b>代码可以只有 demo，文档必须是满分作文。</p></div>
+      <div class="card"><div class="card-tag">现实二</div><h4>鸿蒙特性是显性加分项</h4><p>这是华为承办的鸿蒙赛道。评委想看到的是"这个体验为什么必须在鸿蒙上发生"——分布式协同、一次开发多端部署、元服务、小艺，每个被自然用上的鸿蒙能力都是得分点。硬凑会被看穿，但我们的多设备场景是真的合理（见第叁章）。</p></div>
+      <div class="card"><div class="card-tag">现实三</div><h4>"用户体验"赛道的对手不是工程师</h4><p>这个方向的强队往往是设计驱动的队伍。技术深度不是第一评分项——<b>视觉完成度、交互自然度、故事感染力</b>才是。这恰好是我们的主场：粒子博物馆首页 + 拼豆手作闭环，比绝大多数"套壳 AI 聊天"项目更有体验纵深。</p></div>
+    </div>
+
+    <p class="body reveal">
+      官网报名入口：<code>developer.huawei.com/home/C4-AI</code>；竞赛交流 QQ 群 1013310660；官方邮箱 AiContest@huawei.com。建议本周内确认三人均已在官网完成报名组队（每人都要单独报名再加入团队，别漏）。
+    </p>
+  </div>
+</section>
+
+<!-- ============ CH3 定位 ============ -->
+<section class="chapter" id="ch3">
+  <div class="wrap">
+    <div class="chap-head reveal">
+      <div class="chap-num">叁</div>
+      <div class="chap-title"><h2>产品定位</h2><div class="en">WHAT TO BUILD</div></div>
+    </div>
+    <p class="sec-note reveal">会议定的方向（非遗 × 流行 IP × AR × 鸿蒙协同）是对的。现在需要把它收敛成一句评委 10 秒能记住的话、一条三分钟能演示完的故事线。</p>
+
+    <div class="pull reveal">
+      「遗见」—— 把非遗博物馆放进每个人的客厅。
+      <small>定位建议：AR 非遗数字博物馆 × AI 文创共创平台。名字可再议，但"走出展柜"这个意象建议保留，它是路演的第一张幻灯片。</small>
+    </div>
+
+    <h3 class="sub reveal">三分钟演示故事线（评委视角）</h3>
+    <div class="flow reveal">
+      <div class="step"><div class="no">幕一 · 见</div><h5>文物走出展柜</h5><p>打开手机摄像头，一件苗绣绣绷 / 景德镇瓷瓶以真实尺寸落在你家茶几上，可环绕观看、可放大看针脚</p></div>
+      <div class="step"><div class="no">幕二 · 懂</div><h5>点读文化卡片</h5><p>点击模型热点，弹出这项技艺的故事卡：它从哪来、谁在做、为什么快要失传</p></div>
+      <div class="step"><div class="no">幕三 · 创</div><h5>AI 文创共创</h5><p>选一件流行 IP 与技艺碰撞，AI 生成帆布包/手机壳设计图，实时贴到 3D 载体上预览</p></div>
+      <div class="step"><div class="no">幕四 · 作</div><h5>图纸变成实物</h5><p>一键生成拼豆图纸 + 材料清单——屏幕上那件文物，周末就能拼出来挂在包上</p></div>
+      <div class="step"><div class="no">幕五 · 传</div><h5>多设备共赏</h5><p>手机看到一半，流转到平板继续设计；成品投上智慧屏，全家人围看——鸿蒙分布式在此自然发生</p></div>
+    </div>
+
+    <h3 class="sub reveal">为什么是这条线：三个差异化支点</h3>
+    <div class="card-grid reveal">
+      <div class="card"><div class="card-tag">支点 1 · 体验</div><h4>闭环，而非展示</h4><p>市面 AR 博物馆（含会议参考的小红书案例）止步于"看"。我们是唯一一条「看 → 懂 → 创 → 作 → 传」的完整链路——评委记住的是那个"AI 图 30 秒变成能拼出来的拼豆图纸"的瞬间。</p></div>
+      <div class="card"><div class="card-tag">支点 2 · 技术</div><h4>鸿蒙协同有真场景</h4><p>手机 AR 受屏幕尺寸限制是真实痛点 → 流转到平板/智慧屏是真实解法。这不是硬凑鸿蒙特性，而是"只有分布式才能做好"的体验，恰好命中赛道口味。</p></div>
+      <div class="card"><div class="card-tag">支点 3 · 立意</div><h4>公益叙事可讲大</h4><p>非遗传承人老龄化、年轻群体触达难是真问题。"让年轻人先在家里爱上文物，再走进真的博物馆"，社会价值线与商业价值线（文创定制）都讲得通，答辩时站得住。</p></div>
+    </div>
+
+    <h3 class="sub reveal">克制清单：这些先不做</h3>
+    <p class="body reveal">
+      电商交易、用户账号体系、UGC 社区、更多 IP 扩充——全部砍掉或写进"未来规划"。三个人、十天初赛、两个月复赛，<b>把五幕故事线打磨到惊艳，比把功能列表写满更有杀伤力</b>。DESIGN.md 里的 Non-goals 已经说得很对，坚持它。
+    </p>
+  </div>
+</section>
+<!-- ============ CH4 技术 ============ -->
+<section class="chapter dark" id="ch4">
+  <div class="wrap">
+    <div class="chap-head reveal">
+      <div class="chap-num">肆</div>
+      <div class="chap-title"><h2>技术路线</h2><div class="en">HOW TO BUILD IT</div></div>
+    </div>
+    <p class="sec-note reveal">原则只有一条：<b style="color:var(--gold)">数据层全保留，展示层渐进重做，鸿蒙化选阻力最小的路径</b>。不重写 promptService、patternGenerator、craftData——这些是花了两周攒下的壁垒。</p>
+
+    <h3 class="sub reveal">4.1 AR 方案选型（绵阳的调研题，这里有参考答案）</h3>
+    <p class="body reveal">会议留了"VR 还是 AR"的开放题。答案明确是 <b>AR</b>：VR 需要头显（评委没有），AR 用评委自己的手机就能体验。具体三条路径对比：</p>
+    <div class="tbl-wrap reveal">
+      <table>
+        <tr><th>方案</th><th>成本</th><th>效果</th><th>风险</th><th>适用阶段</th></tr>
+        <tr class="recommend">
+          <td>① Web 端 AR<br><code>&lt;model-viewer&gt;</code> / WebXR</td>
+          <td>2–3 天出 POC，复用现有 GLB 与 GLTFLoader 管线</td>
+          <td>安卓走 ARCore / WebXR，iOS 走 AR Quick Look，浏览器直达，扫码即体验</td>
+          <td>鸿蒙 Next 浏览器兼容性需实测；能力受 Web 限制</td>
+          <td><b>初赛 Demo + 复赛主力</b></td>
+        </tr>
+        <tr>
+          <td>② 华为 AR Engine 原生<br><code>ArkTS</code></td>
+          <td>1–2 周起，需学 ArkUI 与 AR Engine API</td>
+          <td>平面检测/光照估计更稳，鸿蒙叙事满分</td>
+          <td>团队无华为实体机；模拟器对 AR 支持有限，需云真机</td>
+          <td>决赛冲刺期的"杀手锏"</td>
+        </tr>
+        <tr>
+          <td>③ 商用 SDK<br><code>8thWall 类</code></td>
+          <td>接入快但收费</td>
+          <td>成熟稳定</td>
+          <td>付费 + 与"鸿蒙原生"叙事冲突</td>
+          <td>不建议</td>
+        </tr>
+      </table>
+    </div>
+    <p class="body reveal">
+      <b>建议节奏</b>：初赛用 <code>&lt;model-viewer&gt;</code> 包一层现有展品页，录一段"瓷瓶落在桌面上"的 15 秒视频放进创意书——成本一个下午，说服力胜过十页文字。复赛把 AR 页做成独立入口，模型走压缩后的管线。决赛前评估 AR Engine 原生版本，作为现场答辩的差异化演示。
+    </p>
+
+    <h3 class="sub reveal">4.2 鸿蒙适配：选"混合壳"，别重写</h3>
+    <div class="tbl-wrap reveal">
+      <table>
+        <tr><th>路径</th><th>工作量</th><th>体验</th><th>结论</th></tr>
+        <tr><td>纯 ArkWeb 容器套壳</td><td>极小（1–2 天）</td><td>取决于 Web 性能</td><td>可作复赛底线：能装到鸿蒙机上跑起来</td></tr>
+        <tr class="recommend"><td>混合：原生壳 + Web 内核</td><td>中（1–2 周）</td><td>导航/相机/流转用原生能力，生成页复用现有 Web</td><td><b>推荐</b>：ArkTS 原生首页 + AR 入口 + 跨设备流转按钮，crafts/generator 页走 ArkWeb 复用</td></tr>
+        <tr><td>全量 ArkTS 重写</td><td>大（1 个月+）</td><td>最佳</td><td>团队时间与人力不允许，放弃</td></tr>
+      </table>
+    </div>
+    <p class="body reveal">
+      鸿蒙加分功能的落地优先级：<b>① 跨设备流转</b>（手机→平板继续浏览，鸿蒙分布式能力的招牌场景，演示效果直观）→ <b>② 元服务卡片</b>（桌面卡片直接展示"今日文物"，轻量化触达）→ <b>③ 小艺语音唤起</b>（"小艺小艺，看看苗绣"）。做一个就够写进文档，全做是决赛水平。
+    </p>
+
+    <h3 class="sub reveal">4.3 性能优化：用户体验赛道的生死线（按 ROI 排序）</h3>
+    <ul class="prio-list reveal">
+      <li><div><h5>GLB 模型压缩管线</h5><p>18 个模型共 420MB 全部走 gltf-transform / gltfpack：DRACO 或 meshopt 几何压缩 + KTX2 纹理压缩，预期降到 40–80MB（约 1/10）。这是 AR 移动端可加载的前提，不做这个 AR 无从谈起。</p><span class="impact">收益：展品切换从 30 秒级 → 秒开 · 成本：半天（写个批量脚本）</span></div></li>
+      <li><div><h5>字体子集化</h5><p>思源宋体 ×2 + 霞鹜文楷共 71MB，全量字体内 99% 的字永远用不到。用 fonttools/pyftsubset 按实际文案子集化，预期 &lt; 2MB。</p><span class="impact">收益：首屏 −69MB · 成本：1 小时</span></div></li>
+      <li><div><h5>首屏分包与懒加载</h5><p>首页只预载首个展品模型（压缩后 ~2MB），其余 17 个空闲时预取；museum-bg 等大图转 WebP/AVIF；three.js 已独立 chunk，保持。</p><span class="impact">收益：首屏 ≈90MB → 5MB 内 · 成本：半天</span></div></li>
+      <li><div><h5>图像存 Supabase Storage，不入库</h5><p>当前作品图以 base64 直接写进 image_url 文本列（单条 1–2MB），列表查询会越来越慢。改存 Storage 只存 URL。</p><span class="impact">收益：作品列表不随时间劣化 · 成本：2 小时</span></div></li>
+      <li><div><h5>部署与工程化</h5><p>前端 Vercel/华为云 CDN，Express 加 static 托管 dist 或用华为云 ECS/函数工作流；补 Dockerfile + GitHub Actions（lint+test+build）；补 LICENSE；生图 API 加简单频次限制。</p><span class="impact">收益：有可交的演示链接 · 成本：1 天</span></div></li>
+    </ul>
+
+    <h3 class="sub reveal">4.4 架构上的小修（复赛迭代前做掉）</h3>
+    <p class="body reveal">
+      把 <code>craftData.js</code> 提升为唯一数据源，<code>apiService.getCraftInfo</code> 与 <code>promptService.CRAFT_LIBRARY</code> 改为从它派生；<code>home.js</code> 与 <code>crafts.js</code> 重复的 craft 映射表合并。半天工作量，换复赛两个月不加新 bug。
+    </p>
+  </div>
+</section>
+
+<!-- ============ CH5 冲刺 ============ -->
+<section class="chapter" id="ch5">
+  <div class="wrap">
+    <div class="chap-head reveal">
+      <div class="chap-num">伍</div>
+      <div class="chap-title"><h2>初赛十日冲刺</h2><div class="en">D-10 → D-DAY · 07.16–07.26</div></div>
+    </div>
+    <p class="sec-note reveal">初赛只交文档（+演示材料）。十天的目标不是"做出产品"，而是"让评委相信这个产品必然惊艳"。分工延续会议结论，但每项补上具体交付物。</p>
+
+    <h3 class="sub reveal">分工对齐（会议分工 → 可验收交付物）</h3>
+    <div class="tbl-wrap reveal">
+      <table>
+        <tr><th>负责人</th><th>会议分工</th><th>可验收交付物（07-24 前）</th></tr>
+        <tr><td>刘宇轩</td><td>创意书 / 申报文档</td><td>8 段式创意书终稿（结构见下）+ 一页纸摘要版 + 关键词自查表</td></tr>
+        <tr><td>子涵</td><td>首页与前端主架</td><td>首页视觉定稿截图/录屏（粒子博物馆）+ 产品 UI 概念稿 3–5 张（含 AR 页示意）</td></tr>
+        <tr><td>绵阳</td><td>AR 技术调研</td><td>① AR 调研结论页（本文 4.1 可直接引用）② <code>&lt;model-viewer&gt;</code> POC + 15 秒 AR 演示视频 ③ 领 Tripo 额度</td></tr>
+        <tr><td>共同</td><td>—</td><td>官网报名确认（三人各自报名 + 组队）· 文档合稿 · 07-25 提交，不留到 26 号</td></tr>
+      </table>
+    </div>
+
+    <h3 class="sub reveal">创意书骨架（按"AI 初审 + 人工复审"双读法设计）</h3>
+    <p class="body reveal">
+      机器读的是结构与关键词，人读的是故事与图。骨架按八段组织，每段标题即评分点：
+      <b>① 痛点</b>（非遗触达断层：传承人老龄化 × 年轻人无感）→ <b>② 方案一句话</b>（AR 数字博物馆 × AI 文创共创）→ <b>③ 创新点</b>（体验闭环、拼豆图纸独家能力、非遗×流行 IP）→ <b>④ 技术架构</b>（一张架构图：ArkUI 壳 / Three.js / Gemini / Supabase / 鸿蒙分布式）→ <b>⑤ 鸿蒙结合</b>（跨设备流转、元服务、一次开发多端部署——逐条对应官方特性名词）→ <b>⑥ 体验设计</b>（五幕故事线 + UI 稿，呼应"高端精致视觉与自然高效交互"原文）→ <b>⑦ 落地与数据</b>（已有 18 项技艺资产、可运行 demo 链接、历次参赛验证）→ <b>⑧ 团队与规划</b>（分工、复赛里程碑）。
+      关键词自查：鸿蒙、HarmonyOS、分布式、跨设备流转、元服务、一次开发多端部署、AR、用户体验创新、AI 生成——一个都不能少。
+    </p>
+
+    <h3 class="sub reveal">Day by Day</h3>
+    <div class="daygrid reveal" style="--ink:var(--paper)">
+      <div class="day"><div class="d">D1–D2 · 7.16–17</div><h5>立项对齐</h5><p>三人过一遍本报告；确认官网报名组队完成；刘宇轩文档初稿发出（群承诺 17 号）</p></div>
+      <div class="day"><div class="d">D3–D5 · 7.18–20</div><h5>素材生产</h5><p>绵阳 AR POC + 录视频；子涵首页录屏 + UI 概念稿；文档并行迭代第二版</p></div>
+      <div class="day"><div class="d">D6–D7 · 7.21–22</div><h5>合稿补强</h5><p>文档嵌入截图与视频二维码；架构图定稿；关键词自查表逐项打勾</p></div>
+      <div class="day"><div class="d">D8 · 7.23</div><h5>外部盲测</h5><p>找 2–3 个不知情同学只看文档复述项目——复述不出来就是文档没写明白，改</p></div>
+      <div class="day"><div class="d">D9 · 7.24–25</div><h5>终审提交</h5><p>终稿 PDF 化；检查报名系统附件；<b>25 号提交</b>，26 号留给意外</p></div>
+      <div class="day"><div class="d">D10 · 7.26</div><h5>缓冲日</h5><p>只处理提交事故；晚上开复盘会，启动复赛排期</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CH6 路线 ============ -->
+<section class="chapter" id="ch6">
+  <div class="wrap">
+    <div class="chap-head reveal">
+      <div class="chap-num">陆</div>
+      <div class="chap-title"><h2>复赛与决赛路线</h2><div class="en">ROADMAP · AUG → NOV</div></div>
+    </div>
+    <p class="sec-note reveal">初赛之后拼的就是真机体验了。三个阶段，每个阶段只有一个主题。</p>
+
+    <div class="timeline reveal">
+      <div class="tl-item">
+        <div class="tl-date">8 月 · 主题：能跑</div>
+        <h4>性能与 AR 实装</h4>
+        <p>把"能跑"做到位：模型压缩管线落地（420MB→~60MB）、字体子集化、首屏优化到 5MB 内；AR 页正式版（平面放置 + 真实尺寸 + 热点卡片）；部署上线拿到正式演示链接。</p>
+        <ul><li>里程碑：手机上扫二维码，10 秒内文物出现在桌面上</li></ul>
+      </div>
+      <div class="tl-item">
+        <div class="tl-date">9 月 · 主题：鸿蒙</div>
+        <h4>混合壳与跨设备流转</h4>
+        <p>ArkTS 原生壳（首页 + AR 入口 + 流转按钮），ArkWeb 复用生成页；落地跨设备流转演示（手机→平板）；数据层去重；Demo 视频精剪。9 月 30 日前留一周缓冲提交复赛。</p>
+        <ul><li>里程碑：DevEco 工程可编译运行，流转演示一镜到底</li></ul>
+      </div>
+      <div class="tl-item">
+        <div class="tl-date">10–11 月 · 主题：惊艳</div>
+        <h4>决赛打磨与现场叙事</h4>
+        <p>评估 AR Engine 原生版；元服务卡片/小艺唤起补一到两个；答辩 PPT 围绕"五幕故事线"排练；准备现场无网降级方案（本地模型包 + 录屏兜底）。</p>
+        <ul><li>里程碑：11 月现场，评委拿起手机亲手把文物放在讲台上</li></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CH7 风险 ============ -->
+<section class="chapter dark" id="ch7">
+  <div class="wrap">
+    <div class="chap-head reveal">
+      <div class="chap-num">柒</div>
+      <div class="chap-title"><h2>风险与对策</h2><div class="en">RISKS &amp; MITIGATIONS</div></div>
+    </div>
+    <p class="sec-note reveal">按发生概率 × 杀伤力排序，每条都有具体对策，没有"到时候再说"。</p>
+
+    <div class="card-grid reveal">
+      <div class="card"><div class="card-tag">RISK 01 · 高</div><h4>团队无华为实体机</h4><p>对策：DevEco Studio 模拟器调 UI 与流转逻辑；华为云远程真机（云调试）做关键验证；文档与视频中的"真机画面"可用模拟器 + Web 端演示组合呈现。10 月前如晋级，再考虑借/购一台二手鸿蒙设备。</p></div>
+      <div class="card"><div class="card-tag">RISK 02 · 高</div><h4>WebXR 兼容性碎片化</h4><p>对策：永不把 AR 作为唯一体验路径——静态 3D + 粒子首页是兜底；model-viewer 自动按平台降级（WebXR / Quick Look / 纯 3D）。演示视频提前录好，现场不赌网络与机型。</p></div>
+      <div class="card"><div class="card-tag">RISK 03 · 中</div><h4>Gemini 接口访问与成本</h4><p>对策：现有降级链路保留（失败回退本地生成图）；生图 API 加限流后再公开部署；文档中把"AI 生图"写成可替换模块（华为云盘古/国内图像模型可作备选叙事，评委更受用）。</p></div>
+      <div class="card"><div class="card-tag">RISK 04 · 中</div><h4>3D 模型版权</h4><p>对策：Tripo 额度生成的模型保留生成记录与授权条款截图，文档注明来源；博物馆级文物扫描件注意只用于非商用参赛场景并标注。</p></div>
+      <div class="card"><div class="card-tag">RISK 05 · 中</div><h4>人力带宽</h4><p>对策：刘宇轩出差、子涵实习、绵阳刚期末结束——十天冲刺表已按"每人每天 2–3 小时"排量；砍掉一切 P3 需求（第叁章克制清单），保住主线。</p></div>
+      <div class="card"><div class="card-tag">RISK 06 · 低</div><h4>文档被判"AI 味"过重</h4><p>对策：文档里放真实素材（仓库截图、首页录屏、AR 实拍视频）而非空泛形容词；AI 辅助写作后人工重写关键段落（痛点与故事线必须是人话）。</p></div>
+    </div>
+
+    <div class="pull reveal">
+      这个项目的胜负手不在技术深度，在"评委第一次用手机把文物放到自己桌面上"的那三秒钟。所有排期都为那一刻服务。
+      <small>—— 本报告唯一的核心建议</small>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="wrap">
+    <div>
+      <div class="f-title">遗见 <span>·</span> Heritage Foundry</div>
+      <div style="margin-top:10px;font-family:var(--mono);font-size:11px;letter-spacing:.2em">华为黑客松 · 用户体验创新 · 2026</div>
+    </div>
+    <div class="src">
+      本报告基于：Heritage-Foundry 仓库全量代码审计（90 文件，2026-07-16）、微信群「华为黑客松！！！」聊天记录（wechat-cli 导出）、2026-07-07 团队会议纪要、
+      <a href="https://developer.huawei.com/home/C4-AI" target="_blank" rel="noopener">大赛官网</a>与承办高校官方通知（初赛截止 2026-07-26 / 复赛 2026-09-30 / 总决赛 2026-11）。
+      配套文档见本目录 <code style="font-family:var(--mono)">docs/</code> 文件夹。
+    </div>
+  </div>
+</footer>
+
+</main>
+
+<script>
+(function(){
+  // flat mode (?flat=1) or print: show everything without scroll animation
+  var flat = /(^|[?&])flat=1/.test(location.search);
+  if (flat || (window.matchMedia && matchMedia('print').matches)) {
+    document.querySelectorAll('.reveal').forEach(function(el){ el.classList.add('in'); });
+    document.documentElement.style.scrollBehavior = 'auto';
+  }
+
+  // scroll reveal
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+    });
+  },{threshold:.12,rootMargin:'0px 0px -40px 0px'});
+  document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); });
+
+  // nav highlight
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav a'));
+  var secs = links.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+  var nio = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){
+        var i = secs.indexOf(e.target);
+        links.forEach(function(a,idx){ a.classList.toggle('active', idx===i); });
+      }
+    });
+  },{rootMargin:'-30% 0px -55% 0px'});
+  secs.forEach(function(s){ if(s) nio.observe(s); });
+})();
+</script>
+</body>
+</html>
