@@ -259,7 +259,4 @@
 - 模型切换释放旧资源 + 丢弃陈旧回调(沿用 `ThreeScene` 既有模式)。
 
 ### 8.4 预览图
-三方案预览图见 `docs/design-previews/`:
-- `option-a-imperial-court-workshop.png`(方案A 紫禁工坊)
-- `option-b-jiangnan-water-court-v2.png`(方案B 江南书院)
-- `option-c-dunhuang-grotto.png`(方案C 敦煌秘境)
+候选预览图属于阶段性产物，定稿后已从仓库清理；当前实现以生产资源和 `DESIGN.md` 为准。

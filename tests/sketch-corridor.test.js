@@ -10,7 +10,8 @@ import {
   getFeatureDoorLayout,
   getGeneratorDoorLayout,
   getRoomStandLayout,
-  getWallSegments
+  getWallSegments,
+  shouldIlluminateMuseumDoor
 } from '../src/components/SketchCorridorScene.js';
 
 const indexHtml = readFileSync(new URL('../src/index.html', import.meta.url), 'utf8');
@@ -208,6 +209,18 @@ describe('sketch corridor scene', () => {
 
   it('does not auto-spin or float room models when reduced motion is requested', () => {
     expect(corridorJs).toContain("if (!this.reducedMotion && this.viewState === 'room' && this.currentDoor)");
+  });
+
+  it('only keeps nearby corridor entrance lights active', () => {
+    expect(shouldIlluminateMuseumDoor({ cameraZ: 0, doorZ: -9, viewState: 'corridor' })).toBe(true);
+    expect(shouldIlluminateMuseumDoor({ cameraZ: 0, doorZ: -24, viewState: 'corridor' })).toBe(false);
+    expect(shouldIlluminateMuseumDoor({ cameraZ: 0, doorZ: -3, viewState: 'room' })).toBe(false);
+  });
+
+  it('shares texture requests and instances repeated door studs', () => {
+    expect(corridorJs).toContain('this.textureCache = new Map()');
+    expect(corridorJs).toContain('cache: this.textureCache');
+    expect(corridorJs).toContain('new THREE.InstancedMesh(');
   });
 
   it('themes the generator workspace with the same museum language', () => {

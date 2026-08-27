@@ -2,15 +2,15 @@
 // 交互为轨道式（借鉴 itom portfolio 的 useScrollCamera 思路）：
 // 滚轮/方向键/触摸竖滑沿轨道前进后退，鼠标移动视差环顾；
 // 点击木门 → 相机转向 90° 正对门 → 真实穿门而入（房间就在门后，无跳切）。
-// 渲染/灯光惯例与 MuseumScene 保持一致（RoomEnvironment PMREM + ACES + 暖金射灯），
+// 渲染/灯光使用 RoomEnvironment PMREM + ACES + 暖金射灯，
 // 墙面/地面/门均为受光 Standard 材质，GLB 模型保持正常立体渲染。
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { Easing, Tween, update as updateTweens } from '@tweenjs/tween.js/dist/tween.esm.js';
 import { createGLTFLoader } from '../utils/modelLoader.js';
-import { loadManagedMuseumTexture } from '../utils/museumTexture.js';
+import { getMuseumRenderBudget, loadManagedMuseumTexture } from '../utils/museumTexture.js';
 
-const HALL_INK = 0x0a0b0d;
+const HALL_INK = 0x171411;
 const GOLD = '#c99a2e';
 const GOLD_TEXT = '#e6cd8f';
 const SILK = '#e7e1d7';
@@ -29,7 +29,7 @@ function getSharedDoorDecor() {
       studGeometry: new THREE.SphereGeometry(0.058, 12, 8),
       bossGeometry: new THREE.CylinderGeometry(0.075, 0.075, 0.03, 16),
       ringGeometry: new THREE.TorusGeometry(0.11, 0.024, 10, 28),
-      goldMaterial: new THREE.MeshStandardMaterial({ color: 0xd4a83a, roughness: 0.28, metalness: 0.85 })
+      goldMaterial: new THREE.MeshStandardMaterial({ color: 0x92734f, roughness: 0.48, metalness: 0.68 })
     };
   }
   return sharedDoorDecor;
@@ -149,6 +149,10 @@ export function clampCorridorZ(z, bounds) {
   return THREE.MathUtils.clamp(z, bounds.minZ, bounds.maxZ);
 }
 
+export function shouldIlluminateMuseumDoor({ cameraZ = 0, doorZ = 0, viewState = 'corridor' } = {}) {
+  return viewState === 'corridor' && Math.abs(cameraZ - doorZ) <= 14;
+}
+
 // 纯函数：把一侧走廊墙按门洞切成若干墙板段（可单测）。
 export function getWallSegments(doorZs = [], startZ, endZ, holeHalfWidth = 1.14) {
   const segments = [];
@@ -207,6 +211,8 @@ export class SketchCorridorScene {
     this.currentDoor = null;
     this.loader = createGLTFLoader();
     this.modelCache = new Map();
+    this.textureCache = new Map();
+    this.textureAnisotropy = 4;
     this.hoveredStand = null;
 
     // 轨道与视差状态（走廊沿 z，展厅沿 x）
@@ -238,7 +244,7 @@ export class SketchCorridorScene {
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(HALL_INK);
-    this.scene.fog = new THREE.Fog(HALL_INK, 16, 52);
+    this.scene.fog = new THREE.Fog(HALL_INK, 20, 62);
 
     this.camera = new THREE.PerspectiveCamera(55, width / height, 0.1, 120);
     this.camera.position.set(0, CORRIDOR.eyeY, CORRIDOR.startZ);
@@ -246,11 +252,17 @@ export class SketchCorridorScene {
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     this.renderer.setSize(width, height);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+    const renderBudget = getMuseumRenderBudget({
+      experienceMode: document.body?.dataset.experienceMode,
+      devicePixelRatio: window.devicePixelRatio,
+      maxAnisotropy: this.renderer.capabilities.getMaxAnisotropy()
+    });
+    this.textureAnisotropy = renderBudget.anisotropy;
+    this.renderer.setPixelRatio(renderBudget.pixelRatio);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    // 与 MuseumScene 同款：ACES 色调映射 + 微提曝光，射灯下的展厅更有层次
+    // ACES 色调映射 + 微提曝光，让射灯下的展厅保留层次。
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.22;
+    this.renderer.toneMappingExposure = 1.16;
     this.container.appendChild(this.renderer.domElement);
 
     // 灯光同时作用于展厅 Standard 材质与 GLB 模型
@@ -292,8 +304,8 @@ export class SketchCorridorScene {
 
   addLighting() {
     // 博物馆基调：环境光给到能看清墙面浮雕与石纹的程度，门上暖金射灯塑造观展光池
-    this.scene.add(new THREE.AmbientLight(0xffffff, 0.55));
-    this.scene.add(new THREE.HemisphereLight(0x4a5060, 0x1c1712, 0.75));
+    this.scene.add(new THREE.AmbientLight(0xfff8ec, 0.68));
+    this.scene.add(new THREE.HemisphereLight(0xd8cbb8, 0x33271f, 0.82));
   }
 
   buildCorridor(layouts) {
@@ -303,13 +315,13 @@ export class SketchCorridorScene {
     const length = startZ - endZ;
     const centerZ = (startZ + endZ) / 2;
 
-    // 地板（深色石材 + 金色砖缝，沿走廊方向平铺）
+    // 深灰石材地面：较低重复频率保留大板尺度，避免细碎棋盘格。
     const floor = new THREE.Mesh(
       new THREE.PlaneGeometry(CORRIDOR.width, length),
       new THREE.MeshStandardMaterial({
-        map: this.loadMuseumTexture('floor-stone', [1.6, Math.ceil(length / 5)]),
-        roughness: 0.55,
-        metalness: 0.18
+        map: this.loadMuseumTexture('floor-stone', [1.45, Math.ceil(length / 6)]),
+        roughness: 0.78,
+        metalness: 0.04
       })
     );
     floor.rotation.x = -Math.PI / 2;
@@ -324,7 +336,7 @@ export class SketchCorridorScene {
         const segmentLength = from - to;
         const wall = new THREE.Mesh(
           new THREE.PlaneGeometry(segmentLength, CORRIDOR.height),
-          this.makeWallMaterial('wall-cloud', [Math.max(segmentLength / 7, 0.4), 1])
+          this.makeWallMaterial('wall-cloud', [Math.max(segmentLength / 5.5, 0.5), 1])
         );
         wall.rotation.y = side === 'left' ? Math.PI / 2 : -Math.PI / 2;
         wall.position.set(sign * CORRIDOR.width / 2, CORRIDOR.height / 2, (from + to) / 2);
@@ -343,22 +355,22 @@ export class SketchCorridorScene {
       });
     });
 
-    // 顶面（鎏金藻井）
+    // 简化木构藻井：暖白嵌板与深木格架，提供秩序感而不复刻宫殿。
     const ceiling = new THREE.Mesh(
       new THREE.PlaneGeometry(CORRIDOR.width, length),
-      this.makeWallMaterial('ceiling-coffer', [1.6, Math.ceil(length / 6)], { roughness: 0.75, metalness: 0.2, emissiveIntensity: 0.16 })
+      this.makeWallMaterial('ceiling-coffer', [1.35, Math.ceil(length / 5.5)], { roughness: 0.78, metalness: 0.04 })
     );
     ceiling.rotation.x = Math.PI / 2;
     ceiling.position.set(0, CORRIDOR.height, centerZ);
     this.scene.add(ceiling);
 
-    // 中轴红毯：金龙祥云纹，引视线向长廊深处
+    // 中轴织物只保留暗朱砂与靛青细边，纹样退到近看层级。
     const carpet = new THREE.Mesh(
-      new THREE.PlaneGeometry(2.3, length),
+      new THREE.PlaneGeometry(1.75, length),
       new THREE.MeshStandardMaterial({
-        map: this.loadMuseumTexture('carpet-runner', [1, Math.ceil(length / 4)]),
-        roughness: 0.92,
-        metalness: 0.02
+        map: this.loadMuseumTexture('carpet-runner', [1, Math.ceil(length / 7)]),
+        roughness: 0.96,
+        metalness: 0
       })
     );
     carpet.rotation.x = -Math.PI / 2;
@@ -367,7 +379,7 @@ export class SketchCorridorScene {
 
     // 两侧墙脚鎏金踢脚线
     const baseTrimGeometry = new THREE.BoxGeometry(0.06, 0.16, length);
-    const baseTrimMaterial = new THREE.MeshStandardMaterial({ color: 0x8a6a2a, roughness: 0.4, metalness: 0.7 });
+    const baseTrimMaterial = new THREE.MeshStandardMaterial({ color: 0x715a40, roughness: 0.58, metalness: 0.52 });
     [-1, 1].forEach((sign) => {
       const trim = new THREE.Mesh(baseTrimGeometry, baseTrimMaterial);
       trim.position.set(sign * (CORRIDOR.width / 2 - 0.04), 0.08, centerZ);
@@ -385,7 +397,7 @@ export class SketchCorridorScene {
     // 金凤纹照壁（鎏金衬框 + 缂丝凤纹面板）
     const featureFrame = new THREE.Mesh(
       new THREE.PlaneGeometry(4.06, 3.16),
-      new THREE.MeshStandardMaterial({ color: 0x8a6a2a, roughness: 0.4, metalness: 0.7 })
+      new THREE.MeshStandardMaterial({ color: 0x715a40, roughness: 0.58, metalness: 0.52 })
     );
     featureFrame.position.set(0, 2.85, endZ + 0.03);
     this.scene.add(featureFrame);
@@ -394,15 +406,15 @@ export class SketchCorridorScene {
       new THREE.PlaneGeometry(3.9, 3.0),
       new THREE.MeshStandardMaterial({
         map: this.loadMuseumTexture('feature-wall', [1, 1]),
-        roughness: 0.7,
-        metalness: 0.15
+        roughness: 0.82,
+        metalness: 0.05
       })
     );
     feature.position.set(0, 2.85, endZ + 0.05);
     this.scene.add(feature);
 
     // 照壁洗墙灯：暖金光束打在尽头端景上
-    const featureSpot = new THREE.SpotLight(0xffd9a0, 14, 18, 0.5, 0.6, 1.1);
+    const featureSpot = new THREE.SpotLight(0xffddb0, 9, 18, 0.5, 0.6, 1.1);
     featureSpot.position.set(0, CORRIDOR.height - 0.3, endZ + 6);
     featureSpot.target.position.set(0, 2.2, endZ);
     this.scene.add(featureSpot);
@@ -424,8 +436,14 @@ export class SketchCorridorScene {
     group.rotation.y = layout.side === 'left' ? Math.PI / 2 : -Math.PI / 2;
     this.scene.add(group);
 
-    // 门框（鎏金铜框）
-    const frameMaterial = new THREE.MeshStandardMaterial({ color: 0x8a6a2a, roughness: 0.38, metalness: 0.78 });
+    // 深木门框与暗铜压边，接续展厅梁枋而不做通体鎏金。
+    const frameMaterial = new THREE.MeshStandardMaterial({
+      map: this.loadMuseumTexture('wood-beam', [1, 1]),
+      color: 0x665044,
+      roughness: 0.7,
+      metalness: 0.03
+    });
+    const bronzeMaterial = new THREE.MeshStandardMaterial({ color: 0x826548, roughness: 0.5, metalness: 0.62 });
     const sidePostGeometry = new THREE.BoxGeometry(0.14, CORRIDOR.doorHeight + 0.14, 0.14);
     [-1, 1].forEach((sign) => {
       const post = new THREE.Mesh(sidePostGeometry, frameMaterial);
@@ -447,10 +465,10 @@ export class SketchCorridorScene {
       new THREE.PlaneGeometry(CORRIDOR.doorWidth, CORRIDOR.doorHeight),
       new THREE.MeshPhysicalMaterial({
         map: this.loadMuseumTexture('red-lacquer', [1, 1]),
-        roughness: 0.34,
-        metalness: 0.1,
-        clearcoat: 0.7,
-        clearcoatRoughness: 0.25,
+        roughness: 0.62,
+        metalness: 0.02,
+        clearcoat: 0.26,
+        clearcoatRoughness: 0.48,
         side: THREE.DoubleSide
       })
     );
@@ -460,20 +478,24 @@ export class SketchCorridorScene {
     // 门槛（鎏金压边）
     const threshold = new THREE.Mesh(
       new THREE.BoxGeometry(CORRIDOR.doorWidth + 0.28, 0.09, 0.22),
-      frameMaterial
+      bronzeMaterial
     );
     threshold.position.set(0, 0.045, 0.06);
     group.add(threshold);
 
     // 门钉（4×3 鎏金泡钉）与铺首门环，挂在门板上随门开合
     const decor = getSharedDoorDecor();
-    [0.3, 0.68, 1.06, 1.44].forEach((x) => {
-      [0.7, 1.5, 2.3].forEach((y) => {
-        const stud = new THREE.Mesh(decor.studGeometry, decor.goldMaterial);
-        stud.position.set(x, y, 0.03);
-        pivot.add(stud);
-      });
+    const studPositions = [0.3, 0.68, 1.06, 1.44].flatMap((x) => (
+      [0.7, 1.5, 2.3].map((y) => [x, y, 0.03])
+    ));
+    const studs = new THREE.InstancedMesh(decor.studGeometry, decor.goldMaterial, studPositions.length);
+    const studMatrix = new THREE.Matrix4();
+    studPositions.forEach(([x, y, z], index) => {
+      studMatrix.makeTranslation(x, y, z);
+      studs.setMatrixAt(index, studMatrix);
     });
+    studs.instanceMatrix.needsUpdate = true;
+    pivot.add(studs);
     const boss = new THREE.Mesh(decor.bossGeometry, decor.goldMaterial);
     boss.rotation.x = Math.PI / 2;
     boss.position.set(1.7, 1.52, 0.04);
@@ -491,7 +513,7 @@ export class SketchCorridorScene {
     group.add(sign);
 
     // 门上暖金射灯：照亮门、牌匾与周边墙面，在地面投出观展光池
-    const spot = new THREE.SpotLight(0xffd9a0, 20, 14, 0.75, 0.55, 1.2);
+    const spot = new THREE.SpotLight(0xffd9a0, 12, 14, 0.75, 0.55, 1.2);
     spot.position.set(layout.position.x * 0.4, CORRIDOR.height - 0.25, layout.position.z + 0.6);
     spot.target.position.set(layout.position.x, 1.7, layout.position.z);
     this.scene.add(spot);
@@ -502,6 +524,7 @@ export class SketchCorridorScene {
       group,
       pivot,
       sign,
+      spot,
       openAngle: 1.85,
       opened: false,
       hoverT: 0,
@@ -531,8 +554,8 @@ export class SketchCorridorScene {
       new THREE.PlaneGeometry(ROOM.depth, ROOM.width),
       new THREE.MeshStandardMaterial({
         map: this.loadMuseumTexture('floor-stone', [2, 2]),
-        roughness: 0.55,
-        metalness: 0.18
+        roughness: 0.78,
+        metalness: 0.04
       })
     );
     floor.rotation.x = -Math.PI / 2;
@@ -543,8 +566,8 @@ export class SketchCorridorScene {
       new THREE.PlaneGeometry(ROOM.depth, ROOM.width),
       new THREE.MeshStandardMaterial({
         map: this.loadMuseumTexture('ceiling-coffer', [2, 2]),
-        roughness: 0.75,
-        metalness: 0.2
+        roughness: 0.78,
+        metalness: 0.04
       })
     );
     ceiling.rotation.x = Math.PI / 2;
@@ -585,26 +608,22 @@ export class SketchCorridorScene {
     this.scene.add(title);
 
     // 展厅照明：暖金点光源悬于厅心，仅在观众进入该厅时点亮（控制同屏灯数）
-    const roomLight = new THREE.PointLight(0xffd9a0, 8, 22, 1.6);
+    const roomLight = new THREE.PointLight(0xffddb0, 6, 22, 1.6);
     roomLight.position.set(centerX, ROOM.height - 0.7, doorZ);
     roomLight.visible = false;
     this.scene.add(roomLight);
     door.roomLight = roomLight;
 
-    // 展台（深色花岗岩贴图石座 + 鎏金顶圈 + 深色名牌 + GLB 锚点）
-    // 石纹同时挂到自发光通道，保证远距离也能读出石材颗粒感而不是一团黑
+    // 石墨石展台通过真实受光呈现细颗粒，避免自发光把材质压平。
     const pedestalGeometry = new THREE.CylinderGeometry(0.5, 0.58, 1.0, 24);
     const pedestalTexture = this.loadMuseumTexture('pedestal-stone', [3, 1]);
     const pedestalMaterial = new THREE.MeshStandardMaterial({
       map: pedestalTexture,
-      emissive: 0xffffff,
-      emissiveMap: pedestalTexture,
-      emissiveIntensity: 0.3,
-      roughness: 0.55,
-      metalness: 0.15
+      roughness: 0.78,
+      metalness: 0.04
     });
     const rimGeometry = new THREE.TorusGeometry(0.5, 0.02, 8, 40);
-    const rimMaterial = new THREE.MeshStandardMaterial({ color: 0xc99a2e, roughness: 0.3, metalness: 0.8 });
+    const rimMaterial = new THREE.MeshStandardMaterial({ color: 0x826548, roughness: 0.5, metalness: 0.62 });
 
     getRoomStandLayout(door.chapter.crafts || [], door).forEach((layout) => {
       const group = new THREE.Group();
@@ -986,18 +1005,16 @@ export class SketchCorridorScene {
       url: `${TEXTURE_BASE}${name}.webp`,
       name,
       repeat,
-      anisotropy: 8
+      anisotropy: this.textureAnisotropy,
+      cache: this.textureCache
     });
   }
 
-  // 墙面/顶面材质：贴图同时挂自发光通道，暗部的浮雕纹理在全场景可读（不再是一团黑）
-  makeWallMaterial(name, repeat, { roughness = 0.9, metalness = 0.05, emissiveIntensity = 0.2 } = {}) {
+  // 墙面与顶面使用真实环境光和展陈灯受光，避免 base color 自发光造成平面感。
+  makeWallMaterial(name, repeat, { roughness = 0.9, metalness = 0.05 } = {}) {
     const texture = this.loadMuseumTexture(name, repeat);
     return new THREE.MeshStandardMaterial({
       map: texture,
-      emissive: 0xffffff,
-      emissiveMap: texture,
-      emissiveIntensity,
       roughness,
       metalness
     });
@@ -1455,6 +1472,11 @@ export class SketchCorridorScene {
       this.renderer.domElement.style.cursor = hovered ? 'pointer' : '';
     }
     this.doors.forEach((door) => {
+      door.spot.visible = shouldIlluminateMuseumDoor({
+        cameraZ: this.camera.position.z,
+        doorZ: door.position.z,
+        viewState: this.viewState
+      });
       const target = door === hovered && !door.opened ? 1 : 0;
       door.hoverT += (target - door.hoverT) * Math.min(1, dt * 10);
       door.sign.scale.setScalar(1 + door.hoverT * 0.08);
@@ -1524,6 +1546,7 @@ export class SketchCorridorScene {
         material.dispose();
       });
     });
+    this.textureCache.clear();
     this.renderer?.dispose();
     if (canvas?.parentNode === this.container) {
       this.container.removeChild(canvas);
@@ -1531,7 +1554,7 @@ export class SketchCorridorScene {
   }
 }
 
-// 与 MuseumScene 同款归一化：按最大边缩放到目标尺寸并居中。
+// 按最大边缩放到目标尺寸并居中。
 function normalizeObject(object, targetSize) {
   const box = new THREE.Box3().setFromObject(object);
   const size = box.getSize(new THREE.Vector3());

@@ -39,5 +39,9 @@ heritage-foundry-redesign/
 /public/models/museum-complete-building.glb
 /public/models/chinese-knot-hunyuan.glb
 /public/assets/generated/preview-*
+/docs/design-previews/
+/community-post-*.md
+/video-recording-script.md
+/docs/.build_user_manual.py
 /assets-src/models/chinese-knot-hunyuan.glb
 /assets-src/models/museum-complete-building.glb

@@ -4,7 +4,7 @@
 - Status: Active
 - Last refreshed: 2026-08-08
 - Primary product surfaces: 铜织博物馆首页、沉浸式四章展厅、3D 藏品鉴赏、百工典藏、山河图志、AI 造物案台、共创画廊、AR 看展。
-- Evidence reviewed: 用户参考图 `.omx/artifacts/visual-ralph/immersive-museum/reference.png`、`docs/design-previews/option-a-copper-weave-palace.png`、`public/assets/generated/museum-cinematic.webp`、`src/index.html`、`src/home.js`、`src/museum-experience.css`、`src/components/SketchCorridorScene.js`、`src/components/ArtifactStage.js`、`src/generator.html`、`src/generator.js`、`src/generator-museum.css`、`src/data/crafts.json`。
+- Evidence reviewed: `public/assets/generated/museum-cinematic.webp`、`src/index.html`、`src/home.js`、`src/museum-experience.css`、`src/components/SketchCorridorScene.js`、`src/components/ArtifactStage.js`、`src/generator.html`、`src/generator.js`、`src/generator-museum.css`、`src/data/crafts.json`。
 
 ## Brand
 - Personality: 宏伟、当代东方、克制、可信、活态、可共创。

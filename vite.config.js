@@ -1,4 +1,5 @@
 import { defineConfig, loadEnv } from 'vite'
+import { defaultExclude } from 'vitest/config'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
@@ -8,6 +9,10 @@ export default defineConfig(({ mode }) => {
   return {
     base,
     root: './src',
+    test: {
+      // 只跑 tests/ 真身；output/(提交物副本)、tmp/(临时产物)等目录里的测试副本不拾取
+      exclude: [...defaultExclude, 'output/**', 'tmp/**', '_company-brain-analysis/**', 'heritage-foundry-redesign/**', 'cover-image/**', '.codex-doc-work/**']
+    },
     publicDir: '../public',
     server: {
       host: '0.0.0.0',

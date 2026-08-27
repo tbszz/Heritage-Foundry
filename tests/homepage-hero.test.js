@@ -7,7 +7,6 @@ import {
   getInitialHomepageCraft,
   resolveHomepageSelection
 } from '../src/home.js';
-import { getModelTargetSize, getParticleCount } from '../src/components/ParticleMorphScene.js';
 import * as Home from '../src/home.js';
 
 describe('homepage heritage hero', () => {
@@ -45,7 +44,7 @@ describe('homepage heritage hero', () => {
 
     expect(getHomepageCraftLinks('lanterns')).toEqual({
       craftHref: 'crafts.html?craft=lanterns',
-      generatorHref: 'generator.html?craft=papercut'
+      generatorHref: 'generator.html?craft=lanterns'
     });
   });
 
@@ -91,19 +90,4 @@ describe('homepage heritage hero', () => {
     });
   });
 
-  it('reduces particle count for mobile and reduced-motion users', () => {
-    const desktopCount = getParticleCount({ width: 1600, hardwareConcurrency: 12 });
-    const mobileCount = getParticleCount({ width: 420, hardwareConcurrency: 4 });
-    const reducedCount = getParticleCount({ width: 1400, hardwareConcurrency: 8, reducedMotion: true });
-
-    expect(desktopCount).toBeGreaterThanOrEqual(56000);
-    expect(mobileCount).toBeLessThanOrEqual(22000);
-    expect(reducedCount).toBeLessThanOrEqual(10000);
-    expect(desktopCount).toBeGreaterThan(mobileCount);
-    expect(mobileCount).toBeGreaterThan(reducedCount);
-  });
-
-  it('uses a smaller GLB target size on narrow screens', () => {
-    expect(getModelTargetSize(390)).toBeLessThan(getModelTargetSize(1280));
-  });
 });

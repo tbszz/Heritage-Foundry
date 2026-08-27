@@ -204,7 +204,6 @@ API 基础路径为 `/api`，详细请求与响应格式见 [`docs/API.md`](docs
 | `POST /api/generate-3d` | 创建真实 3D 生成任务 |
 | `GET /api/generate-3d/:id` | 轮询统一任务状态 |
 | `GET /api/generate-3d/:id/artifacts/model.glb` | 下载本地 Provider 的 GLB 产物 |
-| `POST /api/quiz` | 在 Vercel 上生成 AI 非遗测验；不可用时前端回退到本地题库 |
 | `GET /api/creations` | 读取最近公开作品 |
 | `GET /api/creations/stats` | 读取作品与热门技艺统计 |
 | `GET /api/creations/:id` | 读取单个作品 |

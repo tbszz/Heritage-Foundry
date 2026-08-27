@@ -17,13 +17,14 @@ export function getCraftsByCategory(category) {
   return CRAFTS_DATA.filter(craft => craft.category === category);
 }
 
-// 造物工作台（generator 页）直接支持的技艺：generatorId 指向自身的条目
+// 造物工作台（generator 页）支持的技艺：crafts.json 中带提示词语料（promptLanguage）的条目。
+// 目前 18 项技艺全部有语料，即全部直接支持，首页与 generator 页共用同一份 id，不再做借道映射。
 export function getGeneratorCrafts() {
-  return CRAFTS_DATA.filter(craft => craft.generatorId === craft.id);
+  return CRAFTS_DATA.filter((craft) => Boolean(craft.promptLanguage));
 }
 
-// 任意技艺 id → 工作台可用的技艺 id（不支持的技艺回退到剪纸）
+// 任意技艺 id → 工作台可用的技艺 id（无语料或未知 id 统一回退到剪纸）
 export function getGeneratorCraftId(craftId) {
   const craft = getCraftById(craftId);
-  return craft?.generatorId || 'papercut';
+  return craft?.promptLanguage ? craft.id : 'papercut';
 }

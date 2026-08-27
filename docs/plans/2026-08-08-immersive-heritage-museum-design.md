@@ -17,7 +17,7 @@
 
 ### A. 铜织天宫（采用）
 
-使用现有 `option-a-copper-weave-palace.png` 作为首页外景，现代博物馆体量与传统编织肌理并存。点击入馆后进入已有丝绢、木构和 3D 长廊。
+使用生产资源 `public/assets/generated/museum-copper-exterior.webp` 作为首页外景，现代博物馆体量与传统编织肌理并存。点击入馆后进入已有丝绢、木构和 3D 长廊。
 
 优点：宏伟、独特、符合参考图的建筑中心构图，也避免传统宫殿模板感。
 

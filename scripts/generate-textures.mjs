@@ -11,65 +11,55 @@ const MODEL = process.env.GEMINI_TEXTURE_MODEL || 'gemini-3-pro-image-preview';
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 const OUT_DIR = fileURLToPath(new URL('../public/assets/textures/', import.meta.url));
 
-const SEAMLESS = 'seamless tileable texture, orthographic flat top-down view, even diffuse lighting, no shadows, no perspective, no text, no watermark, high detail';
+const SEAMLESS = 'seamless tileable square material texture, orthographic flat front view, even diffuse lighting, no shadows, no perspective, no objects, no frame, no text, no watermark, high material detail';
 
 const TEXTURES = [
   {
     name: 'floor-stone',
-    prompt: `Museum floor texture: dark blue-black polished stone tiles in a regular grid, thin elegant gold grout lines, subtle natural stone veins, ${SEAMLESS}`
+    size: '2K',
+    prompt: `Grand heritage museum floor: charcoal and warm grey honed stone slabs, large rectangular slab rhythm, restrained pale stone joints, subtle mineral variation and gentle age patina, no gold grout, ${SEAMLESS}`
   },
   {
     name: 'wall-cloud',
-    prompt: `Museum interior wall texture: dark charcoal matte wall with subtle embossed Chinese auspicious cloud (xiangyun) relief pattern, tone-on-tone, elegant and understated, ${SEAMLESS}`
+    size: '2K',
+    prompt: `Warm grey mineral plaster museum wall with handmade horizontal variation, sparse shallow tone-on-tone relief inspired by woven threads and abstract cloud bands, mostly plain, slightly antique, ${SEAMLESS}`
   },
   {
     name: 'carpet-runner',
-    prompt: `Long ceremonial carpet runner texture, vertical orientation: deep crimson red fabric with ornate golden border stripes along both long edges, subtle Chinese cloud brocade pattern in the center field, top-down flat view, even lighting, no shadows, no perspective, no text`
-  },
-  {
-    name: 'brick-gate',
-    prompt: `Traditional Chinese dark grey qing brick wall texture, weathered ancient bricks with thin mortar lines, subtle age stains, ${SEAMLESS}`
+    size: '2K',
+    prompt: `Restrained heritage museum runner: dark warm charcoal handwoven textile, mostly plain central field, narrow muted cinnabar and indigo brocade borders, tiny aged bronze thread accents, no medallions, ${SEAMLESS}`
   },
   {
     name: 'feature-wall',
-    prompt: `Museum feature wall panel: golden paper-cut style phoenix, crane and auspicious cloud motifs arranged symmetrically on deep black lacquer background with a faint dark red gradient glow in the center, elegant, ceremonial, flat front view, no text, no watermark`
+    size: '2K',
+    prompt: `Square museum feature panel inspired by Chinese intangible heritage: layered woven copper threads forming an abstract landscape and flowing craft rhythm, dark walnut and warm charcoal ground, muted cinnabar and indigo silk details, aged bronze rather than bright gold, balanced ceremonial composition, flat front view, no frame, no text, no watermark`
   },
   {
     name: 'wood-beam',
-    prompt: `Dark red-brown lacquered wood texture, fine straight grain with subtle golden shimmer, traditional Chinese architectural beam, ${SEAMLESS}`
+    size: '2K',
+    prompt: `Deep smoked walnut architectural beam, straight fine grain, hand-rubbed matte oil finish, dark aged edges, minimal muted mineral-pigment traces, no glossy lacquer, ${SEAMLESS}`
   },
   {
     name: 'ceiling-coffer',
     size: '2K',
-    prompt: `Traditional Chinese museum ceiling texture: dark coffered ceiling (zaojing) with deep charcoal and dark bronze square coffers, thin aged gold trim lines between coffers, very dark and elegant, ${SEAMLESS}, intricate craftsmanship`
+    prompt: `Simplified contemporary Chinese coffer ceiling: smoked walnut square ribs, warm ivory acoustic inset panels, very thin aged bronze reveals, occasional restrained woven geometric detail, dignified museum craftsmanship, ${SEAMLESS}`
   },
   {
     name: 'red-lacquer',
     size: '2K',
-    prompt: `Traditional Chinese vermilion red lacquered wooden planks texture: deep rich red lacquer with subtle vertical wood grain, faint aged patina and fine crackle, dignified and dark, ${SEAMLESS}, fine material detail`
-  },
-  {
-    name: 'roof-tiles',
-    size: '2K',
-    prompt: `Traditional Chinese dark grey glazed roof tiles texture: neat overlapping rows of curved clay tiles with subtle sheen, faint moss and age stains, top-down flat view, ${SEAMLESS}, fine craftsmanship detail`
+    prompt: `Muted cinnabar lacquer over aged walnut, deep restrained red-brown color, visible fine vertical wood grain, subtle hand-layered lacquer depth, faint edge patina and tiny crackle, matte museum finish, ${SEAMLESS}`
   },
   {
     name: 'pedestal-stone',
     size: '2K',
-    prompt: `Dark museum pedestal stone texture: fine-grained black basalt with very subtle silver mineral flecks and a honed matte finish, elegant and quiet, ${SEAMLESS}, fine mineral detail`
+    prompt: `Graphite grey museum pedestal stone, fine-grained basalt with subtle warm mineral flecks, honed matte finish, quiet and substantial, no border ornament, ${SEAMLESS}`
   },
   {
     name: 'banner-silk',
     size: '2K',
-    prompt: `Dark silk brocade fabric texture: deep charcoal-black silk with a faint woven auspicious-cloud damask pattern and a soft restrained sheen, ${SEAMLESS}, fine woven detail`
+    prompt: `Heritage museum banner silk: deep indigo-charcoal brocade, fine visible weave, sparse muted cinnabar thread and aged bronze geometric weaving accents, restrained soft sheen, ${SEAMLESS}`
   }
 ];
-
-// 部分贴图需要裁掉生成图自带的留白/装裱边框
-const CROPS = {
-  'carpet-runner': { left: 210, top: 0, width: 600, height: 1024 },
-  'feature-wall': { left: 35, top: 165, width: 950, height: 780 }
-};
 
 async function generateOne({ name, prompt, size = '1K' }) {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -104,10 +94,9 @@ async function generateOne({ name, prompt, size = '1K' }) {
   const buffer = Buffer.from(imagePart.inlineData.data, 'base64');
   const outPath = path.join(OUT_DIR, `${name}.webp`);
   let pipeline = sharp(buffer);
-  if (CROPS[name]) pipeline = pipeline.extract(CROPS[name]);
   // 暗色大贴图统一压到 1024,控制页面体积
-  pipeline = pipeline.resize(1024, 1024, { fit: 'inside' });
-  await pipeline.webp({ quality: 82 }).toFile(outPath);
+  pipeline = pipeline.resize(1024, 1024, { fit: 'cover' });
+  await pipeline.webp({ quality: 76, effort: 5 }).toFile(outPath);
   const stats = fs.statSync(outPath);
   console.log(`✓ ${name}.webp  ${(stats.size / 1024).toFixed(0)}KB`);
 }

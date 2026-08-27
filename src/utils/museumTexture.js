@@ -5,18 +5,30 @@ const DEFAULT_FALLBACK = Object.freeze({
 });
 
 const TEXTURE_FALLBACKS = Object.freeze({
-  'floor-stone': { base: '#303845', accent: '#b88a30', line: 'rgba(231, 225, 215, 0.14)' },
-  'wall-cloud': { base: '#2a2d33', accent: '#c99a2e', line: 'rgba(231, 225, 215, 0.16)' },
-  'ceiling-coffer': { base: '#342d25', accent: '#c99a2e', line: 'rgba(231, 225, 215, 0.14)' },
-  'carpet-runner': { base: '#7d2e2a', accent: '#d5aa42', line: 'rgba(255, 232, 176, 0.28)' },
-  'feature-wall': { base: '#2c201b', accent: '#d5aa42', line: 'rgba(231, 225, 215, 0.12)' },
-  'red-lacquer': { base: '#8f3a31', accent: '#d4a83a', line: 'rgba(255, 232, 176, 0.18)' },
-  'brick-gate': { base: '#42484f', accent: '#9ca5ad', line: 'rgba(231, 225, 215, 0.16)' },
-  'wood-beam': { base: '#6f4534', accent: '#c99a2e', line: 'rgba(255, 232, 176, 0.16)' },
-  'roof-tiles': { base: '#48505a', accent: '#a7a6a2', line: 'rgba(231, 225, 215, 0.14)' },
-  'pedestal-stone': { base: '#3a4048', accent: '#c0c7cd', line: 'rgba(231, 225, 215, 0.18)' },
-  'banner-silk': { base: '#332b2b', accent: '#b9913c', line: 'rgba(231, 225, 215, 0.14)' }
+  'floor-stone': { base: '#363431', accent: '#88745a', line: 'rgba(224, 215, 201, 0.12)' },
+  'wall-cloud': { base: '#8a7e6e', accent: '#786249', line: 'rgba(242, 233, 219, 0.12)' },
+  'ceiling-coffer': { base: '#3e3027', accent: '#82694a', line: 'rgba(235, 218, 191, 0.12)' },
+  'carpet-runner': { base: '#493d38', accent: '#8b493e', line: 'rgba(206, 184, 151, 0.2)' },
+  'feature-wall': { base: '#51433a', accent: '#9a7650', line: 'rgba(231, 225, 215, 0.12)' },
+  'red-lacquer': { base: '#713b34', accent: '#947451', line: 'rgba(235, 205, 170, 0.14)' },
+  'wood-beam': { base: '#49362c', accent: '#725641', line: 'rgba(232, 214, 190, 0.12)' },
+  'pedestal-stone': { base: '#323333', accent: '#706c65', line: 'rgba(225, 222, 214, 0.12)' },
+  'banner-silk': { base: '#34383a', accent: '#8b4a3f', line: 'rgba(224, 211, 190, 0.12)' }
 });
+
+export function getMuseumRenderBudget({
+  experienceMode = 'cinematic',
+  devicePixelRatio = 1,
+  maxAnisotropy = 4
+} = {}) {
+  const lite = experienceMode === 'lite';
+  const ratioCap = lite ? 1.15 : 1.5;
+  const anisotropyCap = lite ? 2 : 4;
+  return {
+    pixelRatio: Math.min(Math.max(Number(devicePixelRatio) || 1, 1), ratioCap),
+    anisotropy: Math.min(Math.max(Number(maxAnisotropy) || 1, 1), anisotropyCap)
+  };
+}
 
 export function getMuseumTextureFallbackColors(name) {
   return {
@@ -81,12 +93,20 @@ export function loadManagedMuseumTexture({
   url,
   name,
   repeat = [1, 1],
-  anisotropy = 8
+  anisotropy = 8,
+  cache = null
 }) {
+  const cacheKey = `${url}|${repeat[0]}x${repeat[1]}|${anisotropy}`;
+  if (cache?.has(cacheKey)) return cache.get(cacheKey);
+
   const fallback = createMuseumFallbackTexture(THREE, name, repeat, anisotropy);
   const texture = loader.load(
     url,
     (loaded) => {
+      // 回退图(192px)首次上传时 WebGL2 用 texStorage2D 按 192 不可变分配；
+      // 真实贴图尺寸不同，直接换 image 会让 texSubImage2D 因尺寸不匹配报 GL_INVALID_VALUE，
+      // 导致 GPU 永远停在回退图。先 dispose 释放旧分配，让 three 按真实尺寸重新分配。
+      loaded.dispose();
       configureTexture(THREE, loaded, repeat, anisotropy);
       renderer?.initTexture?.(loaded);
     },
@@ -102,5 +122,7 @@ export function loadManagedMuseumTexture({
   if (fallback?.image) {
     texture.image = fallback.image;
   }
-  return configureTexture(THREE, texture, repeat, anisotropy);
+  configureTexture(THREE, texture, repeat, anisotropy);
+  cache?.set(cacheKey, texture);
+  return texture;
 }
