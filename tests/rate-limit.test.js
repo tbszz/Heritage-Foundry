@@ -28,12 +28,13 @@ describe('generate API rate limiter', () => {
   });
 
   it('frees the quota after the window slides past old requests', async () => {
-    const app = buildApp({ windowMs: 50, max: 1 });
+    let currentTime = 1_000;
+    const app = buildApp({ windowMs: 50, max: 1, now: () => currentTime });
 
     expect((await request(app).post('/api/generate-image')).status).toBe(200);
     expect((await request(app).post('/api/generate-image')).status).toBe(429);
 
-    await new Promise((resolve) => setTimeout(resolve, 60));
+    currentTime += 51;
     expect((await request(app).post('/api/generate-image')).status).toBe(200);
   });
 });
