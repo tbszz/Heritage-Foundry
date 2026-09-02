@@ -6,8 +6,10 @@ import {
   get3DCapabilities,
   get3DGenerationTask
 } from '../src/utils/apiService.js';
+import { applyArEntryState, buildArExperienceUrl } from '../src/generator.js';
 
 const generatorJs = readFileSync(new URL('../src/generator.js', import.meta.url), 'utf8');
+const generatorHtml = readFileSync(new URL('../src/generator.html', import.meta.url), 'utf8');
 
 describe('real 3D generator client', () => {
   beforeEach(() => {
@@ -99,6 +101,35 @@ describe('real 3D generator client', () => {
 
     expect(fetch).toHaveBeenCalledWith('/api/generate-3d/task%2Fid', expect.any(Object));
     expect(task.modelUrl).toBe('https://assets.example/figurine.glb');
+  });
+
+  it('builds a task-based AR handoff without exposing the model URL', () => {
+    expect(buildArExperienceUrl('local:task/id', 'tiger-head')).toBe(
+      'ar.html?task=local%3Atask%2Fid&craft=tiger-head'
+    );
+    expect(buildArExperienceUrl('', 'tiger-head')).toBe('');
+  });
+
+  it('shows a task-scoped AR handoff and clears it on reset', () => {
+    const link = {
+      hidden: true,
+      attributes: new Map(),
+      setAttribute(name, value) { this.attributes.set(name, value); },
+      removeAttribute(name) { this.attributes.delete(name); }
+    };
+
+    applyArEntryState(link, { taskId: 'task-9', craftId: 'tiger-head' });
+    expect(link.hidden).toBe(false);
+    expect(link.attributes.get('href')).toBe('ar.html?task=task-9&craft=tiger-head');
+
+    applyArEntryState(link);
+    expect(link.hidden).toBe(true);
+    expect(link.attributes.has('href')).toBe(false);
+  });
+
+  it('keeps the AR handoff hidden in the initial generator markup', () => {
+    expect(generatorHtml).toContain('id="view-in-ar-link"');
+    expect(generatorHtml).toMatch(/id="view-in-ar-link"[^>]*hidden/);
   });
 
   it('keeps a run token so stale task results cannot replace the current carrier', () => {

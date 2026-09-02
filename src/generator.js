@@ -37,6 +37,24 @@ const THREE_D_POLL_INTERVAL_MS = 3000;
 const THREE_D_MAX_POLLS = 200;
 const THREE_D_MAX_TRANSIENT_FAILURES = 3;
 
+export function buildArExperienceUrl(taskId, craftId) {
+  const normalizedTaskId = String(taskId || '').trim();
+  if (!normalizedTaskId) return '';
+
+  const params = new URLSearchParams({ task: normalizedTaskId });
+  const normalizedCraftId = String(craftId || '').trim();
+  if (normalizedCraftId) params.set('craft', normalizedCraftId);
+  return `ar.html?${params.toString()}`;
+}
+
+export function applyArEntryState(link, { taskId = '', craftId = '' } = {}) {
+  if (!link) return;
+  const href = buildArExperienceUrl(taskId, craftId);
+  link.hidden = !href;
+  if (href) link.setAttribute('href', href);
+  else link.removeAttribute('href');
+}
+
 let threeScene = null;
 let currentImageUrl = null;
 let currentPatternResult = null;
@@ -51,6 +69,7 @@ let threeDTaskActive = false;
 let productExportActive = false;
 let patternImageExportActive = false;
 let current3DModelUrl = null;
+let current3DTaskId = null;
 let currentThreeDErrorMessage = '';
 let highestWorkflowStepIndex = 0;
 let threeDCapabilities = {
@@ -504,6 +523,8 @@ async function handleGenerate3D() {
   setWorkflowStep('model');
   setThreeDStatus('正在把参考图提交到真实 3D 建模引擎…', 2, true);
   hideGlbDownload();
+  current3DTaskId = null;
+  hideArEntry();
 
   try {
     let task = await create3DGenerationTask(currentImageUrl, {
@@ -521,9 +542,11 @@ async function handleGenerate3D() {
         await threeScene.setGeneratedModel(task.modelUrl);
         if (!threeDTaskRunGate.isCurrent(runToken, getCurrentSelection())) return;
         current3DModelUrl = task.modelUrl;
+        current3DTaskId = task.id;
         currentThreeDErrorMessage = '';
         revealGlbDownload(task.modelUrl);
-        setThreeDStatus('真实 3D 手办已生成，可旋转查看或下载 GLB。', 100, false);
+        revealArEntry(task.id, selection.craftId);
+        setThreeDStatus('真实 3D 手办已生成，可旋转查看、下载或放进现实空间。', 100, false);
         showToast('真实 3D 手办生成完成');
         return;
       }
@@ -641,8 +664,10 @@ function updateGenerateButtonLabel() {
 
 function resetThreeDResult() {
   current3DModelUrl = null;
+  current3DTaskId = null;
   currentThreeDErrorMessage = '';
   hideGlbDownload();
+  hideArEntry();
   const progress = document.getElementById('three-d-progress');
   if (progress) {
     progress.value = 0;
@@ -702,6 +727,16 @@ function hideGlbDownload() {
   if (!link) return;
   link.hidden = true;
   link.removeAttribute('href');
+}
+
+function revealArEntry(taskId, craftId) {
+  const link = document.getElementById('view-in-ar-link');
+  applyArEntryState(link, { taskId, craftId });
+}
+
+function hideArEntry() {
+  const link = document.getElementById('view-in-ar-link');
+  applyArEntryState(link);
 }
 
 function wait(ms) {
@@ -1040,4 +1075,6 @@ function showToast(message) {
   }, 2600);
 }
 
-document.addEventListener('DOMContentLoaded', init);
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', init);
+}
