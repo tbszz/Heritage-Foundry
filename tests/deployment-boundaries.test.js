@@ -28,4 +28,12 @@ describe('Vercel deployment boundaries', () => {
     expect(ignored).toContain('heritage-foundry-demo.zip');
     expect(ignored).toContain('artifacts/');
   });
+
+  it('defines exactly one Vercel build entrypoint', () => {
+    const config = JSON.parse(fs.readFileSync(path.resolve('vercel.json'), 'utf8'));
+    const packageJson = JSON.parse(fs.readFileSync(path.resolve('package.json'), 'utf8'));
+
+    expect(config.buildCommand).toBe('npm run build');
+    expect(packageJson.scripts['vercel-build']).toBeUndefined();
+  });
 });

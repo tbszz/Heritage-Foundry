@@ -17,7 +17,6 @@
     "server": "npm run dev:api",
     "test": "vitest --root . run",
     "start": "npm run dev",
-    "vercel-build": "npm run build",
     "models:build-ar": "node scripts/build-harmony-ar-models.mjs"
   },
   "dependencies": {
