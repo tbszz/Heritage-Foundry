@@ -45,3 +45,6 @@ heritage-foundry-redesign/
 /docs/.build_user_manual.py
 /assets-src/models/chinese-knot-hunyuan.glb
 /assets-src/models/museum-complete-building.glb
+
+# Private generation queue
+artifacts/tripo-batch/

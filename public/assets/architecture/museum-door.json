@@ -1,0 +1,8 @@
+{
+  "provider": "tripo",
+  "taskId": "4a12b214-4a1d-418e-bb7d-dc4e4a11f2a7",
+  "triangles": 12174,
+  "bytes": 1016016,
+  "modelUrl": "/models/architecture/museum-door.glb",
+  "referenceUrl": "/assets/architecture/museum-door-reference.png"
+}

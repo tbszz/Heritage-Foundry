@@ -20,21 +20,6 @@ const TEXTURE_BASE = '/assets/textures/';
 const CRAFT_ICON_BASE = '/assets/generated/craft-icons-webp/';
 const textureLoader = new THREE.TextureLoader();
 
-// 门饰共享几何体/材质（全部展厅门复用，减少内存与 draw call 状态切换）
-let sharedDoorDecor = null;
-
-function getSharedDoorDecor() {
-  if (!sharedDoorDecor) {
-    sharedDoorDecor = {
-      studGeometry: new THREE.SphereGeometry(0.058, 12, 8),
-      bossGeometry: new THREE.CylinderGeometry(0.075, 0.075, 0.03, 16),
-      ringGeometry: new THREE.TorusGeometry(0.11, 0.024, 10, 28),
-      goldMaterial: new THREE.MeshStandardMaterial({ color: 0x92734f, roughness: 0.48, metalness: 0.68 })
-    };
-  }
-  return sharedDoorDecor;
-}
-
 export const CORRIDOR = {
   width: 10,           // 走廊总宽（墙在 x=±5）
   height: 4.6,         // 层高
@@ -54,16 +39,16 @@ export const CORRIDOR = {
 // 展厅：就建在走廊墙后（门洞真实连通），左门房间向 -x 延伸，右门向 +x
 export const ROOM = {
   wallX: 5,            // 走廊墙所在 |x|
-  depth: 11,           // 房间进深（x 方向）
-  width: 9.6,          // 房间开间（z 方向，以门中轴为中心）
+  depth: 25,           // 房间进深（x 方向）
+  width: 12,          // 房间开间（z 方向，以门中轴为中心）
   height: 4.6,
   eyeY: 1.7,
-  standZ: 2.3,         // 展台离门轴的 z 偏移
+  standZ: 3.2,         // 展台离门轴的 z 偏移
   standFirstX: 9.0,    // 第一排展台 |x|（距入口约 2.6m，正对视线）
   standSpacing: 2.0,   // 展台排距（x 方向）
   cameraEnter: 6.4,    // 相机在房间内的 |x| 轨道范围
-  cameraDeep: 14.2,
-  maxStands: 8,        // 展台上限（覆盖展品最多的展厅）
+  cameraDeep: 28.2,
+  maxStands: 20,        // 大展厅的二十件展台上限
   parallaxYaw: 0.5,    // 房间内视差环顾范围更大，方便看两侧展台
   parallaxPitch: 0.14,
   modelSize: 1.15      // GLB 归一化目标尺寸
@@ -332,7 +317,7 @@ export class SketchCorridorScene {
     [-1, 1].forEach((sign) => {
       const side = sign === -1 ? 'left' : 'right';
       const doorZs = layouts.filter((layout) => layout.side === side).map((layout) => layout.position.z);
-      getWallSegments(doorZs, startZ, endZ).forEach(({ from, to }) => {
+      getWallSegments(doorZs, startZ, endZ, CORRIDOR.doorWidth / 2).forEach(({ from, to }) => {
         const segmentLength = from - to;
         const wall = new THREE.Mesh(
           new THREE.PlaneGeometry(segmentLength, CORRIDOR.height),
@@ -344,13 +329,13 @@ export class SketchCorridorScene {
       });
       // 门洞过梁（门楣上方的墙板）
       doorZs.forEach((z) => {
-        const lintelHeight = CORRIDOR.height - CORRIDOR.doorHeight - 0.14;
+        const lintelHeight = CORRIDOR.height - CORRIDOR.doorHeight;
         const lintel = new THREE.Mesh(
-          new THREE.PlaneGeometry(CORRIDOR.doorWidth + 0.28, lintelHeight),
+          new THREE.PlaneGeometry(CORRIDOR.doorWidth, lintelHeight),
           this.makeWallMaterial('wall-cloud', [0.4, lintelHeight / CORRIDOR.height])
         );
         lintel.rotation.y = side === 'left' ? Math.PI / 2 : -Math.PI / 2;
-        lintel.position.set(sign * CORRIDOR.width / 2, CORRIDOR.doorHeight + 0.14 + lintelHeight / 2, z);
+        lintel.position.set(sign * CORRIDOR.width / 2, CORRIDOR.doorHeight + lintelHeight / 2, z);
         this.scene.add(lintel);
       });
     });
@@ -436,73 +421,17 @@ export class SketchCorridorScene {
     group.rotation.y = layout.side === 'left' ? Math.PI / 2 : -Math.PI / 2;
     this.scene.add(group);
 
-    // 深木门框与暗铜压边，接续展厅梁枋而不做通体鎏金。
-    const frameMaterial = new THREE.MeshStandardMaterial({
-      map: this.loadMuseumTexture('wood-beam', [1, 1]),
-      color: 0x665044,
-      roughness: 0.7,
-      metalness: 0.03
-    });
-    const bronzeMaterial = new THREE.MeshStandardMaterial({ color: 0x826548, roughness: 0.5, metalness: 0.62 });
-    const sidePostGeometry = new THREE.BoxGeometry(0.14, CORRIDOR.doorHeight + 0.14, 0.14);
-    [-1, 1].forEach((sign) => {
-      const post = new THREE.Mesh(sidePostGeometry, frameMaterial);
-      post.position.set(sign * (CORRIDOR.doorWidth / 2 + 0.07), (CORRIDOR.doorHeight + 0.14) / 2, 0);
-      group.add(post);
-    });
-    const lintel = new THREE.Mesh(
-      new THREE.BoxGeometry(CORRIDOR.doorWidth + 0.28, 0.14, 0.14),
-      frameMaterial
-    );
-    lintel.position.set(0, CORRIDOR.doorHeight + 0.07, 0);
-    group.add(lintel);
-
-    // 门板（朱漆大门：clearcoat 漆面光泽，铰链在局部左侧，开门时向展厅内旋开，不挡走廊）
+    // Tripo provides all visible door geometry and materials. This transparent
+    // plane is only a stable click target while the GLB is loading.
     const pivot = new THREE.Group();
-    pivot.position.set(-CORRIDOR.doorWidth / 2, 0, 0.04);
+    pivot.position.set(-CORRIDOR.doorWidth / 2, 0, 0.01);
     group.add(pivot);
     const panel = new THREE.Mesh(
       new THREE.PlaneGeometry(CORRIDOR.doorWidth, CORRIDOR.doorHeight),
-      new THREE.MeshPhysicalMaterial({
-        map: this.loadMuseumTexture('red-lacquer', [1, 1]),
-        roughness: 0.62,
-        metalness: 0.02,
-        clearcoat: 0.26,
-        clearcoatRoughness: 0.48,
-        side: THREE.DoubleSide
-      })
+      new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide })
     );
     panel.position.set(CORRIDOR.doorWidth / 2, CORRIDOR.doorHeight / 2, 0);
     pivot.add(panel);
-
-    // 门槛（鎏金压边）
-    const threshold = new THREE.Mesh(
-      new THREE.BoxGeometry(CORRIDOR.doorWidth + 0.28, 0.09, 0.22),
-      bronzeMaterial
-    );
-    threshold.position.set(0, 0.045, 0.06);
-    group.add(threshold);
-
-    // 门钉（4×3 鎏金泡钉）与铺首门环，挂在门板上随门开合
-    const decor = getSharedDoorDecor();
-    const studPositions = [0.3, 0.68, 1.06, 1.44].flatMap((x) => (
-      [0.7, 1.5, 2.3].map((y) => [x, y, 0.03])
-    ));
-    const studs = new THREE.InstancedMesh(decor.studGeometry, decor.goldMaterial, studPositions.length);
-    const studMatrix = new THREE.Matrix4();
-    studPositions.forEach(([x, y, z], index) => {
-      studMatrix.makeTranslation(x, y, z);
-      studs.setMatrixAt(index, studMatrix);
-    });
-    studs.instanceMatrix.needsUpdate = true;
-    pivot.add(studs);
-    const boss = new THREE.Mesh(decor.bossGeometry, decor.goldMaterial);
-    boss.rotation.x = Math.PI / 2;
-    boss.position.set(1.7, 1.52, 0.04);
-    pivot.add(boss);
-    const ring = new THREE.Mesh(decor.ringGeometry, decor.goldMaterial);
-    ring.position.set(1.7, 1.36, 0.06);
-    pivot.add(ring);
 
     // 黑漆金字牌匾（Canvas 纹理：展厅名 + 副题）
     const sign = new THREE.Mesh(
@@ -535,6 +464,26 @@ export class SketchCorridorScene {
     sign.userData.door = door;
     group.userData.door = door;
     this.doors.push(door);
+    this.loadCraftModel('/models/architecture/museum-door.glb').then(gltf => {
+      if (this.disposed) return;
+      const model = new THREE.Group();
+      const doorAsset = gltf.scene.clone(true);
+      // Tripo exports this door with its carved face along +X.
+      doorAsset.rotation.y = -Math.PI / 2;
+      model.add(doorAsset);
+      const bounds = new THREE.Box3().setFromObject(model);
+      const size = bounds.getSize(new THREE.Vector3());
+      if (size.x <= 0 || size.y <= 0) return;
+      model.scale.multiply(new THREE.Vector3(CORRIDOR.doorWidth / size.x, CORRIDOR.doorHeight / size.y, CORRIDOR.doorHeight / size.y));
+      const fitted = new THREE.Box3().setFromObject(model);
+      model.position.x -= fitted.min.x;
+      model.position.y -= fitted.min.y;
+      // Recess the full thickness behind the wall; only the front face meets the opening.
+      model.position.z -= fitted.max.z;
+      model.traverse(node => { if (node.isMesh) node.userData.door = door; });
+      pivot.add(model);
+      door.modelLoaded = true;
+    }).catch(error => { console.warn('Museum door model could not load', error.message); });
 
     // 展厅门：在墙后建真实连通的展厅
     if (door.kind === 'chapter') this.buildRoom(door);
@@ -608,7 +557,7 @@ export class SketchCorridorScene {
     this.scene.add(title);
 
     // 展厅照明：暖金点光源悬于厅心，仅在观众进入该厅时点亮（控制同屏灯数）
-    const roomLight = new THREE.PointLight(0xffddb0, 6, 22, 1.6);
+    const roomLight = new THREE.PointLight(0xffddb0, 12, 52, 1.2);
     roomLight.position.set(centerX, ROOM.height - 0.7, doorZ);
     roomLight.visible = false;
     this.scene.add(roomLight);
@@ -1186,7 +1135,7 @@ export class SketchCorridorScene {
       const entry = this.textTextures.find((item) => item.canvas === canvas);
       if (entry) entry.texture.needsUpdate = true;
     };
-    image.src = `${CRAFT_ICON_BASE}${encodeURIComponent(craft.id)}.webp`;
+    image.src = craft.previewUrl || `${CRAFT_ICON_BASE}${encodeURIComponent(craft.id)}.webp`;
     return this.registerTextTexture(canvas, draw);
   }
 

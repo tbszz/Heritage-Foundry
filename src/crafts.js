@@ -6,6 +6,12 @@ let currentCraft = null;
 
 function init() {
   initCraftSidebar();
+  const category = document.getElementById('craft-category');
+  for (const name of new Set(CRAFTS_DATA.filter(c => c.id.startsWith('heritage-')).map(c => c.category))) {
+    const option = document.createElement('option'); option.value = name; option.textContent = name; category?.appendChild(option);
+  }
+  document.getElementById('craft-search')?.addEventListener('input', initCraftSidebar);
+  category?.addEventListener('change', initCraftSidebar);
   bindEvents();
   initCraftThreeScene();
   selectInitialCraft();
@@ -24,14 +30,18 @@ function initCraftThreeScene() {
 function initCraftSidebar() {
   const sidebarList = document.getElementById('craft-sidebar-list');
   if (!sidebarList) return;
+  sidebarList.replaceChildren();
+  const query = document.getElementById('craft-search')?.value.trim() || '';
+  const category = document.getElementById('craft-category')?.value || '';
 
-  CRAFTS_DATA.forEach((craft) => {
+  CRAFTS_DATA.filter(craft => craft.id.startsWith('heritage-')).forEach((craft) => {
+    if ((query && !craft.name.includes(query)) || (category && craft.category !== category)) return;
     const item = document.createElement('div');
     item.className = 'craft-sidebar-item';
     item.dataset.id = craft.id;
     
     item.innerHTML = `
-      <div class="craft-sidebar-icon">${craft.emoji}</div>
+      <div class="craft-sidebar-icon"><img src="${craft.previewUrl}" alt="" loading="lazy" width="48" height="48" style="object-fit:contain"></div>
       <div class="craft-sidebar-info">
         <h4>${craft.name}</h4>
         <span>${craft.category}</span>
@@ -45,7 +55,7 @@ function initCraftSidebar() {
 
 export function getInitialCraftId(search = '') {
   const params = new URLSearchParams(search);
-  return params.get('craft') || CRAFTS_DATA[0]?.id || '';
+  return params.get('craft') || CRAFTS_DATA.find(craft => craft.id.startsWith('heritage-'))?.id || CRAFTS_DATA[0]?.id || '';
 }
 
 function selectInitialCraft() {

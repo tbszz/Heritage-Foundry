@@ -121,6 +121,20 @@ describe('sketch corridor scene', () => {
     expect(getRoomStandLayout([])).toHaveLength(0);
   });
 
+  it('keeps twenty exhibits inside the enlarged hall with a reachable last row', () => {
+    const crafts = Array.from({ length: 20 }, (_, index) => ({ id: `exhibit-${index}` }));
+    for (const side of ['left', 'right']) {
+      const layout = getRoomStandLayout(crafts, { side, position: { z: -6 } });
+      expect(layout).toHaveLength(20);
+      expect(new Set(layout.map(item => item.id)).size).toBe(20);
+      for (const stand of layout) {
+        expect(Math.abs(stand.position.x) + 0.6).toBeLessThan(ROOM.wallX + ROOM.depth);
+        expect(Math.abs(stand.position.z + 6) + 0.6).toBeLessThan(ROOM.width / 2);
+        expect(Math.abs(stand.position.x)).toBeLessThan(ROOM.cameraDeep);
+      }
+    }
+  });
+
   it('routes heritage guide IDs through the same guarded chapter entrance', () => {
     const scene = Object.create(SketchCorridorScene.prototype);
     scene.doors = getCorridorDoorLayout(chapters);
@@ -217,10 +231,11 @@ describe('sketch corridor scene', () => {
     expect(shouldIlluminateMuseumDoor({ cameraZ: 0, doorZ: -3, viewState: 'room' })).toBe(false);
   });
 
-  it('shares texture requests and instances repeated door studs', () => {
+  it('shares texture requests and loads Tripo door geometry', () => {
     expect(corridorJs).toContain('this.textureCache = new Map()');
     expect(corridorJs).toContain('cache: this.textureCache');
-    expect(corridorJs).toContain('new THREE.InstancedMesh(');
+    expect(corridorJs).toContain("this.loadCraftModel('/models/architecture/museum-door.glb')");
+    expect(corridorJs).not.toContain('getSharedDoorDecor');
   });
 
   it('themes the generator workspace with the same museum language', () => {

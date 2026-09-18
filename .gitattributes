@@ -2,3 +2,6 @@ public/models/*.glb filter=lfs diff=lfs merge=lfs -text
 assets-src/models/*.glb filter=lfs diff=lfs merge=lfs -text
 assets-src/fonts/*.ttf filter=lfs diff=lfs merge=lfs -text
 assets-src/fonts/*.otf filter=lfs diff=lfs merge=lfs -text
+public/models/heritage/*.glb filter=lfs diff=lfs merge=lfs -text
+public/models-ar/**/*.glb filter=lfs diff=lfs merge=lfs -text
+public/models-ar/*.glb filter=lfs diff=lfs merge=lfs -text

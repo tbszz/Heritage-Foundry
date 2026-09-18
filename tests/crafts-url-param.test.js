@@ -7,6 +7,6 @@ describe('crafts page URL selection', () => {
   });
 
   it('falls back to the first craft when the query parameter is missing', () => {
-    expect(getInitialCraftId('')).toBe('tiger-head');
+    expect(getInitialCraftId('')).toBe('heritage-001');
   });
 });

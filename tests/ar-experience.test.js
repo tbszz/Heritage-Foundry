@@ -198,7 +198,10 @@ describe('AR collection metadata', () => {
         .map((craft) => [craft.id, [craft.arPlacement, craft.arSizeMeters]])
     );
 
-    expect(presets).toEqual(EXPECTED_AR_PRESETS);
+    expect(presets).toMatchObject(EXPECTED_AR_PRESETS);
+    const exhibits = CRAFTS_DATA.filter(c => c.id.startsWith('heritage-'));
+    expect(exhibits).toHaveLength(100);
+    expect(exhibits.every(c => ['floor', 'wall'].includes(c.arPlacement) && c.arSizeMeters > 0)).toBe(true);
   });
 });
 

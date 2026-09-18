@@ -1,5 +1,6 @@
 const meshyProvider = require('./threeD/providers/meshy');
 const localProvider = require('./threeD/providers/localHttp');
+const tripoProvider = require('./threeD/providers/tripo');
 const {
   createServiceError,
   readPositiveInteger
@@ -7,19 +8,21 @@ const {
 
 const MAX_UPSTREAM_TASK_ID_BYTES = 256;
 const MAX_LOCAL_PUBLIC_TASK_ID_LENGTH = 'local:'.length + Math.ceil(MAX_UPSTREAM_TASK_ID_BYTES * 4 / 3);
+const MAX_TRIPO_PUBLIC_TASK_ID_LENGTH = 'tripo:'.length + Math.ceil(MAX_UPSTREAM_TASK_ID_BYTES * 4 / 3);
 let capabilityCache = null;
 let capabilityInFlight = null;
 
 const PROVIDERS = Object.freeze({
   meshy: meshyProvider,
-  local: localProvider
+  local: localProvider,
+  tripo: tripoProvider
 });
 
 function getProviderName() {
   const providerName = String(process.env.THREE_D_PROVIDER || 'meshy').trim().toLowerCase();
   if (!PROVIDERS[providerName]) {
     throw createServiceError(
-      'THREE_D_PROVIDER 必须是 meshy 或 local',
+      'THREE_D_PROVIDER 必须是 meshy、local 或 tripo',
       503,
       'THREE_D_PROVIDER_INVALID',
       { category: 'configuration', retryable: false }
@@ -47,6 +50,17 @@ function getCapabilityCacheKey(providerName) {
       process.env.LOCAL_3D_BASE_URL || '',
       process.env.LOCAL_3D_ALLOWED_HOSTS || '',
       Boolean(process.env.LOCAL_3D_API_KEY)
+    ].join('|');
+  }
+  if (providerName === 'tripo') {
+    return [
+      providerName,
+      process.env.TRIPO_API_BASE_URL || '',
+      process.env.TRIPO_MODEL || '',
+      process.env.TRIPO_FACE_LIMIT || '',
+      process.env.TRIPO_TEXTURE_QUALITY || '',
+      process.env.TRIPO_GEOMETRY_QUALITY || '',
+      Boolean(process.env.TRIPO_API_KEY)
     ].join('|');
   }
   return [
@@ -136,24 +150,36 @@ function validatePublicTaskId(taskId) {
     }
     return normalized;
   }
+  if (normalized.startsWith('tripo:')) {
+    if (
+      normalized.length > MAX_TRIPO_PUBLIC_TASK_ID_LENGTH
+      || /[\u0000-\u001f\u007f]/.test(normalized)
+    ) {
+      throw createServiceError('taskId 格式无效', 400, 'INVALID_TASK_ID', {
+        category: 'invalid_request',
+        retryable: false
+      });
+    }
+    return normalized;
+  }
   return validateUpstreamTaskId(normalized);
 }
 
-function encodeLocalTaskId(taskId) {
-  return `local:${Buffer.from(validateUpstreamTaskId(taskId), 'utf8').toString('base64url')}`;
+function encodePrefixedTaskId(prefix, taskId) {
+  return `${prefix}:${Buffer.from(validateUpstreamTaskId(taskId), 'utf8').toString('base64url')}`;
 }
 
-function decodeLocalTaskId(publicTaskId) {
-  const encoded = publicTaskId.slice('local:'.length);
+function decodePrefixedTaskId(publicTaskId, prefix) {
+  const encoded = publicTaskId.slice(`${prefix}:`.length);
   if (!encoded || !/^[A-Za-z0-9_-]+$/.test(encoded)) {
-    throw createServiceError('本地 taskId 格式无效', 400, 'INVALID_TASK_ID', {
+    throw createServiceError('taskId 格式无效', 400, 'INVALID_TASK_ID', {
       category: 'invalid_request',
       retryable: false
     });
   }
   const decoded = Buffer.from(encoded, 'base64url').toString('utf8');
   if (Buffer.from(decoded, 'utf8').toString('base64url') !== encoded) {
-    throw createServiceError('本地 taskId 格式无效', 400, 'INVALID_TASK_ID', {
+    throw createServiceError('taskId 格式无效', 400, 'INVALID_TASK_ID', {
       category: 'invalid_request',
       retryable: false
     });
@@ -162,8 +188,16 @@ function decodeLocalTaskId(publicTaskId) {
 }
 
 function toPublicTask(task, providerName) {
+  if (providerName === 'tripo') {
+    const publicId = encodePrefixedTaskId('tripo', task.id);
+    return {
+      ...task,
+      id: publicId,
+      provider: 'tripo'
+    };
+  }
   if (providerName !== 'local') return task;
-  const publicId = encodeLocalTaskId(task.id);
+  const publicId = encodePrefixedTaskId('local', task.id);
   return {
     ...task,
     id: publicId,
@@ -180,7 +214,14 @@ function resolveTaskProvider(publicTaskId) {
     return {
       providerName: 'local',
       provider: localProvider,
-      upstreamTaskId: decodeLocalTaskId(publicTaskId)
+      upstreamTaskId: decodePrefixedTaskId(publicTaskId, 'local')
+    };
+  }
+  if (publicTaskId.startsWith('tripo:')) {
+    return {
+      providerName: 'tripo',
+      provider: tripoProvider,
+      upstreamTaskId: decodePrefixedTaskId(publicTaskId, 'tripo')
     };
   }
   const providerName = getProviderName();
@@ -230,5 +271,7 @@ module.exports = {
   getModelArtifact,
   normalizeMeshyStatus: meshyProvider.normalizeMeshyStatus,
   normalizeMeshyTask: meshyProvider.normalizeMeshyTask,
-  buildCreatePayload: meshyProvider.buildCreatePayload
+  buildCreatePayload: meshyProvider.buildCreatePayload,
+  normalizeTripoTask: tripoProvider.normalizeTripoTask,
+  buildTripoCreatePayload: tripoProvider.buildCreatePayload
 };

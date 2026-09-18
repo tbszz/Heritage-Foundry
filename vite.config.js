@@ -35,6 +35,7 @@ export default defineConfig(({ mode }) => {
         input: {
           index: './src/index.html',
           crafts: './src/crafts.html',
+          collection: './src/collection.html',
           generator: './src/generator.html',
           ar: './src/ar.html'
         },

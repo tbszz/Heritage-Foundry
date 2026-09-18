@@ -21,12 +21,15 @@ describe('serverless 3D runtime policy', () => {
     });
   });
 
-  it('allows Meshy on Vercel and local TripoSR outside Vercel', async () => {
+  it('allows Meshy and Tripo on Vercel and local TripoSR outside Vercel', async () => {
     const { getServerless3DPolicy } = await import('./runtime-policy.js');
 
     process.env.VERCEL = '1';
     process.env.THREE_D_PROVIDER = 'meshy';
     expect(getServerless3DPolicy()).toMatchObject({ allowed: true, provider: 'meshy' });
+
+    process.env.THREE_D_PROVIDER = 'tripo';
+    expect(getServerless3DPolicy()).toMatchObject({ allowed: true, provider: 'tripo' });
 
     delete process.env.VERCEL;
     process.env.THREE_D_PROVIDER = 'local';

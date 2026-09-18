@@ -246,6 +246,270 @@ describe('Meshy 3D service', () => {
     });
   });
 
+  it('creates a Tripo v3.1 smart low-poly PBR GLB task from an image URL', async () => {
+    process.env.THREE_D_PROVIDER = ' tripo ';
+    process.env.TRIPO_API_KEY = 'server-only-tripo-key';
+    process.env.MESHY_API_KEY = 'must-not-leak';
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ code: 0, data: { task_id: 'task_tripo_123' } })
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const service = await import('../services/threeDService.js');
+    const task = await service.createImageTo3DTask('https://cdn.example/reference.webp', {
+      target_polycount: 5000
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://openapi.tripo3d.ai/v3/generation/image-to-model',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          Authorization: 'Bearer server-only-tripo-key',
+          'Content-Type': 'application/json'
+        })
+      })
+    );
+    expect(JSON.stringify(fetchMock.mock.calls[0])).not.toContain('must-not-leak');
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
+      input: 'https://cdn.example/reference.webp',
+      model: 'v3.1-20260211',
+      face_limit: 5000,
+      texture: true,
+      pbr: true,
+      texture_quality: 'detailed',
+      geometry_quality: 'detailed',
+      smart_low_poly: true,
+      auto_size: true,
+      export_uv: true
+    });
+    expect(task).toEqual({
+      id: 'tripo:dGFza190cmlwb18xMjM',
+      provider: 'tripo',
+      status: 'queued',
+      progress: 0,
+      modelUrl: null,
+      previewUrl: null,
+      error: null
+    });
+  });
+
+  it('uploads Tripo data URLs as file tokens before creating the model task', async () => {
+    process.env.THREE_D_PROVIDER = 'tripo';
+    process.env.TRIPO_API_KEY = 'server-only-tripo-key';
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ code: 0, data: { file_token: 'file_reference_1' } })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ code: 0, data: { task_id: 'task_file_1' } })
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const service = await import('../services/threeDService.js');
+    const task = await service.createImageTo3DTask('data:image/png;base64,YWJjZA');
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      'https://openapi.tripo3d.ai/v3/files',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          Authorization: 'Bearer server-only-tripo-key'
+        })
+      })
+    );
+    const uploadBody = fetchMock.mock.calls[0][1].body;
+    expect(uploadBody.get('file').name).toBe('reference.png');
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).input).toBe('file_reference_1');
+    expect(task.id).toBe('tripo:dGFza19maWxlXzE');
+  });
+
+  it('marks Tripo upload transport failures as before paid create', async () => {
+    process.env.THREE_D_PROVIDER = 'tripo';
+    process.env.TRIPO_API_KEY = 'server-only-tripo-key';
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError('socket closed'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const service = await import('../services/threeDService.js');
+
+    await expect(service.createImageTo3DTask('data:image/png;base64,YWJjZA'))
+      .rejects.toMatchObject({
+        code: 'TRIPO_NETWORK_ERROR',
+        category: 'network',
+        retryable: true,
+        tripoStage: 'upload',
+        tripoPaidCreateAttempted: false,
+        tripoPaidCreateEndpoint: '/generation/image-to-model'
+      });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe('https://openapi.tripo3d.ai/v3/files');
+  });
+
+  it('keeps local payload validation before the paid create boundary', async () => {
+    process.env.TRIPO_API_KEY = 'server-only-tripo-key';
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true, json: async () => ({ code: 0, data: { file_token: 'file_reference_1' } })
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const provider = await import('../services/threeD/providers/tripo.js');
+    await expect(provider.createImageTo3DTask('data:image/png;base64,YWJjZA', { face_limit: 1 }))
+      .rejects.toMatchObject({ code: 'INVALID_FACE_LIMIT', tripoStage: 'preflight', tripoPaidCreateAttempted: false });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe('https://openapi.tripo3d.ai/v3/files');
+  });
+  it('classifies missing Tripo configuration as preflight without any request', async () => {
+    delete process.env.TRIPO_API_KEY;
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const provider = await import('../services/threeD/providers/tripo.js');
+    await expect(provider.createImageTo3DTask('data:image/png;base64,YWJjZA'))
+      .rejects.toMatchObject({ code: 'TRIPO_NOT_CONFIGURED', tripoStage: 'preflight', tripoPaidCreateAttempted: false });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+  it('marks Tripo missing task ids as after paid create started', async () => {
+    process.env.THREE_D_PROVIDER = 'tripo';
+    process.env.TRIPO_API_KEY = 'server-only-tripo-key';
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ code: 0, data: { file_token: 'file_reference_1' } })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ code: 0, data: {} })
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const service = await import('../services/threeDService.js');
+
+    await expect(service.createImageTo3DTask('data:image/png;base64,YWJjZA'))
+      .rejects.toMatchObject({
+        code: 'TRIPO_INVALID_RESPONSE',
+        category: 'invalid_response',
+        retryable: false,
+        tripoStage: 'paid_create',
+        tripoPaidCreateAttempted: true,
+        tripoPaidCreateEndpoint: '/generation/image-to-model'
+      });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][0]).toBe('https://openapi.tripo3d.ai/v3/generation/image-to-model');
+  });
+
+  it('rejects unsupported Tripo data URL uploads before contacting the API', async () => {
+    process.env.THREE_D_PROVIDER = 'tripo';
+    process.env.TRIPO_API_KEY = 'server-only-tripo-key';
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const service = await import('../services/threeDService.js');
+
+    await expect(service.createImageTo3DTask('data:image/webp;base64,YWJjZA'))
+      .rejects.toMatchObject({
+        statusCode: 400,
+        code: 'TRIPO_INVALID_IMAGE'
+      });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps Tripo task routing stable even when another provider is selected later', async () => {
+    process.env.THREE_D_PROVIDER = 'meshy';
+    process.env.TRIPO_API_KEY = 'server-only-tripo-key';
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        code: 0,
+        data: {
+          task_id: 'task_tripo_456',
+          status: 'success',
+          progress: 100,
+          output: {
+            model_url: 'https://cdn.tripo3d.ai/output/model.glb',
+            rendered_image_url: 'https://cdn.tripo3d.ai/output/preview.png'
+          }
+        }
+      })
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const service = await import('../services/threeDService.js');
+    const task = await service.getImageTo3DTask('tripo:dGFza190cmlwb180NTY');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://openapi.tripo3d.ai/v3/tasks/task_tripo_456',
+      expect.any(Object)
+    );
+    expect(task).toEqual({
+      id: 'tripo:dGFza190cmlwb180NTY',
+      provider: 'tripo',
+      status: 'succeeded',
+      progress: 100,
+      modelUrl: 'https://cdn.tripo3d.ai/output/model.glb',
+      previewUrl: 'https://cdn.tripo3d.ai/output/preview.png',
+      error: null
+    });
+  });
+
+  it('normalizes Tripo running tasks and preserves official error details safely', async () => {
+    process.env.THREE_D_PROVIDER = 'tripo';
+    process.env.TRIPO_API_KEY = 'server-only-tripo-key';
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        code: 0,
+        data: {
+          task_id: 'task_running_1',
+          status: 'running',
+          progress: 37,
+          error_code: 1004,
+          error_message: 'generate_parts is incompatible with pbr'
+        }
+      })
+    }));
+
+    const service = await import('../services/threeDService.js');
+    const task = await service.getImageTo3DTask('tripo:dGFza19ydW5uaW5nXzE');
+
+    expect(task).toMatchObject({
+      id: 'tripo:dGFza19ydW5uaW5nXzE',
+      provider: 'tripo',
+      status: 'processing',
+      progress: 37,
+      error: null
+    });
+
+    expect(service.normalizeTripoTask({
+      task_id: 'task_failed_1',
+      status: 'failed',
+      progress: 100,
+      error_code: 1004,
+      error_message: 'generate_parts is incompatible with pbr'
+    })).toMatchObject({
+      status: 'failed',
+      error: '1004: generate_parts is incompatible with pbr'
+    });
+  });
+
+  it('reports Tripo capabilities as not ready when balance is exhausted', async () => {
+    process.env.THREE_D_PROVIDER = 'tripo';
+    process.env.TRIPO_API_KEY = 'server-only-tripo-key';
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ code: 0, data: { balance: 0, frozen: 0 } })
+    }));
+
+    const service = await import('../services/threeDService.js');
+
+    await expect(service.getCapabilities()).resolves.toMatchObject({
+      provider: 'tripo',
+      configured: true,
+      ready: false
+    });
+  });
+
   it('keeps local task routing stable and exposes only a same-origin GLB proxy while polling', async () => {
     process.env.THREE_D_PROVIDER = 'meshy';
     process.env.LOCAL_3D_BASE_URL = 'http://localhost:7861';

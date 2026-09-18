@@ -210,6 +210,38 @@ describe('3D generation routes', () => {
     );
   });
 
+  it('creates a Tripo route task with the server low-poly face limit despite the legacy default polycount', async () => {
+    process.env.THREE_D_PROVIDER = 'tripo';
+    process.env.TRIPO_API_KEY = 'route-tripo-key';
+    process.env.TRIPO_FACE_LIMIT = '8000';
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ code: 0, data: { task_id: 'route-tripo-1' } })
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const app = await createApp();
+
+    const response = await request(app)
+      .post('/api/generate-3d')
+      .send({
+        image_url: 'https://cdn.example/reference.png',
+        target_polycount: 100000
+      });
+
+    expect(response.status).toBe(202);
+    expect(response.body.task).toMatchObject({
+      id: 'tripo:cm91dGUtdHJpcG8tMQ',
+      provider: 'tripo',
+      status: 'queued'
+    });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
+      input: 'https://cdn.example/reference.png',
+      face_limit: 8000,
+      smart_low_poly: true,
+      pbr: true
+    });
+  });
+
   it('exposes a safe 3D capability summary without provider secrets', async () => {
     process.env.THREE_D_PROVIDER = 'local';
     process.env.LOCAL_3D_BASE_URL = 'http://127.0.0.1:7861/internal';

@@ -15,8 +15,8 @@ describe('homepage heritage hero', () => {
 
     expect(homepageCrafts.length).toBeGreaterThan(0);
     expect(homepageCrafts.every((craft) => Boolean(craft.modelUrl))).toBe(true);
-    expect(homepageCrafts.map((craft) => craft.id)).toContain('papercut');
-    expect(homepageCrafts.map((craft) => craft.id)).toContain('porcelain');
+    expect(homepageCrafts.map((craft) => craft.id)).toContain('heritage-001');
+    expect(homepageCrafts.map((craft) => craft.id)).toContain('heritage-100');
   });
 
   it('uses the selected heritage description and story as the hero copy', () => {
@@ -33,7 +33,7 @@ describe('homepage heritage hero', () => {
   it('falls back to porcelain as the museum-style default when a requested craft is missing', () => {
     const initialCraft = getInitialHomepageCraft('missing-id', CRAFTS_DATA);
 
-    expect(initialCraft).toEqual(CRAFTS_DATA.find((craft) => craft.id === 'porcelain'));
+    expect(initialCraft).toEqual(CRAFTS_DATA.find((craft) => craft.id === 'heritage-001'));
   });
 
   it('builds craft-specific homepage links for the selected craft', () => {
@@ -50,8 +50,8 @@ describe('homepage heritage hero', () => {
 
   it('keeps the latest requested craft during rapid selection', () => {
     const crafts = getHomepageCrafts(CRAFTS_DATA);
-    const currentCraft = crafts.find((craft) => craft.id === 'tiger-head');
-    const requestedCraft = crafts.find((craft) => craft.id === 'porcelain');
+    const currentCraft = crafts.find((craft) => craft.id === 'heritage-081');
+    const requestedCraft = crafts.find((craft) => craft.id === 'heritage-001');
 
     expect(resolveHomepageSelection(currentCraft, requestedCraft)).toEqual({
       nextCraft: requestedCraft,
@@ -69,19 +69,19 @@ describe('homepage heritage hero', () => {
 
     const tourStops = Home.getMuseumTourStops(CRAFTS_DATA);
 
-    expect(tourStops).toHaveLength(18);
+    expect(tourStops).toHaveLength(100);
     expect(tourStops[0]).toMatchObject({
       index: 0,
-      id: 'tiger-head',
-      iconUrl: '/assets/generated/craft-icons/tiger-head.png',
+      id: 'heritage-001',
+      iconUrl: '/assets/heritage/heritage-001.webp',
       stopLabel: '01'
     });
 
-    const porcelainStop = tourStops.find((stop) => stop.id === 'porcelain');
+    const porcelainStop = tourStops.find((stop) => stop.id === 'heritage-001');
     expect(porcelainStop).toMatchObject({
-      name: '景德镇陶瓷',
-      assetKey: 'porcelain',
-      museumLine: expect.stringContaining('白如玉'),
+      name: '景德镇青花梅瓶',
+      assetKey: 'heritage-001',
+      museumLine: expect.stringContaining('陶瓷'),
       camera: {
         x: expect.any(Number),
         y: expect.any(Number),

@@ -280,9 +280,11 @@ describe('cinematic digital museum redesign', () => {
   it('groups every modeled craft into a curated museum chapter', () => {
     const chapters = getMuseumChapters(CRAFTS_DATA);
     const craftIds = chapters.flatMap((chapter) => chapter.crafts.map((craft) => craft.id));
-    const modeledIds = CRAFTS_DATA.filter((craft) => craft.modelUrl).map((craft) => craft.id);
+    const modeledIds = CRAFTS_DATA.filter((craft) => craft.modelUrl && craft.id.startsWith('heritage-')).map((craft) => craft.id);
 
-    expect(chapters).toHaveLength(4);
+    expect(chapters).toHaveLength(5);
+    expect(craftIds).toHaveLength(100);
+    expect(chapters.every(chapter => chapter.crafts.length === 20)).toBe(true);
     expect(new Set(craftIds)).toEqual(new Set(modeledIds));
     expect(chapters.every((chapter) => chapter.crafts.length > 0)).toBe(true);
   });

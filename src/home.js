@@ -44,6 +44,7 @@ let communityTabsBound = false;
 const loadedFeatureContent = new Set();
 
 export function getHomepageCrafts(crafts = CRAFTS_DATA) {
+  if (crafts.some(craft => craft.id.startsWith('heritage-'))) return crafts.filter(craft => craft.id.startsWith('heritage-') && craft.modelUrl);
   return crafts.filter((craft) => Boolean(craft.modelUrl));
 }
 
@@ -91,8 +92,8 @@ export function getMuseumTourStops(crafts = CRAFTS_DATA) {
       index,
       assetKey: craft.id,
       stopLabel: String(index + 1).padStart(2, '0'),
-      iconUrl: `/assets/generated/craft-icons/${craft.id}.png`,
-      iconWebpUrl: `/assets/generated/craft-icons-webp/${craft.id}.webp`,
+      iconUrl: craft.previewUrl || `/assets/generated/craft-icons/${craft.id}.png`,
+      iconWebpUrl: craft.previewUrl || `/assets/generated/craft-icons-webp/${craft.id}.webp`,
       museumLine: craft.museumLine || craft.story,
       camera: {
         x: Number((Math.cos(angle) * radius).toFixed(3)),
@@ -110,6 +111,18 @@ export function getMuseumTourStops(crafts = CRAFTS_DATA) {
 
 export function getMuseumChapters(crafts = CRAFTS_DATA) {
   const modeledCrafts = getHomepageCrafts(crafts);
+  if (modeledCrafts.some(craft => craft.id.startsWith('heritage-'))) {
+    const themes = [
+      { id: 'earth', title: '火土新生', categories: ['陶瓷', '陶塑'], subtitle: '窑火与泥土的二十种形态' },
+      { id: 'thread', title: '经纬成章', categories: ['织绣', '民俗'], subtitle: '针线、织物与生活的祝愿' },
+      { id: 'carving', title: '竹木清韵', categories: ['竹编', '木雕'], subtitle: '竹丝与刀痕之间的匠心' },
+      { id: 'lacquer', title: '金漆流光', categories: ['漆器', '金工'], subtitle: '漆、铜与银的温润光泽' },
+      { id: 'paper', title: '灯影雅集', categories: ['灯彩', '戏曲与乐器'], subtitle: '灯火、戏曲与乐声相逢' }
+    ];
+    return themes.map(theme => ({ ...theme, description: theme.subtitle,
+      crafts: modeledCrafts.filter(craft => theme.categories.includes(craft.category))
+    }));
+  }
   const byId = new Map(modeledCrafts.map((craft) => [craft.id, craft]));
   const claimed = new Set(CHAPTERS.flatMap((chapter) => chapter.craftIds));
   const unclaimed = modeledCrafts.filter((craft) => !claimed.has(craft.id));
@@ -455,8 +468,8 @@ function animateNumber(el, target, duration = 1200) {
 }
 
 async function loadStats() {
-  const craftCount = CRAFTS_DATA.length;
-  const modelCount = CRAFTS_DATA.filter(c => c.modelUrl).length;
+  const craftCount = getHomepageCrafts().length;
+  const modelCount = getHomepageCrafts().length;
 
   animateNumber(document.getElementById('stat-craft-count'), craftCount);
   animateNumber(document.getElementById('stat-model-count'), modelCount);
