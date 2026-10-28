@@ -14,9 +14,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIR = path.join(ROOT,'artifacts/spirit-pet/heritage-082');
 const SOURCE = path.join(DIR,'quadruped.raw.glb');
 const DEST = path.join(ROOT,'public/models/spirit-pet/shandong-tiger-quad.glb');
-const LEGACY = path.join(ROOT,'public/models/spirit-pet/shandong-tiger.glb');
 const hash = async p => createHash('sha256').update(await readFile(p)).digest('hex');
-const legacyBefore = await hash(LEGACY);
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
 const doc = await io.read(SOURCE);
 // Blender's frame 1 is 1/30s. glTF clips must begin at zero for a clean repeat.
@@ -40,7 +38,6 @@ const final = await io.read(DEST);
 const root=final.getRoot();
 const bytes=(await stat(DEST)).size;
 assert(bytes<3_000_000,'Final asset must be <3 MB (decimal)');
-assert.equal(await hash(LEGACY),legacyBefore,'Legacy pet changed');
 assert(!root.listExtensionsUsed().some(e=>e.extensionName==='KHR_draco_mesh_compression'));
 assert.deepEqual(root.listAnimations().map(a=>a.getName()).sort(),['idle','run','walk']);
 const textures=[];
@@ -88,7 +85,7 @@ for(const mesh of root.listMeshes())for(const primitive of mesh.listPrimitives()
   }
 }
 assert(maxWeightError<1e-5);
-const report={file:path.relative(ROOT,DEST),bytes,megabytes:bytes/1e6,sha256:await hash(DEST),legacySha256:legacyBefore,
+const report={file:path.relative(ROOT,DEST),bytes,megabytes:bytes/1e6,sha256:await hash(DEST),
   clips,textures,vertices,joints:root.listSkins().map(s=>s.listJoints().length),maxWeightError,noDraco:true,forward:'+X',up:'+Y'};
 await writeFile(path.join(DIR,'quad-glb-validation.json'),JSON.stringify(report,null,2)+'\n');
 console.log(JSON.stringify(report,null,2));

@@ -48,3 +48,9 @@ heritage-foundry-redesign/
 
 # Private generation queue
 artifacts/tripo-batch/
+
+# 本地过程产物（预览图、烘焙中间件、Codex 简报）与本机工具配置
+/artifacts/
+/.tmp/
+/.codex/
+/.claude/
