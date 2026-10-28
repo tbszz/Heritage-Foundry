@@ -28,11 +28,12 @@
     </a>
 
     <nav class="museum-nav-links" aria-label="站点导航">
-      <a href="#museum-stage" data-action="enter-museum">云上展厅</a>
+      <a href="#museum-stage" data-action="enter-museum" aria-current="page">云上展厅</a>
       <a href="crafts.html">百工典藏</a>
       <a href="?view=map" data-open-feature="map">山河图志</a>
       <a href="generator.html">AI 造物</a>
       <a href="?view=gallery" data-open-feature="gallery">共创画廊</a>
+      <a href="ar.html">AR 看展</a>
     </nav>
 
     <button class="museum-nav-entry" type="button" data-action="enter-museum">
@@ -133,6 +134,21 @@
 
       <p class="sketch-corridor-hud" id="sketch-corridor-hud" aria-hidden="true">滚轮逛长廊 · 点击木门进入展厅</p>
       <button id="corridor-back" class="corridor-back" type="button" hidden>← 返回长廊</button>
+      <div id="spirit-pet-bubble" class="spirit-pet-bubble" role="status" aria-live="polite" hidden>
+        <div class="spirit-pet-bubble-card">
+          <button class="spirit-pet-bubble-close" type="button" data-action="close-pet-bubble" aria-label="收起小布的话">×</button>
+          <p id="spirit-pet-text" class="spirit-pet-text"></p>
+          <div id="spirit-pet-sources" class="spirit-pet-sources" hidden></div>
+        </div>
+      </div>
+      <form id="spirit-pet-dock" class="spirit-pet-dock" hidden>
+        <div id="spirit-pet-chips" class="spirit-pet-chips"></div>
+        <div class="spirit-pet-field">
+          <label class="sr-only" for="spirit-pet-input">问问灵宠小布</label>
+          <input id="spirit-pet-input" type="text" maxlength="200" autocomplete="off" placeholder="问问小布：剪纸为什么多用红色？">
+          <button type="submit">问小布</button>
+        </div>
+      </form>
       <button id="experience-mode-toggle" class="mode-toggle" type="button" aria-pressed="false">
         省流设置
       </button>

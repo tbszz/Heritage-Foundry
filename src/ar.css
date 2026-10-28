@@ -409,11 +409,19 @@
 }
 
 .ar-return-link {
+  display: block;
+  width: 100%;
   margin-top: 13px;
   color: var(--ar-bronze);
   font-size: 12px;
   text-align: center;
   text-decoration: none;
+  cursor: pointer;
+}
+
+.ar-return-link:hover,
+.ar-return-link:focus-visible {
+  text-decoration: underline;
 }
 
 .ar-share-fallback {

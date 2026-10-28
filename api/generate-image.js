@@ -1,6 +1,7 @@
 require('dotenv').config();
 
 const geminiService = require('../services/geminiService');
+const reviewService = require('../services/reviewService');
 const { buildEnhancedPrompt } = require('../services/promptService');
 const { createServerlessGuard, imageGuardrailConfig } = require('./serverless-guardrails');
 
@@ -28,10 +29,13 @@ module.exports = async (req, res) => {
       craft_type,
       ip,
       carrier,
+      self_check: selfCheckSnake,
+      selfCheck: selfCheckCamel,
       custom_prompt: customPromptSnake,
       customPrompt: customPromptCamel
     } = req.body;
     const customPrompt = customPromptCamel || customPromptSnake;
+    const selfCheck = selfCheckCamel === true || selfCheckSnake === true;
 
     if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
       return res.status(400).json({
@@ -43,16 +47,25 @@ module.exports = async (req, res) => {
 
     const enhancedPrompt = buildEnhancedPrompt(prompt, style, craft_type, { ip, carrier, customPrompt });
 
-    const result = await geminiService.generateImage(enhancedPrompt, {
-      aspect_ratio,
-      image_size,
-      mime_type
-    });
+    const result = selfCheck
+      ? await reviewService.generateImageWithSelfCheck({
+        prompt: enhancedPrompt,
+        options: { aspect_ratio, image_size, mime_type },
+        carrier: carrier || 'keychain'
+      })
+      : await geminiService.generateImage(enhancedPrompt, {
+        aspect_ratio,
+        image_size,
+        mime_type
+      });
 
     res.json({
       success: true,
       image: result.base64Image,
       message: '生成成功',
+      ...(selfCheck
+        ? { review: result.review, retried: result.retried }
+        : {}),
       metadata: {
         ...result.metadata,
         style

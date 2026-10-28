@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>非遗造物局</title>
+  <link rel="stylesheet" href="./assets/style.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <section class="hero" id="home" aria-labelledby="hero-title">
+      <img class="hero-image" src="./assets/images/homepage.jpeg" alt="非遗造物局数字博物馆外景" />
+      <div class="hero-shade"></div>
+      <header class="brand-bar">
+        <img class="brand-mark" src="./assets/images/seal-mark.webp" alt="非遗造物局印章标识" />
+        <div>
+          <p class="brand-name">非遗造物局</p>
+          <p class="brand-subtitle">AI 非遗共创数字博物馆</p>
+        </div>
+      </header>
+      <div class="hero-copy">
+        <p class="eyebrow">一馆藏百艺 · 一念续千年</p>
+        <h1 id="hero-title">让非遗从展柜<br />走进今天</h1>
+        <p class="hero-lede">看展、理解、共创，再把灵感变成能够亲手制作的作品。</p>
+        <button class="primary-action" id="enterButton" type="button">推门入馆</button>
+      </div>
+      <div class="scroll-cue" aria-hidden="true"><span></span>向上探索</div>
+    </section>
+
+    <section class="chapter chapter-intro" id="journey" aria-labelledby="journey-title">
+      <div class="chapter-heading">
+        <p class="chapter-kicker">云上展厅</p>
+        <h2 id="journey-title">从看见一件藏品开始</h2>
+        <p>六个真实产品界面，串起一条从文化发现到手作落地的完整路径。</p>
+      </div>
+
+      <div class="feature-rail" id="featureRail" aria-label="核心功能导览">
+        <article class="feature-card is-current" data-index="0">
+          <img src="./assets/images/collection.jpeg" alt="3D 非遗藏品鉴赏界面" />
+          <div class="feature-caption">
+            <span>百工典藏</span>
+            <h3>旋转鉴赏 3D 藏品</h3>
+            <p>从造型、纹理到材料细节，近距离认识十八项非遗技艺。</p>
+          </div>
+        </article>
+        <article class="feature-card" data-index="1">
+          <img src="./assets/images/atlas.jpeg" alt="山河图志交互地图" />
+          <div class="feature-caption">
+            <span>山河图志</span>
+            <h3>沿地域寻找技艺</h3>
+            <p>在地图上发现各地非遗资源，让一件作品重新连接它生长的土地。</p>
+          </div>
+        </article>
+        <article class="feature-card" data-index="2">
+          <img src="./assets/images/studio.jpeg" alt="AI 非遗造物案台" />
+          <div class="feature-caption">
+            <span>造物案台</span>
+            <h3>组合灵感，炼成作品</h3>
+            <p>把非遗技艺、文化元素、文创载体和视觉风格组合成新的创作方向。</p>
+          </div>
+        </article>
+        <article class="feature-card" data-index="3">
+          <img src="./assets/images/blueprint.jpeg" alt="拼豆图纸和材料清单" />
+          <div class="feature-caption">
+            <span>手作落地</span>
+            <h3>从图片变成制作图纸</h3>
+            <p>自动整理拼豆色号、数量、材料清单、制作时间与难度。</p>
+          </div>
+        </article>
+        <article class="feature-card" data-index="4">
+          <img src="./assets/images/gallery.jpeg" alt="非遗共创作品画廊" />
+          <div class="feature-caption">
+            <span>共创画廊</span>
+            <h3>让每次创作成为新藏品</h3>
+            <p>作品在这里汇聚，也让非遗被更多人看见、使用和重新创造。</p>
+          </div>
+        </article>
+      </div>
+
+      <div class="rail-controls" aria-label="切换核心功能">
+        <button type="button" id="previousFeature" aria-label="上一个功能">上一幕</button>
+        <p><strong id="featureIndex">01</strong><span>/ 05</span></p>
+        <button type="button" id="nextFeature" aria-label="下一个功能">下一幕</button>
+      </div>
+    </section>
+
+    <section class="chapter forge" id="forge" aria-labelledby="forge-title">
+      <div class="chapter-heading light-heading">
+        <p class="chapter-kicker">离线造物签</p>
+        <h2 id="forge-title">亲手组合一件非遗文创</h2>
+        <p>选择技艺、载体与气质，在本地生成一张属于你的造物签。</p>
+      </div>
+
+      <div class="forge-panel">
+        <fieldset class="choice-group" data-group="craft">
+          <legend>选一门技艺</legend>
+          <div class="choice-grid">
+            <button type="button" class="choice is-selected" data-value="扎染">扎染</button>
+            <button type="button" class="choice" data-value="剪纸">剪纸</button>
+            <button type="button" class="choice" data-value="苗绣">苗绣</button>
+            <button type="button" class="choice" data-value="木雕">木雕</button>
+          </div>
+        </fieldset>
+        <fieldset class="choice-group" data-group="carrier">
+          <legend>选一种载体</legend>
+          <div class="choice-grid">
+            <button type="button" class="choice is-selected" data-value="帆布包">帆布包</button>
+            <button type="button" class="choice" data-value="手机壳">手机壳</button>
+            <button type="button" class="choice" data-value="拼豆挂件">拼豆挂件</button>
+            <button type="button" class="choice" data-value="茶具">茶具</button>
+          </div>
+        </fieldset>
+        <fieldset class="choice-group" data-group="mood">
+          <legend>选一种气质</legend>
+          <div class="choice-grid">
+            <button type="button" class="choice is-selected" data-value="山海国潮">山海国潮</button>
+            <button type="button" class="choice" data-value="克制东方">克制东方</button>
+            <button type="button" class="choice" data-value="节日热烈">节日热烈</button>
+            <button type="button" class="choice" data-value="自然日常">自然日常</button>
+          </div>
+        </fieldset>
+        <button class="forge-action" id="forgeButton" type="button">生成我的造物签</button>
+      </div>
+
+      <article class="creation-ticket" id="creationTicket" aria-live="polite">
+        <div class="ticket-mark">造<br />物</div>
+        <div class="ticket-copy">
+          <p class="ticket-label">非遗造物局 · 第 <span id="ticketNumber">001</span> 号</p>
+          <h3 id="ticketTitle">扎染山海帆布包</h3>
+          <p id="ticketStory">让蓝白晕染化作山海潮汐，在日常出行中带走一片不可复制的云纹。</p>
+          <dl>
+            <div><dt>技艺</dt><dd id="ticketCraft">扎染</dd></div>
+            <div><dt>载体</dt><dd id="ticketCarrier">帆布包</dd></div>
+            <div><dt>气质</dt><dd id="ticketMood">山海国潮</dd></div>
+          </dl>
+        </div>
+      </article>
+    </section>
+
+    <section class="chapter epilogue" id="epilogue" aria-labelledby="epilogue-title">
+      <div class="epilogue-grid" aria-hidden="true">
+        <img src="./assets/images/collection.jpeg" alt="" />
+        <img src="./assets/images/studio.jpeg" alt="" />
+        <img src="./assets/images/blueprint.jpeg" alt="" />
+      </div>
+      <div class="epilogue-copy">
+        <img src="./assets/images/seal-mark.webp" alt="" />
+        <p>看见 · 理解 · 共创</p>
+        <h2 id="epilogue-title">非遗不是过去式</h2>
+        <p>它可以在今天继续被使用、被分享，也被重新创造。</p>
+        <button class="secondary-action" id="backToTop" type="button">再次入馆</button>
+      </div>
+    </section>
+  </main>
+
+  <nav class="chapter-nav" aria-label="章节导航">
+    <button class="nav-dot is-active" type="button" data-target="home" aria-label="首页"></button>
+    <button class="nav-dot" type="button" data-target="journey" aria-label="功能导览"></button>
+    <button class="nav-dot" type="button" data-target="forge" aria-label="造物签"></button>
+    <button class="nav-dot" type="button" data-target="epilogue" aria-label="结语"></button>
+  </nav>
+
+  <script src="./assets/main.js"></script>
+</body>
+</html>

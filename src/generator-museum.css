@@ -268,6 +268,58 @@ body.generator-shell .custom-prompt-hint {
   color: var(--muted);
 }
 
+/* AI 简报：开口说需求 */
+body.generator-shell .brief-console {
+  padding: 14px 12px;
+  border: 1px solid rgb(181 139 74 / 0.32);
+  border-radius: 3px;
+  background: rgb(181 139 74 / 0.06);
+}
+
+body.generator-shell .brief-console textarea {
+  min-height: 84px;
+}
+
+body.generator-shell .brief-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+body.generator-shell .brief-status {
+  color: var(--gold);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+body.generator-shell .brief-result {
+  display: grid;
+  gap: 6px;
+  padding-top: 2px;
+}
+
+body.generator-shell .brief-combo {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+body.generator-shell .brief-reasoning {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+body.generator-shell .brief-fallback {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 body.generator-shell .atelier-stage {
   margin: 0;
   padding: clamp(18px, 2vw, 28px);
@@ -365,6 +417,69 @@ body.generator-shell .stage-generate-btn {
   font-size: 16px;
   font-weight: 800;
   letter-spacing: 0.14em;
+}
+
+body.generator-shell .stage-generate-row {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+body.generator-shell .stage-selfcheck {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -4px 0 14px;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+
+body.generator-shell .stage-selfcheck input {
+  width: 15px;
+  height: 15px;
+  min-height: 0;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+body.generator-shell .review-note {
+  display: grid;
+  gap: 4px;
+  margin: 10px 2px 0;
+  padding: 9px 12px;
+  border-left: 3px solid var(--gold);
+  border-radius: 2px;
+  background: rgb(181 139 74 / 0.08);
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: left;
+}
+
+body.generator-shell .review-note strong {
+  color: var(--gold);
+  letter-spacing: 0.06em;
+}
+
+body.generator-shell .review-note span {
+  color: var(--muted);
+}
+
+body.generator-shell .review-note.is-revise {
+  border-left-color: var(--accent);
+  background: rgb(196 77 66 / 0.1);
+}
+
+body.generator-shell .review-note.is-revise strong {
+  color: #dd8577;
+}
+
+body.generator-shell .review-note ul {
+  margin: 2px 0 0;
+  padding-left: 16px;
+  color: var(--muted);
 }
 
 body.generator-shell .preview-container {

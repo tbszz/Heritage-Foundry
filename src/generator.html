@@ -41,7 +41,22 @@
             <div class="console-heading">
               <span class="panel-index">工艺签</span>
               <h3 id="craft-slip-title">取纹样</h3>
-              <small>依次选择技艺、题材、载体与气质</small>
+              <small>说一句话，或依次选择技艺、题材、载体与气质</small>
+            </div>
+
+            <div class="control-group brief-console" data-component="BriefConsole">
+              <label for="brief-input">开口说需求 <small>AI 帮你定工艺签</small></label>
+              <textarea
+                id="brief-input"
+                rows="3"
+                maxlength="300"
+                placeholder="例如：想做送表弟的生日礼物，他喜欢皮卡丘，老家苏州，要可爱一点"
+              ></textarea>
+              <div class="brief-actions">
+                <button id="brief-btn" type="button" class="btn btn-secondary btn-small">AI 帮我选</button>
+                <span id="brief-status" class="brief-status" role="status" aria-live="polite"></span>
+              </div>
+              <div id="brief-result" class="brief-result" hidden></div>
             </div>
 
             <div class="control-group">
@@ -110,7 +125,13 @@
               <span class="stage-status"><i></i> 案台已备妥</span>
             </div>
 
-            <button id="generateBtn" class="btn btn-primary stage-generate-btn">炼成作品图</button>
+            <div class="stage-generate-row">
+              <button id="generateBtn" class="btn btn-primary stage-generate-btn">炼成作品图</button>
+              <label class="stage-selfcheck" for="self-check-toggle">
+                <input type="checkbox" id="self-check-toggle" checked>
+                <span>AI 自审：未达标自动重制一版</span>
+              </label>
+            </div>
 
             <div class="preview-container">
               <div id="three-container" class="three-container" aria-label="文创载体三维预览">

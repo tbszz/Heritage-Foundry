@@ -1,8 +1,115 @@
-import { ThreeScene } from './components/ThreeScene.js';
 import { CRAFTS_DATA, getCraftById, getGeneratorCraftId } from './utils/craftData.js';
+import { askDocent } from './utils/apiService.js';
 
 let craftThreeScene = null;
+let craftThreeScenePromise = null;
 let currentCraft = null;
+const docentHistory = [];
+
+// 3D 展台按需加载：先渲染典藏列表，引擎在浏览器空闲时再拉取并套用当前展品。
+function ensureCraftThreeScene() {
+  if (!craftThreeScenePromise) {
+    craftThreeScenePromise = import('./components/ThreeScene.js')
+      .then(({ ThreeScene }) => {
+        if (craftThreeScene) return craftThreeScene;
+        const container = document.getElementById('craft-three-container');
+        if (!container) return null;
+        craftThreeScene = new ThreeScene(container);
+        craftThreeScene.init();
+        if (currentCraft) craftThreeScene.setCraft(currentCraft);
+        return craftThreeScene;
+      })
+      .catch((error) => {
+        craftThreeScenePromise = null;
+        console.warn('Failed to load the craft 3D stage:', error);
+        return null;
+      });
+  }
+  return craftThreeScenePromise;
+}
+
+function scheduleCraftThreeSceneInit() {
+  const idle = window.requestIdleCallback || ((callback) => window.setTimeout(callback, 150));
+  idle(() => {
+    ensureCraftThreeScene();
+  });
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+}
+
+export function getDocentHistory() {
+  return docentHistory.slice();
+}
+
+export function appendDocentMessage(role, text) {
+  docentHistory.push({ role, text: String(text || '').slice(0, 300) });
+  while (docentHistory.length > 6) docentHistory.shift();
+}
+
+function renderDocentMessage({ role, html }) {
+  const thread = document.getElementById('docent-thread');
+  if (!thread) return;
+  const hint = thread.querySelector('.docent-hint');
+  if (hint) hint.remove();
+  const message = document.createElement('div');
+  message.className = `docent-message docent-${role}`;
+  message.innerHTML = html;
+  thread.appendChild(message);
+  thread.scrollTop = thread.scrollHeight;
+}
+
+export async function handleDocentQuestion(question) {
+  const trimmed = String(question || '').trim();
+  if (!trimmed) return;
+
+  renderDocentMessage({
+    role: 'user',
+    html: `<p>${escapeHtml(trimmed)}</p>`
+  });
+  appendDocentMessage('user', trimmed);
+
+  const button = document.getElementById('docent-ask-btn');
+  if (button) button.disabled = true;
+  renderDocentMessage({
+    role: 'pending',
+    html: '<p class="docent-pending">讲解员翻阅资料中…</p>'
+  });
+
+  try {
+    const { answer, sources } = await askDocent(trimmed, {
+      craftId: currentCraft?.id,
+      history: docentHistory.slice(0, -1)
+    });
+    const sourceChips = sources.length
+      ? `<div class="docent-sources">${sources.map((source) => `<span>典藏 · ${escapeHtml(source.name)}</span>`).join('')}</div>`
+      : '';
+    const pending = document.querySelector('.docent-pending')?.closest('.docent-message');
+    pending?.remove();
+    renderDocentMessage({
+      role: 'answer',
+      html: `<p>${escapeHtml(answer)}</p>${sourceChips}`
+    });
+    appendDocentMessage('docent', answer);
+  } catch (error) {
+    console.warn('Docent failed:', error);
+    const pending = document.querySelector('.docent-pending')?.closest('.docent-message');
+    pending?.remove();
+    const fallback = error.code === 'GEMINI_NOT_CONFIGURED'
+      ? '讲解员服务尚未配置，可先浏览典藏资料。'
+      : `讲解员暂时无法回答（${escapeHtml(error.message)}），请稍后再试。`;
+    renderDocentMessage({ role: 'error', html: `<p>${fallback}</p>` });
+  } finally {
+    if (button) button.disabled = false;
+    const input = document.getElementById('docent-input');
+    if (input) input.value = '';
+  }
+}
 
 function init() {
   initCraftSidebar();
@@ -13,18 +120,8 @@ function init() {
   document.getElementById('craft-search')?.addEventListener('input', initCraftSidebar);
   category?.addEventListener('change', initCraftSidebar);
   bindEvents();
-  initCraftThreeScene();
   selectInitialCraft();
-}
-
-function initCraftThreeScene() {
-  if (craftThreeScene) return;
-  
-  const container = document.getElementById('craft-three-container');
-  if (container) {
-    craftThreeScene = new ThreeScene(container);
-    craftThreeScene.init();
-  }
+  scheduleCraftThreeSceneInit();
 }
 
 function initCraftSidebar() {
@@ -78,8 +175,6 @@ function selectCraft(craft) {
   if (arLink) {
     arLink.href = `ar.html?craft=${encodeURIComponent(craft.id)}`;
   }
-
-  initCraftThreeScene();
 
   animateContentChange(() => {
     document.getElementById('content-title').textContent = craft.name;
@@ -137,6 +232,12 @@ function bindEvents() {
       const product = e.target.dataset.product;
       handleCreateProduct(product);
     });
+  });
+
+  document.getElementById('docent-form')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const input = document.getElementById('docent-input');
+    handleDocentQuestion(input?.value || '');
   });
 }
 

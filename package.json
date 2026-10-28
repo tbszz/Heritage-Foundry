@@ -17,7 +17,8 @@
     "server": "npm run dev:api",
     "test": "vitest --root . run",
     "start": "npm run dev",
-    "models:build-ar": "node scripts/build-harmony-ar-models.mjs"
+    "models:build-ar": "node scripts/build-harmony-ar-models.mjs",
+    "knowledge:build": "node scripts/build-craft-embeddings.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.10.0",

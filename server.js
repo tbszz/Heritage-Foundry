@@ -8,6 +8,8 @@ const path = require('path');
 const generateRoutes = require('./routes/generate');
 const generate3DRoutes = require('./routes/generate3d');
 const creationRoutes = require('./routes/creations');
+const creativeBriefRoutes = require('./routes/creativeBrief');
+const docentRoutes = require('./routes/docent');
 const errorHandler = require('./middleware/errorHandler');
 const { createCorsOptions } = require('./middleware/apiGuardrails');
 
@@ -36,6 +38,8 @@ function createApp() {
 
   app.use('/api', generateRoutes);
   app.use('/api', generate3DRoutes);
+  app.use('/api', creativeBriefRoutes);
+  app.use('/api', docentRoutes);
   app.use('/api/creations', creationRoutes);
 
   app.get('/api/health', (req, res) => {

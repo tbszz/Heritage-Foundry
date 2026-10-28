@@ -8,6 +8,14 @@
       "dest": "/api/generate-image.js"
     },
     {
+      "src": "/api/creative-brief",
+      "dest": "/api/creative-brief.js"
+    },
+    {
+      "src": "/api/docent",
+      "dest": "/api/docent.js"
+    },
+    {
       "src": "/api/edit-image",
       "dest": "/api/edit-image.js"
     },

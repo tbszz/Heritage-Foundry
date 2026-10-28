@@ -1,8 +1,8 @@
-import { ThreeScene } from './components/ThreeScene.js';
 import {
   generateImage,
   generatePrompt,
   buildSavedPrompt,
+  createCreativeBrief,
   create3DGenerationTask,
   get3DCapabilities,
   get3DGenerationTask,
@@ -56,6 +56,36 @@ export function applyArEntryState(link, { taskId = '', craftId = '' } = {}) {
 }
 
 let threeScene = null;
+let threeScenePromise = null;
+
+// 3D 预览引擎按需加载：不阻塞首屏表单渲染，首次需要时动态拉取 three 相关分包。
+function ensureThreeSceneReady() {
+  if (!threeScenePromise) {
+    threeScenePromise = import('./components/ThreeScene.js')
+      .then(({ ThreeScene }) => {
+        if (threeScene) return threeScene;
+        const container = document.getElementById('three-container');
+        if (!container) return null;
+        threeScene = new ThreeScene(container);
+        threeScene.init();
+        return threeScene;
+      })
+      .catch((error) => {
+        threeScenePromise = null;
+        console.warn('Failed to load the 3D preview engine:', error);
+        return null;
+      });
+  }
+  return threeScenePromise;
+}
+
+function scheduleThreeScenePreload() {
+  const idle = window.requestIdleCallback || ((callback) => window.setTimeout(callback, 150));
+  idle(() => {
+    ensureThreeSceneReady();
+  });
+}
+
 let currentImageUrl = null;
 let currentPatternResult = null;
 let currentSummary = {};
@@ -90,6 +120,7 @@ function init() {
   updateThreeDActionState();
   loadThreeDCapabilities();
   loadRecentCreations();
+  scheduleThreeScenePreload();
 }
 
 function populateCraftOptions() {
@@ -144,14 +175,23 @@ function applyUrlParams() {
   }
 }
 
-function initGeneratorThreeScene() {
-  if (threeScene) return;
+function updateProductInfo() {
+  const selection = getCurrentSelection();
+  if (!selection) return;
 
-  const container = document.getElementById('three-container');
-  if (container) {
-    threeScene = new ThreeScene(container);
-    threeScene.init();
-  }
+  const name = `${selection.craft.name} × ${selection.ip.name} - ${selection.carrier.name}`;
+  const desc = `将${selection.craft.description}与${selection.ip.description}结合，打造${selection.style.description}风格的${selection.carrier.description}，让传统文化焕发新的活力。`;
+
+  document.getElementById('product-name').textContent = name;
+  document.getElementById('product-desc').textContent = desc;
+
+  // 引擎就绪后套用当前载体；多次调用的回调按注册顺序执行，最后一次（最新选择）生效。
+  void ensureThreeSceneReady().then(() => {
+    threeScene?.setCarrier(selection.carrierId);
+  });
+
+  updateGenerateButtonLabel();
+  updateThreeDActionState();
 }
 
 function bindEvents() {
@@ -202,6 +242,7 @@ function bindEvents() {
       customPromptHint.textContent = `剩余 ${remaining} 字`;
     }
   });
+  document.getElementById('brief-btn')?.addEventListener('click', handleCreativeBrief);
   generateBtn?.addEventListener('click', handleGenerateImage);
   generate3dBtn?.addEventListener('click', handleGenerate3D);
   exportProductGlbBtn?.addEventListener('click', handleExportProductGLB);
@@ -340,25 +381,6 @@ function getPatternSize() {
   };
 }
 
-function updateProductInfo() {
-  const selection = getCurrentSelection();
-  if (!selection) return;
-
-  const name = `${selection.craft.name} × ${selection.ip.name} - ${selection.carrier.name}`;
-  const desc = `将${selection.craft.description}与${selection.ip.description}结合，打造${selection.style.description}风格的${selection.carrier.description}，让传统文化焕发新的活力。`;
-
-  document.getElementById('product-name').textContent = name;
-  document.getElementById('product-desc').textContent = desc;
-
-  initGeneratorThreeScene();
-  if (threeScene) {
-    threeScene.setCarrier(selection.carrierId);
-  }
-
-  updateGenerateButtonLabel();
-  updateThreeDActionState();
-}
-
 function updateStory() {
   const selection = getCurrentSelection();
   if (!selection) return;
@@ -379,6 +401,7 @@ async function handleGenerateImage() {
   imageAbortController?.abort();
   imageAbortController = new AbortController();
   const imageRun = imageRunGate.start(selection);
+  const selfCheck = document.getElementById('self-check-toggle')?.checked !== false;
   threeDTaskRunGate.invalidate();
   threeDTaskActive = false;
   currentImageUrl = null;
@@ -396,7 +419,7 @@ async function handleGenerateImage() {
   imagePreview.innerHTML = `
     <div class="loading-overlay">
       <div class="loading-spinner"></div>
-      <p>作品图正在炼成…</p>
+      <p>${selfCheck ? '作品图正在炼成，AI 复查中…' : '作品图正在炼成…'}</p>
     </div>
   `;
 
@@ -412,6 +435,7 @@ async function handleGenerateImage() {
       ip: selection.ipId,
       carrier: selection.carrierId,
       customPrompt,
+      selfCheck,
       signal: imageAbortController.signal
     });
 
@@ -422,8 +446,13 @@ async function handleGenerateImage() {
     imagePreview.innerHTML = `
       <img src="${currentImageUrl}" alt="生成的非遗文创设计">
       <p class="result-note">${result.message}</p>
+      ${buildReviewNote(result.review, result.retried)}
     `;
 
+    if (shouldApplyArtworkToCarrier(selection.carrierId)) {
+      await ensureThreeSceneReady();
+      if (!imageRunGate.isCurrent(imageRun, getCurrentSelection())) return;
+    }
     if (threeScene && shouldApplyArtworkToCarrier(selection.carrierId)) {
       const textureResult = await applyArtworkTexture(threeScene, currentImageUrl);
       if (!imageRunGate.isCurrent(imageRun, getCurrentSelection())) return;
@@ -525,6 +554,9 @@ async function handleGenerate3D() {
   hideGlbDownload();
   current3DTaskId = null;
   hideArEntry();
+
+  await ensureThreeSceneReady();
+  if (!threeDTaskRunGate.isCurrent(runToken, getCurrentSelection())) return;
 
   try {
     let task = await create3DGenerationTask(currentImageUrl, {
@@ -741,6 +773,110 @@ function hideArEntry() {
 
 function wait(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+}
+
+export function buildCurrentBriefPayload() {
+  const selection = getCurrentSelection();
+  if (!selection) return null;
+  return {
+    craftId: selection.craftId,
+    ipId: selection.ipId,
+    carrierId: selection.carrierId,
+    styleId: selection.styleId,
+    customPrompt: document.getElementById('custom-prompt')?.value?.trim() || ''
+  };
+}
+
+export function applyBrief(brief) {
+  if (!brief) return;
+  const assignments = [
+    ['craft', brief.craftId],
+    ['ip', brief.ipId],
+    ['carrier', brief.carrierId],
+    ['style', brief.styleId]
+  ];
+
+  for (const [elementId, value] of assignments) {
+    const select = document.getElementById(elementId);
+    if (!select || !value || ![...select.options].some((option) => option.value === value)) continue;
+    select.value = value;
+    syncEnhancedSelect(select);
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  const customPromptEl = document.getElementById('custom-prompt');
+  if (customPromptEl && typeof brief.customPrompt === 'string') {
+    customPromptEl.value = brief.customPrompt;
+    customPromptEl.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+}
+
+export function buildReviewNote(review, retried) {
+  if (!review || review.verdict === 'skipped') return '';
+
+  if (review.verdict === 'pass') {
+    return retried
+      ? '<div class="review-note is-pass" data-review="retried-pass"><strong>AI 自审通过</strong><span>首版未达标，已自动重制并通过复查</span></div>'
+      : '<div class="review-note is-pass" data-review="pass"><strong>AI 自审通过</strong><span>已按载体交付清单复查达标</span></div>';
+  }
+
+  const issues = Array.isArray(review.issues) ? review.issues.filter(Boolean) : [];
+  const issuesHtml = issues.length
+    ? `<ul>${issues.map((issue) => `<li>${escapeHtml(issue)}</li>`).join('')}</ul>`
+    : '';
+  const lead = review.note
+    ? `<span>${escapeHtml(review.note)}</span>`
+    : (retried
+      ? '<span>已自动重制一版，复检仍提示以下问题，可再炼一次</span>'
+      : '<span>自审提示以下问题，可再炼一次</span>');
+
+  return `<div class="review-note is-revise" data-review="revise"><strong>AI 自审意见</strong>${lead}${issuesHtml}</div>`;
+}
+
+async function handleCreativeBrief() {
+  const input = document.getElementById('brief-input');
+  const button = document.getElementById('brief-btn');
+  const status = document.getElementById('brief-status');
+  const result = document.getElementById('brief-result');
+  const message = input?.value?.trim();
+  if (!message) {
+    showToast('先用一句话描述你的创作需求');
+    return;
+  }
+  if (button?.disabled) return;
+
+  button.disabled = true;
+  status.textContent = '正在理解你的需求…';
+  result.hidden = true;
+
+  try {
+    const brief = await createCreativeBrief(message, buildCurrentBriefPayload());
+    applyBrief(brief);
+    status.textContent = '已按你的需求更新工艺签';
+    result.hidden = false;
+    result.innerHTML = `
+      <p class="brief-combo">${escapeHtml(brief.craftName)} × ${escapeHtml(brief.ipName)} · ${escapeHtml(brief.carrierName)} · ${escapeHtml(brief.styleName)}</p>
+      ${brief.reasoning ? `<p class="brief-reasoning">${escapeHtml(brief.reasoning)}</p>` : ''}
+    `;
+    showToast('AI 已为你拟定创作简报，可继续手动微调');
+  } catch (error) {
+    console.warn('Creative brief failed:', error);
+    status.textContent = '';
+    result.hidden = false;
+    result.innerHTML = `
+      <p class="brief-fallback">AI 简报暂不可用（${escapeHtml(error.message)}），可直接在下方手动选择。</p>
+    `;
+  } finally {
+    button.disabled = false;
+  }
 }
 
 async function handleGeneratePattern() {

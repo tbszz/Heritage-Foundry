@@ -1069,6 +1069,106 @@ h6 {
   font-size: 14px;
 }
 
+/* AI 讲解员：典藏页问答面板 */
+.docent-panel {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.docent-panel h4 {
+  margin: 0 0 12px;
+  font-size: 14px;
+}
+
+.docent-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 260px;
+  overflow-y: auto;
+  margin-bottom: 10px;
+}
+
+.docent-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.docent-message {
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.docent-message p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.docent-user {
+  align-self: flex-end;
+  max-width: 88%;
+  background: rgb(196 77 66 / 0.14);
+  border: 1px solid rgb(196 77 66 / 0.35);
+}
+
+.docent-answer,
+.docent-pending,
+.docent-error {
+  align-self: flex-start;
+  max-width: 95%;
+  background: rgb(201 154 46 / 0.08);
+  border: 1px solid rgb(201 154 46 / 0.28);
+}
+
+.docent-error {
+  background: rgb(154 148 138 / 0.1);
+  border-color: var(--line);
+  color: var(--muted);
+}
+
+.docent-pending {
+  color: var(--muted);
+}
+
+.docent-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.docent-sources span {
+  padding: 2px 8px;
+  border: 1px solid rgb(201 154 46 / 0.4);
+  border-radius: 999px;
+  color: var(--gold);
+  font-size: 11px;
+}
+
+.docent-form {
+  display: flex;
+  gap: 8px;
+}
+
+.docent-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 11px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+}
+
 .product-grid {
   display: flex;
   flex-direction: column;

@@ -1,5 +1,6 @@
 import { CRAFTS_DATA, getGeneratorCraftId } from './utils/craftData.js';
 import { getCreationStats, listCreations, likeCreation } from './utils/apiService.js';
+import { createSpiritPetChat } from './spiritPetChat.js';
 
 const CHAPTERS = [
   {
@@ -967,24 +968,36 @@ function bindSketchCorridor() {
   stage.classList.add('is-corridor-loading');
   sketchCorridorPromise = import('./components/SketchCorridorScene.js')
     .then(({ SketchCorridorScene }) => {
+      const chapters = getMuseumChapters();
+      const petChat = createSpiritPetChat({ stage, getScene: () => sketchCorridorScene });
       sketchCorridorScene = new SketchCorridorScene(container);
+      // 开发调试：在控制台检查灵宠 / 相机状态
+      if (import.meta.env?.DEV) window.__sketchCorridor = sketchCorridorScene;
       sketchCorridorScene.init({
-        chapters: getMuseumChapters(),
-        onRoomEnter: () => {
+        chapters,
+        onRoomEnter: (chapterId) => {
+          const chapter = chapters.find((item) => item.id === chapterId);
+          petChat?.setContext({ hall: chapter?.title || '', craft: null });
           stage.classList.add('is-in-room');
           updateCorridorHud('滚轮走近展品 · 点击展品看详情');
           const back = document.getElementById('corridor-back');
           if (back) back.hidden = false;
         },
         onRoomExit: () => {
+          petChat?.setContext({ hall: '', craft: null });
           stage.classList.remove('is-in-room');
           updateCorridorHud('滚轮逛长廊 · 点击木门进入展厅');
           const back = document.getElementById('corridor-back');
           if (back) back.hidden = true;
         },
         onSelectCraft: (craft) => {
-          if (craft) openArtifact(craft);
+          if (!craft) return;
+          petChat?.setContext({ craft });
+          openArtifact(craft);
         },
+        onPetReady: () => petChat?.onPetReady(),
+        onPetClick: () => petChat?.onPetClick(),
+        onPetFrame: (anchor) => petChat?.onPetFrame(anchor),
         onOpenFeature: (featureId) => {
           openFeatureOverlay(featureId);
         },

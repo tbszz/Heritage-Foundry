@@ -22,3 +22,20 @@ describe('Supabase migration security', () => {
     );
   });
 });
+
+describe('craft embeddings migration security', () => {
+  it('enables row level security for the knowledge base table', () => {
+    expect(migrationSql).toMatch(
+      /alter\s+table\s+public\.craft_embeddings\s+enable\s+row\s+level\s+security\s*;/i
+    );
+  });
+
+  it('revokes browser-role access to the knowledge base and its match function', () => {
+    expect(migrationSql).toMatch(
+      /revoke\s+all(?:\s+privileges)?\s+on\s+table\s+public\.craft_embeddings\s+from\s+anon\s*,\s*authenticated\s*;/i
+    );
+    expect(migrationSql).toMatch(
+      /revoke\s+all(?:\s+privileges)?\s+on\s+function\s+public\.match_craft_chunks\(\s*vector\(256\)\s*,\s*int\s*\)\s+from\s+anon\s*,\s*authenticated\s*;/i
+    );
+  });
+});

@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createGLTFLoader } from '../utils/modelLoader.js';
 
@@ -92,7 +91,7 @@ export class ThreeScene {
     this.currentCraft = null;
     this.animationId = null;
     this.gltfLoader = createGLTFLoader();
-    this.gltfExporter = new GLTFExporter();
+    this.gltfExporter = null;
     this.loadingModel = false;
     this.currentModelUrl = null;
     this.currentCarrier = 'keychain';
@@ -857,7 +856,15 @@ export class ThreeScene {
     return applied;
   }
 
-  async exportCurrentModel(exporter = this.gltfExporter) {
+  async ensureGltfExporter() {
+    if (!this.gltfExporter) {
+      const { GLTFExporter } = await import('three/addons/exporters/GLTFExporter.js');
+      this.gltfExporter = new GLTFExporter();
+    }
+    return this.gltfExporter;
+  }
+
+  async exportCurrentModel(exporter = null) {
     if (this.loadingModel) throw new Error('The 3D model is still loading');
     if (!this.model) throw new Error('No 3D product is available to export');
 
@@ -870,8 +877,9 @@ export class ThreeScene {
       throw new Error('Generated artwork has not finished loading');
     }
 
+    const activeExporter = exporter || await this.ensureGltfExporter();
     const exportModel = this.createProductExportModel();
-    const result = await exporter.parseAsync(exportModel, {
+    const result = await activeExporter.parseAsync(exportModel, {
       binary: true,
       onlyVisible: true,
       trs: true,

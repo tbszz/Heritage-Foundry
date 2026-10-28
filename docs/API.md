@@ -44,6 +44,116 @@ If `GEMINI_API_KEY` is not configured, this endpoint returns `503` instead of pr
 
 Body includes `image` as a base64 data URL and `prompt`.
 
+## Creative Brief (对话式造物台)
+
+`POST /api/creative-brief`
+
+Parses one natural-language sentence into a structured creation brief that maps
+directly onto the generator form. Supports follow-up refinement by passing the
+previous brief back. Candidate ids are constrained to the generator page
+selects; invalid model output falls back to the current brief instead of
+reaching the form.
+
+Body:
+
+```json
+{
+  "message": "想做送表弟的生日礼物，他喜欢皮卡丘，老家苏州，要可爱一点",
+  "currentBrief": {
+    "craftId": "papercut",
+    "ipId": "pikachu",
+    "carrierId": "keychain",
+    "styleId": "cute",
+    "customPrompt": ""
+  }
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "brief": {
+    "craftId": "suzhou-embroidery",
+    "craftName": "苏绣",
+    "ipId": "pikachu",
+    "ipName": "皮卡丘",
+    "carrierId": "keychain",
+    "carrierName": "拼豆挂件",
+    "styleId": "cute",
+    "styleName": "可爱校园",
+    "customPrompt": "加入生日元素",
+    "reasoning": "表弟喜欢皮卡丘，送礼场景选可爱气质……"
+  }
+}
+```
+
+Returns `400 BRIEF_MESSAGE_REQUIRED` for an empty message and `503
+GEMINI_NOT_CONFIGURED` without a key.
+
+## Self Check (生成自审)
+
+`POST /api/generate-image` accepts `self_check: true`. The pipeline then runs
+generate → vision review against the carrier checklist → one automatic retry
+with a revision hint when the review demands fixes. The response adds:
+
+```json
+{
+  "review": {
+    "verdict": "pass",
+    "issues": [],
+    "revisionHint": ""
+  },
+  "retried": false
+}
+```
+
+`verdict` is `pass`, `revise`, or `skipped`. A failing review model degrades to
+`skipped` and never blocks the primary image. Self-check adds one or two model
+calls; the browser client raises its timeout accordingly.
+
+## Docent (AI 讲解员)
+
+`POST /api/docent`
+
+Answers visitor questions grounded on `src/data/crafts.json` using a hybrid
+retrieval layer modeled after proven open-source RAG architectures (Supabase's
+pgvector template for storage; Onyx-style vector + keyword fusion):
+
+1. **Embedding**: `gemini-embedding-001` (256-dim, Matryoshka-truncated), shared
+   `GEMINI_API_KEY`.
+2. **Vector store** (first available wins): Supabase pgvector table
+   `public.craft_embeddings` with HNSW cosine index + `match_craft_chunks` RPC
+   (see `supabase/migrations/202610220001_create_craft_embeddings.sql`), falling
+   back to the committed local index `src/data/craft-embeddings.json`, falling
+   back to keyword-only scoring.
+3. **Fusion**: vector and keyword rankings merged via reciprocal rank fusion;
+   the pinned `craftId` (current craft page) is always included first.
+
+Rebuild the index after changing craft data: `npm run knowledge:build` (writes
+the local JSON index and, when Supabase is configured, repopulates the
+pgvector table). Irrelevant questions fall below the similarity threshold
+(`DOCENT_VECTOR_THRESHOLD`, default `0.72`) and are answered honestly instead
+of fabricated.
+
+Body:
+
+```json
+{
+  "question": "布老虎有什么寓意？",
+  "craftId": "tiger-head",
+  "history": [
+    { "role": "user", "text": "你好" },
+    { "role": "docent", "text": "欢迎来到非遗造物局" }
+  ]
+}
+```
+
+Response includes `answer` and `sources` (the retrieved crafts). Returns `400
+DOCENT_QUESTION_REQUIRED` for an empty question and `503 GEMINI_NOT_CONFIGURED`
+without a key.
+
 ## Image-to-3D Generation
 
 The 3D endpoints expose one provider-neutral task contract. The server selects
@@ -261,6 +371,14 @@ Required for AI:
 ```bash
 GEMINI_API_KEY=
 GEMINI_MODEL=gemini-3.1-flash-image
+```
+
+The creative brief, self check, and docent features share `GEMINI_API_KEY` and
+use a text/multimodal model configurable independently:
+
+```bash
+GEMINI_TEXT_MODEL=gemini-2.5-flash
+GEMINI_TEXT_TIMEOUT_MS=45000
 ```
 
 Choose one server-side image-to-3D provider:

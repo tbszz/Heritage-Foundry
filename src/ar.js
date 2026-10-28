@@ -136,6 +136,66 @@ export function getInitialArCraft(search = '') {
   return getCraftById(request.craftId) || null;
 }
 
+const AR_RETURN_PAGE_LABELS = {
+  'crafts.html': '返回百工典藏',
+  'generator.html': '返回造物案台',
+  'index.html': '返回云上展厅'
+};
+
+// 「从哪来回哪去」：能确认同站来路且浏览器有后退历史时原路返回，
+// 直接打开或从站外进入时按内容模式回到逻辑上的来源页。
+export function resolveArReturnTarget({ mode = 'craft', craftId = '', referrer = '', origin = '', historyLength = 0 } = {}) {
+  if (Number(historyLength) > 1 && referrer) {
+    try {
+      const referrerUrl = new URL(referrer);
+      if (!origin || referrerUrl.origin === origin) {
+        const page = referrerUrl.pathname.split('/').pop() || 'index.html';
+        if (page !== 'ar.html') {
+          return { kind: 'back', label: AR_RETURN_PAGE_LABELS[page] || '返回上一页' };
+        }
+      }
+    } catch {
+      // referrer 无法解析时按模式回退
+    }
+  }
+
+  if (mode === 'task') {
+    const params = new URLSearchParams({ carrier: 'figurine' });
+    if (craftId) params.set('craft', craftId);
+    return { kind: 'href', label: '返回造物案台', href: `generator.html?${params.toString()}` };
+  }
+  const query = craftId ? `?craft=${encodeURIComponent(craftId)}` : '';
+  return { kind: 'href', label: '返回百工典藏', href: `crafts.html${query}` };
+}
+
+function applyReturnTarget() {
+  const link = document.getElementById('ar-return-link');
+  if (!link) return;
+  const target = resolveArReturnTarget({
+    mode: pageState.request?.kind || 'craft',
+    craftId: pageState.request?.craftId || DEFAULT_AR_CRAFT_ID,
+    referrer: document.referrer,
+    origin: window.location.origin,
+    historyLength: window.history.length
+  });
+  link.textContent = target.label;
+  link.dataset.returnKind = target.kind;
+  if (target.kind === 'back') {
+    link.removeAttribute('href');
+    link.setAttribute('role', 'button');
+    link.tabIndex = 0;
+  } else {
+    link.setAttribute('href', target.href);
+    link.removeAttribute('role');
+  }
+}
+
+function handleReturnAction(event) {
+  if (event.currentTarget?.dataset.returnKind !== 'back') return;
+  event.preventDefault();
+  window.history.back();
+}
+
 async function configureModelViewer() {
   await customElements.whenDefined('model-viewer');
   customElements.get('model-viewer').dracoDecoderLocation = '/draco/';
@@ -266,10 +326,9 @@ function showCraftDetails(craft, generated = false) {
 
 function setSourceMode(generated) {
   const sourceSection = document.getElementById('ar-source-section');
-  const generatedReturn = document.getElementById('ar-generated-return');
   if (sourceSection) sourceSection.hidden = generated;
-  if (generatedReturn) generatedReturn.hidden = !generated;
   document.body.dataset.arSource = generated ? 'generated' : 'collection';
+  applyReturnTarget();
 }
 
 function beginModelLoad(source, { forceReload = false } = {}) {
@@ -477,6 +536,11 @@ function bindPageEvents() {
   document.getElementById('ar-retry-button')?.addEventListener('click', handleRetryAction);
   document.getElementById('ar-craft-strip')?.addEventListener('keydown', handleCraftStripKeydown);
   document.getElementById('ar-share-link')?.addEventListener('click', (event) => event.currentTarget.select());
+  const returnLink = document.getElementById('ar-return-link');
+  returnLink?.addEventListener('click', handleReturnAction);
+  returnLink?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') handleReturnAction(event);
+  });
 }
 
 async function initArPage() {

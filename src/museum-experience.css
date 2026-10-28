@@ -3242,3 +3242,215 @@ body[data-experience-mode="cinematic"] .museum-stage-index {
     transition-duration: 180ms !important;
   }
 }
+
+/* ---------- 灵宠小布：头顶对话气泡 + 底部提问栏（与长廊 HUD 同族的深色玻璃 + 细金边） ---------- */
+.spirit-pet-bubble {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 9;
+  pointer-events: none;
+  will-change: transform;
+  transition: opacity 240ms ease;
+}
+
+.spirit-pet-bubble[hidden] {
+  display: none;
+}
+
+.spirit-pet-bubble.is-offscreen {
+  opacity: 0;
+}
+
+.spirit-pet-bubble-card {
+  position: relative;
+  width: max-content;
+  max-width: min(320px, calc(100vw - 32px));
+  padding: 14px 34px 14px 16px;
+  border: 1px solid rgb(201 154 46 / 0.6);
+  border-radius: 14px;
+  background: rgb(14 16 20 / 0.86);
+  backdrop-filter: blur(10px);
+  color: var(--silk);
+  font-family: "LXGW WenKai", serif;
+  font-size: 15px;
+  line-height: 1.7;
+  pointer-events: auto;
+  transform: translate(-50%, calc(-100% - 14px));
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.35);
+}
+
+.spirit-pet-bubble-card::after {
+  position: absolute;
+  bottom: -7px;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  border-right: 1px solid rgb(201 154 46 / 0.6);
+  border-bottom: 1px solid rgb(201 154 46 / 0.6);
+  background: rgb(14 16 20 / 0.86);
+  content: "";
+  transform: translateX(-50%) rotate(45deg);
+}
+
+/* 长回答在正文里滚动；卡片本身不能 overflow，否则底部小箭头会撑出滚动条 */
+.spirit-pet-text {
+  max-height: 38vh;
+  margin: 0;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+
+.spirit-pet-bubble.is-thinking .spirit-pet-text {
+  color: rgb(231 225 215 / 0.7);
+  animation: spirit-pet-thinking 1.2s ease-in-out infinite;
+}
+
+@keyframes spirit-pet-thinking {
+  50% { opacity: 0.45; }
+}
+
+.spirit-pet-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.spirit-pet-sources[hidden] {
+  display: none;
+}
+
+.spirit-pet-sources span {
+  padding: 2px 8px;
+  border: 1px solid rgb(201 154 46 / 0.4);
+  border-radius: 999px;
+  color: #e6cd8f;
+  font-size: 12px;
+}
+
+.spirit-pet-bubble-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: rgb(231 225 215 / 0.6);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.spirit-pet-bubble-close:hover {
+  color: var(--silk);
+  background: rgb(231 225 215 / 0.1);
+}
+
+/* 右下角留给省流开关（bottom 18px，高 44px），提问栏叠在它上方 */
+.spirit-pet-dock {
+  position: absolute;
+  right: var(--page-padding);
+  bottom: 76px;
+  z-index: 9;
+  display: grid;
+  gap: 8px;
+  width: min(380px, calc(100% - 32px));
+}
+
+.spirit-pet-dock[hidden] {
+  display: none;
+}
+
+.spirit-pet-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.spirit-pet-chips button {
+  padding: 6px 12px;
+  border: 1px solid rgb(201 154 46 / 0.45);
+  border-radius: 999px;
+  background: rgb(14 16 20 / 0.72);
+  backdrop-filter: blur(10px);
+  color: var(--silk);
+  font-family: "LXGW WenKai", serif;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+
+.spirit-pet-chips button:hover {
+  border-color: rgb(201 154 46 / 0.9);
+  transform: translateY(-1px);
+}
+
+.spirit-pet-field {
+  display: flex;
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid rgb(201 154 46 / 0.55);
+  border-radius: 999px;
+  background: rgb(14 16 20 / 0.8);
+  backdrop-filter: blur(10px);
+}
+
+.spirit-pet-field input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--silk);
+  font-family: "LXGW WenKai", serif;
+  font-size: 14px;
+  outline: none;
+}
+
+.spirit-pet-field input::placeholder {
+  color: rgb(231 225 215 / 0.45);
+}
+
+.spirit-pet-field button {
+  flex: none;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: #c99a2e;
+  color: #14100a;
+  font-family: "LXGW WenKai", serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.spirit-pet-field button:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.spirit-pet-field:focus-within {
+  border-color: rgb(201 154 46 / 0.95);
+}
+
+/* 窄屏时省流开关上移到 bottom 122px，提问栏回到底边 */
+@media (max-width: 760px) {
+  .spirit-pet-dock {
+    right: 16px;
+    bottom: 16px;
+  }
+
+  .spirit-pet-bubble-card {
+    font-size: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spirit-pet-bubble.is-thinking .spirit-pet-text {
+    animation: none;
+  }
+}

@@ -111,8 +111,9 @@ export async function generateImage(prompt, options = {}) {
       ip,
       carrier,
       customPrompt,
+      selfCheck = false,
       signal,
-      timeoutMs = 135000
+      timeoutMs = 165000
     } = options;
 
     const { response, data } = await fetchJsonWithTimeout(`${API_BASE_URL}/generate-image`, {
@@ -129,18 +130,21 @@ export async function generateImage(prompt, options = {}) {
         craft_type,
         ip,
         carrier,
-        customPrompt
+        customPrompt,
+        self_check: selfCheck === true
       }),
       signal
     }, timeoutMs);
-    
+
     if (data.success && data.image) {
       return {
         imageUrl: data.image,
-        message: data.message || 'AI生成成功'
+        message: data.message || 'AI生成成功',
+        review: data.review || null,
+        retried: data.retried === true
       };
     }
-    
+
     throw new Error(data.error || '生成图片失败');
   } catch (error) {
     console.warn('Image generation failed:', error);
@@ -151,6 +155,50 @@ export async function generateImage(prompt, options = {}) {
         : error.message || '生成图片失败';
     throw new Error(message);
   }
+}
+
+export async function createCreativeBrief(message, currentBrief = null, options = {}) {
+  const { signal, timeoutMs = 45000 } = options;
+
+  const { response, data } = await fetchJsonWithTimeout(`${API_BASE_URL}/creative-brief`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ message, currentBrief }),
+    signal
+  }, timeoutMs);
+
+  if (!response.ok || !data?.success || !data?.brief) {
+    const error = new Error(data?.error || '解析创作需求失败');
+    error.code = data?.code;
+    throw error;
+  }
+
+  return data.brief;
+}
+
+export async function askDocent(question, { craftId, history = [], persona, hall } = {}, options = {}) {
+  const { timeoutMs = 45000 } = options;
+
+  const { response, data } = await fetchJsonWithTimeout(`${API_BASE_URL}/docent`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ question, craftId, history, persona, hall })
+  }, timeoutMs);
+
+  if (!response.ok || !data?.success) {
+    const error = new Error(data?.error || '讲解员暂时无法回答');
+    error.code = data?.code;
+    throw error;
+  }
+
+  return {
+    answer: data.answer || '',
+    sources: Array.isArray(data.sources) ? data.sources : []
+  };
 }
 
 function createApiError(data, fallbackMessage) {
