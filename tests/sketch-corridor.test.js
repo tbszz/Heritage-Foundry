@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import * as THREE from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import {
   CORRIDOR,
@@ -6,6 +7,7 @@ import {
   SketchCorridorScene,
   clampCorridorZ,
   getCorridorDoorLayout,
+  getCorridorKitLayout,
   getCorridorRailBounds,
   getFeatureDoorLayout,
   getGeneratorDoorLayout,
@@ -27,6 +29,158 @@ const chapters = [
 ];
 
 describe('sketch corridor scene', () => {
+  it('assigns every door to a portal bay on its own side', () => {
+    for (const count of [0, 1, 4]) {
+      const doors = [...getCorridorDoorLayout(chapters.slice(0, count)), getGeneratorDoorLayout(count), ...getFeatureDoorLayout(count)];
+      const bays = getCorridorKitLayout(doors, 14, getCorridorRailBounds(count).minZ - 1.5);
+      for (const door of doors) {
+        expect(door.position.z % 3).toBeCloseTo(0);
+        expect(bays.find(bay => bay.z === door.position.z)?.[door.side]).toBe('portal');
+      }
+      for (const bay of bays) for (const side of ['left', 'right']) {
+        expect(bay[side]).toBe(doors.some(door => door.side === side && door.position.z === bay.z) ? 'portal' : 'wall');
+      }
+    }
+  });
+
+  it('covers the corridor with contiguous bays and aligned outer boundaries', () => {
+    for (const [start, end] of [[14, -61], [13.5, -61.5], [1.5, -1.5]]) {
+      const bays = getCorridorKitLayout([], start, end);
+      expect(bays[0].from).toBeGreaterThanOrEqual(start);
+      expect(bays.at(-1).to).toBeLessThanOrEqual(end);
+      expect(bays[0].from - start).toBeLessThan(3);
+      expect(end - bays.at(-1).to).toBeLessThan(3);
+      bays.forEach((bay, index) => {
+        expect(bay.z % 3).toBeCloseTo(0);
+        expect(bay.from - bay.to).toBe(3);
+        if (index) expect(bays[index - 1].to).toBe(bay.from);
+      });
+    }
+    expect(getCorridorKitLayout([], 0, 0)).toEqual([]);
+  });
+
+  it('instances kit primitives, hides fallback structures, and leaves picking to doors', async () => {
+    const scene = Object.create(SketchCorridorScene.prototype);
+    scene.scene = new THREE.Scene();
+    scene.corridorFallback = new THREE.Group();
+    scene.corridorLanterns = [new THREE.Group()];
+    scene.doors = [];
+    scene.textureAnisotropy = 4;
+    const asset = new THREE.Group();
+    for (const name of ['wall', 'portal', 'ceiling', 'floor']) {
+      const node = new THREE.Group();
+      node.name = `kit_${name}`;
+      const material = new THREE.MeshBasicMaterial();
+      node.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), material));
+      if (name === 'ceiling') node.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), material));
+      asset.add(node);
+    }
+    scene.loader = { loadAsync: vi.fn().mockResolvedValue({ scene: asset }) };
+    const doors = getCorridorDoorLayout(chapters);
+    const layout = getCorridorKitLayout(doors, 14, -40);
+    expect(await scene.loadCorridorKit(layout)).toBe(true);
+    expect(scene.corridorFallback.visible).toBe(false);
+    expect(scene.corridorLanterns[0].visible).toBe(false);
+    expect(scene.corridorKit.children).toHaveLength(4);
+    const matrix = new THREE.Matrix4();
+    for (const mesh of scene.corridorKit.children) {
+      expect(mesh.isInstancedMesh).toBe(true);
+      expect(mesh.material.toneMapped).toBe(false);
+      expect(mesh.material.fog).toBe(false);
+      const intersections = [];
+      mesh.raycast(new THREE.Raycaster(), intersections);
+      expect(intersections).toEqual([]);
+      if (mesh.name.startsWith('kit_portal')) {
+        expect(mesh.count).toBe(doors.length);
+        mesh.getMatrixAt(0, matrix);
+        const position = new THREE.Vector3().setFromMatrixPosition(matrix);
+        expect(position.toArray()).toEqual([-5, 0, -6]);
+        expect(new THREE.Vector3(0, 0, 1).transformDirection(matrix).x).toBeCloseTo(1);
+      }
+    }
+  });
+
+  it.each([true, false])('removes covered portal end caps without changing visible reveals or other modules (indexed: %s)', async (indexed) => {
+    // Wall, wainscot and lintel end caps occupy the same planes as the red
+    // jambs. Their different baked UVs must never compete in the depth buffer.
+    const hidden = [
+      [-1, 0, -0.12, -1, 4.6, -0.12, -1, 0, 0],
+      [1, 0, 0, 1, 1, 0, 1, 0, 0.025],
+      [-1, 3.1, -0.12, 1, 3.1, -0.12, 1, 3.1, 0]
+    ];
+    const visible = [
+      [-1, 0, -0.12, -1, 3.1, -0.12, -1, 0, 0.11],
+      [1, 0, -0.12, 1, 3.1, -0.12, 1, 0, 0.11],
+      [-1.24, 3.1, -0.12, 1.24, 3.1, -0.12, 1.24, 3.1, 0.11],
+      [-1.24, 0, 0.11, -1, 0, 0.11, -1, 3.1, 0.11]
+    ];
+    const geometry = new THREE.BufferGeometry();
+    // Include the small coordinate error introduced by GLB quantization.
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute([...hidden, ...visible].flat().map(v => v + 0.00003), 3));
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(Array.from({ length: 42 }, (_, i) => i / 42), 2));
+    if (indexed) geometry.setIndex(Array.from({ length: 21 }, (_, i) => i));
+    const asset = new THREE.Group();
+    for (const name of ['wall', 'portal', 'ceiling', 'floor']) {
+      const node = new THREE.Group();
+      node.name = `kit_${name}`;
+      node.add(new THREE.Mesh(geometry.clone(), new THREE.MeshBasicMaterial()));
+      asset.add(node);
+    }
+    const scene = Object.create(SketchCorridorScene.prototype);
+    Object.assign(scene, {
+      scene: new THREE.Scene(), corridorFallback: new THREE.Group(),
+      corridorLanterns: [], doors: [], textureAnisotropy: 4,
+      loader: { loadAsync: vi.fn().mockResolvedValue({ scene: asset }) }
+    });
+    expect(await scene.loadCorridorKit(getCorridorKitLayout([], 1.5, -1.5))).toBe(true);
+    const portal = scene.corridorKit.children.find(mesh => mesh.name.startsWith('kit_portal'));
+    expect(portal.geometry.index.count).toBe(visible.length * 3);
+    expect(Array.from(portal.geometry.index.array)).toEqual(Array.from({ length: 12 }, (_, i) => i + 9));
+    expect(Array.from(portal.geometry.attributes.uv.array)).toEqual(Array.from(geometry.attributes.uv.array));
+    for (const mesh of scene.corridorKit.children.filter(mesh => mesh !== portal)) {
+      expect(mesh.geometry.index?.count ?? mesh.geometry.attributes.position.count).toBe(21);
+    }
+    geometry.dispose();
+  });
+
+  it('retains the fallback when the kit fails and frees a late asset after disposal', async () => {
+    const scene = Object.create(SketchCorridorScene.prototype);
+    scene.corridorFallback = new THREE.Group();
+    scene.loader = { loadAsync: vi.fn().mockRejectedValue(new Error('offline')) };
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(await scene.loadCorridorKit([])).toBe(false);
+    expect(scene.corridorFallback.visible).toBe(true);
+    warning.mockRestore();
+    const map = new THREE.Texture();
+    const material = new THREE.MeshBasicMaterial({ map });
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(), material);
+    const releaseGeometry = vi.spyOn(mesh.geometry, 'dispose');
+    const releaseMaterial = vi.spyOn(material, 'dispose');
+    const releaseTexture = vi.spyOn(map, 'dispose');
+    scene.loader.loadAsync.mockResolvedValue({ scene: mesh });
+    scene.disposed = true;
+    expect(await scene.loadCorridorKit([])).toBe(false);
+    expect(releaseGeometry).toHaveBeenCalledOnce();
+    expect(releaseMaterial).toHaveBeenCalledOnce();
+    expect(releaseTexture).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the closed door behind the wall and fits its rear hinge idempotently', () => {
+    const scene = Object.create(SketchCorridorScene.prototype);
+    const panel = new THREE.Mesh(new THREE.PlaneGeometry(), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0 }));
+    const door = { side: 'left', group: new THREE.Group(), pivot: new THREE.Group(), model: new THREE.Group(), panel, modelDepth: 0.364, modelClosedZ: -0.2 };
+    scene.fitKitDoor(door);
+    const material = door.backing.material;
+    scene.fitKitDoor(door);
+    expect(door.group.position.x).toBe(-5);
+    expect(door.pivot.position.z).toBeCloseTo(-0.489);
+    expect(door.model.position.z).toBeCloseTo(0.164);
+    expect(door.backing.material).toBe(material);
+    expect(door.backing.material.transparent).toBe(false);
+    expect(panel.material.transparent).toBe(true);
+    expect(door.pivot.position.z + door.modelDepth).toBeCloseTo(-0.125);
+  });
+
   it('lays out one door per chapter, alternating sides, receding down the hall', () => {
     const layout = getCorridorDoorLayout(chapters);
     expect(layout).toHaveLength(4);

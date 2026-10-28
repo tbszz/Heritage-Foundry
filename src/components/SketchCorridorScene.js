@@ -5,12 +5,15 @@
 // 渲染/灯光使用 RoomEnvironment PMREM + ACES + 暖金射灯，
 // 墙面/地面/门均为受光 Standard 材质，GLB 模型保持正常立体渲染。
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { Easing, Tween, update as updateTweens } from '@tweenjs/tween.js/dist/tween.esm.js';
 import { createGLTFLoader } from '../utils/modelLoader.js';
 import { getMuseumRenderBudget, loadManagedMuseumTexture } from '../utils/museumTexture.js';
+import { PET, SpiritPet } from './SpiritPet.js';
 
 const HALL_INK = 0x171411;
+const DOOR_LEAF_GAP = 0.01;
 const GOLD = '#c99a2e';
 const GOLD_TEXT = '#e6cd8f';
 const SILK = '#e7e1d7';
@@ -26,7 +29,7 @@ export const CORRIDOR = {
   startZ: 8,           // 轨道起点（入口）
   firstDoorZ: -6,      // 第一扇门 z
   doorSpacing: 9,      // 展厅门间距
-  generatorGap: 7,     // AI 共创门与最后一扇展厅门的间距
+  generatorGap: 6,     // AI 共创门与最后一扇展厅门的间距
   doorWidth: 2.0,
   doorHeight: 3.1,
   eyeY: 1.7,
@@ -122,7 +125,7 @@ export function getFeatureDoorLayout(chapterCount = 0) {
 export function getCorridorRailBounds(doorCount = 0, featureCount = FEATURE_DOORS.length) {
   const lastDoorZ = CORRIDOR.firstDoorZ
     - Math.max(doorCount - 1, 0) * CORRIDOR.doorSpacing
-    - (doorCount > 0 ? CORRIDOR.generatorGap : 0)
+    - CORRIDOR.generatorGap
     - featureCount * CORRIDOR.doorSpacing;
   return {
     maxZ: CORRIDOR.startZ,
@@ -132,6 +135,27 @@ export function getCorridorRailBounds(doorCount = 0, featureCount = FEATURE_DOOR
 
 export function clampCorridorZ(z, bounds) {
   return THREE.MathUtils.clamp(z, bounds.minZ, bounds.maxZ);
+}
+
+// 纯函数：灵宠可走区域。走廊夹在两墙之间；展厅限定在房间内、门洞以里（可单测）。
+export function getPetWalkBounds(viewState, door, railBounds) {
+  if (viewState === 'room' && door) {
+    const dir = door.side === 'left' ? -1 : 1;
+    const near = dir * (ROOM.wallX + PET.wallMargin + 0.6);
+    const far = dir * (ROOM.wallX + ROOM.depth - PET.wallMargin);
+    return {
+      minX: Math.min(near, far),
+      maxX: Math.max(near, far),
+      minZ: door.position.z - ROOM.width / 2 + PET.wallMargin,
+      maxZ: door.position.z + ROOM.width / 2 - PET.wallMargin
+    };
+  }
+  return {
+    minX: -(CORRIDOR.width / 2 - PET.wallMargin),
+    maxX: CORRIDOR.width / 2 - PET.wallMargin,
+    minZ: railBounds.minZ - 2,
+    maxZ: CORRIDOR.startZ + 4
+  };
 }
 
 export function shouldIlluminateMuseumDoor({ cameraZ = 0, doorZ = 0, viewState = 'corridor' } = {}) {
@@ -148,6 +172,21 @@ export function getWallSegments(doorZs = [], startZ, endZ, holeHalfWidth = 1.14)
   });
   segments.push({ from: cursor, to: endZ });
   return segments.filter((segment) => segment.from - segment.to > 0.01);
+}
+
+// 纯函数：3 米模块格，首尾向外对齐到格子边界。
+export function getCorridorKitLayout(layouts = [], startZ, endZ) {
+  if (!Number.isFinite(startZ) || !Number.isFinite(endZ) || startZ <= endZ) return [];
+  const first = Math.ceil((startZ - 1.5) / 3);
+  const last = Math.floor((endZ + 1.5) / 3);
+  const portals = {
+    left: new Set(layouts.filter(door => door.side === 'left').map(door => door.position.z)),
+    right: new Set(layouts.filter(door => door.side === 'right').map(door => door.position.z))
+  };
+  return Array.from({ length: first - last + 1 }, (_, index) => {
+    const z = (first - index) * 3;
+    return { z, from: z + 1.5, to: z - 1.5, left: portals.left.has(z) ? 'portal' : 'wall', right: portals.right.has(z) ? 'portal' : 'wall' };
+  });
 }
 
 // 纯函数：展厅展台布局——沿进深（x）排布，在门轴两侧交替（可单测）。
@@ -169,6 +208,32 @@ export function getRoomStandLayout(crafts = [], door = null) {
       }
     };
   });
+}
+
+// kit_portal 的红门套覆盖墙体、护墙板和腰线的端面。它们仍有各自的
+// 烘焙 UV，且导出后共面，移动时会在白墙与红漆之间争夺深度。
+// 只删藏在门套里的端盖；保留伸到局部 z=0.11 的完整红色门洞侧面。
+function removeCoveredPortalCaps(geometry) {
+  const epsilon = 0.0001; // 容纳 GLB 顶点量化误差（约 0.00005 米）。
+  const position = geometry.getAttribute('position');
+  const index = geometry.index;
+  const kept = [];
+  const triangleBounds = new THREE.Box3();
+  const vertex = new THREE.Vector3();
+  for (let i = 0; i < (index?.count ?? position.count); i += 3) {
+    triangleBounds.makeEmpty();
+    for (let j = 0; j < 3; j++) {
+      vertex.fromBufferAttribute(position, index ? index.getX(i + j) : i + j);
+      triangleBounds.expandByPoint(vertex);
+    }
+    const { min, max } = triangleBounds;
+    const jambCap = max.x - min.x < epsilon && Math.abs(Math.abs(min.x) - CORRIDOR.doorWidth / 2) < epsilon;
+    const lintelCap = max.y - min.y < epsilon && Math.abs(min.y - CORRIDOR.doorHeight) < epsilon;
+    if ((jambCap || lintelCap) && max.z < 0.11 - epsilon) continue;
+    for (let j = 0; j < 3; j++) kept.push(index ? index.getX(i + j) : i + j);
+  }
+  // 只改索引，保留法线、烘焙 UV 和源资产；无索引几何也统一后再合批。
+  geometry.setIndex(kept);
 }
 
 export class SketchCorridorScene {
@@ -199,6 +264,9 @@ export class SketchCorridorScene {
     this.textureCache = new Map();
     this.textureAnisotropy = 4;
     this.hoveredStand = null;
+    this.spiritPet = null;
+    this.petHovered = false;
+    this.petAnchor = new THREE.Vector3();
 
     // 轨道与视差状态（走廊沿 z，展厅沿 x）
     this.targetZ = CORRIDOR.startZ;
@@ -220,8 +288,14 @@ export class SketchCorridorScene {
     this.visibilityHandler = null;
   }
 
-  init({ chapters = [], onRoomEnter, onRoomExit, onSelectCraft, onOpenFeature, onReady } = {}) {
-    this.callbacks = { onRoomEnter, onRoomExit, onSelectCraft, onOpenFeature, onReady };
+  init({
+    chapters = [], onRoomEnter, onRoomExit, onSelectCraft, onOpenFeature, onReady,
+    onPetReady, onPetClick, onPetFrame
+  } = {}) {
+    this.callbacks = {
+      onRoomEnter, onRoomExit, onSelectCraft, onOpenFeature, onReady,
+      onPetReady, onPetClick, onPetFrame
+    };
     this.reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || false;
 
     const width = Math.max(this.container.clientWidth, 1);
@@ -270,6 +344,7 @@ export class SketchCorridorScene {
     layouts.forEach((layout) => this.buildDoor(layout));
     this.buildFrames(chapters);
     this.buildLanterns();
+    this.spawnSpiritPet();
     this.bindEvents();
 
     // 性能预热：一次性编译 shader + 上传 Canvas 纹理，避免首次滚动时卡顿
@@ -295,10 +370,16 @@ export class SketchCorridorScene {
 
   buildCorridor(layouts) {
     const bounds = this.railBounds;
-    const startZ = CORRIDOR.startZ + 6; // 入口后再延伸一段，避免转身看到虚空
-    const endZ = bounds.minZ - 1.5;
+    const kitLayout = getCorridorKitLayout(layouts, CORRIDOR.startZ + 6, bounds.minZ - 1.5);
+    const startZ = kitLayout[0].from;
+    const endZ = kitLayout.at(-1).to;
     const length = startZ - endZ;
     const centerZ = (startZ + endZ) / 2;
+
+    const fallback = new THREE.Group();
+    fallback.name = 'corridor_fallback';
+    this.corridorFallback = fallback;
+    this.scene.add(fallback);
 
     // 深灰石材地面：较低重复频率保留大板尺度，避免细碎棋盘格。
     const floor = new THREE.Mesh(
@@ -311,7 +392,7 @@ export class SketchCorridorScene {
     );
     floor.rotation.x = -Math.PI / 2;
     floor.position.set(0, 0, centerZ);
-    this.scene.add(floor);
+    fallback.add(floor);
 
     // 两侧墙：按门洞切成墙板段 + 门洞上方过梁
     [-1, 1].forEach((sign) => {
@@ -325,7 +406,7 @@ export class SketchCorridorScene {
         );
         wall.rotation.y = side === 'left' ? Math.PI / 2 : -Math.PI / 2;
         wall.position.set(sign * CORRIDOR.width / 2, CORRIDOR.height / 2, (from + to) / 2);
-        this.scene.add(wall);
+        fallback.add(wall);
       });
       // 门洞过梁（门楣上方的墙板）
       doorZs.forEach((z) => {
@@ -336,7 +417,7 @@ export class SketchCorridorScene {
         );
         lintel.rotation.y = side === 'left' ? Math.PI / 2 : -Math.PI / 2;
         lintel.position.set(sign * CORRIDOR.width / 2, CORRIDOR.doorHeight + lintelHeight / 2, z);
-        this.scene.add(lintel);
+        fallback.add(lintel);
       });
     });
 
@@ -347,7 +428,7 @@ export class SketchCorridorScene {
     );
     ceiling.rotation.x = Math.PI / 2;
     ceiling.position.set(0, CORRIDOR.height, centerZ);
-    this.scene.add(ceiling);
+    fallback.add(ceiling);
 
     // 中轴织物只保留暗朱砂与靛青细边，纹样退到近看层级。
     const carpet = new THREE.Mesh(
@@ -360,7 +441,7 @@ export class SketchCorridorScene {
     );
     carpet.rotation.x = -Math.PI / 2;
     carpet.position.set(0, 0.015, centerZ);
-    this.scene.add(carpet);
+    fallback.add(carpet);
 
     // 两侧墙脚鎏金踢脚线
     const baseTrimGeometry = new THREE.BoxGeometry(0.06, 0.16, length);
@@ -368,7 +449,7 @@ export class SketchCorridorScene {
     [-1, 1].forEach((sign) => {
       const trim = new THREE.Mesh(baseTrimGeometry, baseTrimMaterial);
       trim.position.set(sign * (CORRIDOR.width / 2 - 0.04), 0.08, centerZ);
-      this.scene.add(trim);
+      fallback.add(trim);
     });
 
     // 尽头墙：云纹石底 + 金凤照壁 + 横版馆名金匾
@@ -412,6 +493,110 @@ export class SketchCorridorScene {
     );
     title.position.set(0, 0.62, endZ + 0.06);
     this.scene.add(title);
+    this.corridorKitPromise = this.loadCorridorKit(kitLayout);
+  }
+
+  async loadCorridorKit(layout) {
+    let asset;
+    const group = new THREE.Group();
+    group.name = 'corridor_kit';
+    try {
+      asset = await this.loader.loadAsync('/models/architecture/corridor-kit.glb');
+      if (this.disposed) {
+        disposeObjectResources(asset.scene);
+        return false;
+      }
+      asset.scene.updateMatrixWorld(true);
+      const placements = { wall: [], portal: [], ceiling: [], floor: [] };
+      layout.forEach(bay => {
+        ['left', 'right'].forEach(side => {
+          const left = side === 'left';
+          placements[bay[side]].push(new THREE.Matrix4().makeRotationY(left ? Math.PI / 2 : -Math.PI / 2)
+            .setPosition(left ? -CORRIDOR.width / 2 : CORRIDOR.width / 2, 0, bay.z));
+        });
+        const matrix = new THREE.Matrix4().makeTranslation(0, 0, bay.z);
+        placements.ceiling.push(matrix);
+        placements.floor.push(matrix);
+      });
+      for (const name of ['wall', 'portal', 'ceiling', 'floor']) {
+        const source = asset.scene.getObjectByName(`kit_${name}`);
+        if (!source) throw new Error(`Missing kit_${name}`);
+        const inverse = source.matrixWorld.clone().invert();
+        const byMaterial = new Map();
+        source.traverse(mesh => {
+          if (!mesh.isMesh) return;
+          const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+          materials.forEach((material, index) => {
+            const geometry = mesh.geometry.clone();
+            // 多材质网格只取当前材质的索引，统一到模块局部坐标。
+            if (Array.isArray(mesh.material)) {
+              const indices = [];
+              geometry.groups.filter(g => g.materialIndex === index).forEach(g => {
+                for (let i = g.start; i < g.start + g.count; i++) indices.push(geometry.index ? geometry.index.getX(i) : i);
+              });
+              geometry.setIndex(indices);
+            }
+            geometry.clearGroups();
+            geometry.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inverse, mesh.matrixWorld));
+            if (name === 'portal') removeCoveredPortalCaps(geometry);
+            if (material.isMeshBasicMaterial) {
+              material.toneMapped = false;
+              material.fog = false;
+            }
+            if (material.map) material.map.anisotropy = this.textureAnisotropy;
+            const geometries = byMaterial.get(material) || [];
+            geometries.push(geometry);
+            byMaterial.set(material, geometries);
+          });
+        });
+        for (const [material, geometries] of byMaterial) {
+          const geometry = mergeGeometries(geometries);
+          geometries.forEach(item => item.dispose());
+          if (!geometry) throw new Error(`Invalid kit_${name} geometry`);
+          const mesh = new THREE.InstancedMesh(geometry, material, placements[name].length);
+          mesh.name = `kit_${name}_${material.name}`;
+          placements[name].forEach((matrix, index) => mesh.setMatrixAt(index, matrix));
+          mesh.instanceMatrix.needsUpdate = true;
+          mesh.computeBoundingSphere();
+          mesh.raycast = () => {}; // 模块不参与门和展品的拾取。
+          group.add(mesh);
+        }
+      }
+      this.scene.add(group);
+      this.corridorKit = group;
+      this.corridorFallback.visible = false;
+      this.corridorLanterns.forEach(lantern => { lantern.visible = false; });
+      // 门组对齐真正的墙面，牌匾仍离墙 8 厘米。
+      this.doors.forEach(door => this.fitKitDoor(door));
+      // 实例使用复制后的几何体，源材质和贴图交给场景统一释放。
+      asset.scene.traverse(mesh => mesh.geometry?.dispose());
+      return true;
+    } catch (error) {
+      group.removeFromParent();
+      disposeObjectResources(group);
+      if (asset) disposeObjectResources(asset.scene);
+      console.warn('长廊模块加载失败，使用备用走廊', error.message);
+      return false;
+    }
+  }
+
+  fitKitDoor(door) {
+    door.group.position.x = door.side === 'left' ? -CORRIDOR.width / 2 : CORRIDOR.width / 2;
+    door.pivot.position.z = -0.125 - (door.modelDepth || 0);
+    if (!door.model) return;
+    // 铰轴放在门扇背面，厚门在 106° 时也避开门洞侧壁。
+    door.model.position.z = door.modelClosedZ + door.modelDepth;
+    if (!door.backing) {
+      // 背板边缘藏在墙后，封住扫描门缺口；拾取仍使用原来的门面。
+      door.backing = new THREE.Mesh(
+        new THREE.PlaneGeometry(2.6, CORRIDOR.doorHeight),
+        new THREE.MeshStandardMaterial({ color: 0x5b1711, roughness: 0.7, side: THREE.DoubleSide })
+      );
+      // 退到门扇背面之后 5 毫米，避免共面闪烁。
+      door.backing.position.set(CORRIDOR.doorWidth / 2, CORRIDOR.doorHeight / 2, -0.005);
+      door.backing.raycast = () => {};
+      door.pivot.add(door.backing);
+    }
   }
 
   buildDoor(layout) {
@@ -421,8 +606,7 @@ export class SketchCorridorScene {
     group.rotation.y = layout.side === 'left' ? Math.PI / 2 : -Math.PI / 2;
     this.scene.add(group);
 
-    // Tripo provides all visible door geometry and materials. This transparent
-    // plane is only a stable click target while the GLB is loading.
+    // 透明平面保留稳定的门扇拾取范围。
     const pivot = new THREE.Group();
     pivot.position.set(-CORRIDOR.doorWidth / 2, 0, 0.01);
     group.add(pivot);
@@ -452,6 +636,7 @@ export class SketchCorridorScene {
       ...layout,
       group,
       pivot,
+      panel,
       sign,
       spot,
       openAngle: 1.85,
@@ -474,12 +659,19 @@ export class SketchCorridorScene {
       const bounds = new THREE.Box3().setFromObject(model);
       const size = bounds.getSize(new THREE.Vector3());
       if (size.x <= 0 || size.y <= 0) return;
-      model.scale.multiply(new THREE.Vector3(CORRIDOR.doorWidth / size.x, CORRIDOR.doorHeight / size.y, CORRIDOR.doorHeight / size.y));
+      // 门扇四周各收 1 厘米，避免侧面与门套内壁共面闪烁。
+      const leafWidth = CORRIDOR.doorWidth - DOOR_LEAF_GAP * 2;
+      const leafHeight = CORRIDOR.doorHeight - DOOR_LEAF_GAP * 2;
+      model.scale.multiply(new THREE.Vector3(leafWidth / size.x, leafHeight / size.y, leafHeight / size.y));
       const fitted = new THREE.Box3().setFromObject(model);
-      model.position.x -= fitted.min.x;
-      model.position.y -= fitted.min.y;
+      model.position.x -= fitted.min.x - DOOR_LEAF_GAP;
+      model.position.y -= fitted.min.y - DOOR_LEAF_GAP;
       // Recess the full thickness behind the wall; only the front face meets the opening.
       model.position.z -= fitted.max.z;
+      door.model = model;
+      door.modelClosedZ = model.position.z;
+      door.modelDepth = fitted.max.z - fitted.min.z;
+      if (this.corridorKit) this.fitKitDoor(door);
       model.traverse(node => { if (node.isMesh) node.userData.door = door; });
       pivot.add(model);
       door.modelLoaded = true;
@@ -839,10 +1031,70 @@ export class SketchCorridorScene {
     }, this.reducedMotion ? 300 : 1050);
   }
 
+  // ---------- 灵宠 ----------
+
+  // 灵宠模型异步加载，失败只影响灵宠本身，长廊照常可逛
+  spawnSpiritPet() {
+    this.spiritPet = new SpiritPet(this.scene, this.loader);
+    this.spiritPet.load()
+      .then(() => {
+        if (!this.disposed) this.callbacks.onPetReady?.();
+      })
+      .catch((error) => {
+        console.warn('Spirit pet unavailable:', error);
+        this.spiritPet?.dispose();
+        this.spiritPet = null;
+      });
+  }
+
+  updateSpiritPet(dt) {
+    const pet = this.spiritPet;
+    if (!pet) return;
+    pet.update(dt, {
+      camera: this.camera,
+      yaw: this.baseYaw,
+      bounds: getPetWalkBounds(this.viewState, this.currentDoor, this.railBounds),
+      settled: this.viewState === 'corridor' || this.viewState === 'room'
+    });
+
+    // 悬停灵宠时显示手势；离开后交还给门 / 展台的悬停状态
+    this.raycaster.setFromCamera(this.pointerNdc, this.camera);
+    const hovered = this.inputEnabled && pet.intersects(this.raycaster);
+    if (hovered !== this.petHovered) {
+      this.petHovered = hovered;
+      const sceneHover = this.viewState === 'room' ? this.hoveredStand : this.hoveredDoor;
+      this.renderer.domElement.style.cursor = hovered || sceneHover ? 'pointer' : '';
+    }
+
+    // 把头顶位置投到屏幕，供页面层摆放对话气泡
+    if (!this.callbacks.onPetFrame) return;
+    const visible = pet.isVisible();
+    let anchor = { visible: false, x: 0, y: 0 };
+    if (visible) {
+      pet.getHeadPosition(this.petAnchor).project(this.camera);
+      const inView = this.petAnchor.z < 1 && Math.abs(this.petAnchor.x) < 1.1 && Math.abs(this.petAnchor.y) < 1.1;
+      anchor = {
+        visible: inView,
+        x: (this.petAnchor.x + 1) / 2 * this.container.clientWidth,
+        y: (1 - this.petAnchor.y) / 2 * this.container.clientHeight
+      };
+    }
+    this.callbacks.onPetFrame(anchor);
+  }
+
+  setPetTalking(talking) {
+    this.spiritPet?.setTalking(talking);
+  }
+
+  petCheer() {
+    this.spiritPet?.cheer();
+  }
+
   // ---------- 墙面展品格 ----------
 
   // 宫灯壁灯：入口段与功能门区段的门间墙面各挂一盏，暖光晕填补墙面留白
   buildLanterns() {
+    this.corridorLanterns = [];
     const glowTexture = this.makeGlowTexture();
     const zs = [1.5, -36.5, -44.5, -53.5];
     zs.forEach((z) => {
@@ -904,6 +1156,7 @@ export class SketchCorridorScene {
     group.add(glow);
 
     this.scene.add(group);
+    this.corridorLanterns.push(group);
   }
 
   // 径向光晕纹理（宫灯共用）
@@ -1297,6 +1550,13 @@ export class SketchCorridorScene {
   // 点击路由：走廊点门进展厅，展厅点模型看详情
   pickAt(clientX, clientY) {
     if (!this.inputEnabled || this.renderPaused) return;
+    if (this.spiritPet) {
+      this.raycaster.setFromCamera(this.ndcFromClient(clientX, clientY), this.camera);
+      if (this.spiritPet.intersects(this.raycaster)) {
+        this.callbacks.onPetClick?.();
+        return;
+      }
+    }
     if (this.viewState === 'room') {
       this.pickRoomStand(clientX, clientY);
     } else if (this.viewState === 'corridor') {
@@ -1403,6 +1663,7 @@ export class SketchCorridorScene {
       });
     }
 
+    this.updateSpiritPet(dt);
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -1418,7 +1679,7 @@ export class SketchCorridorScene {
     }
     if (hovered !== this.hoveredDoor) {
       this.hoveredDoor = hovered;
-      this.renderer.domElement.style.cursor = hovered ? 'pointer' : '';
+      this.renderer.domElement.style.cursor = hovered || this.petHovered ? 'pointer' : '';
     }
     this.doors.forEach((door) => {
       door.spot.visible = shouldIlluminateMuseumDoor({
@@ -1453,7 +1714,7 @@ export class SketchCorridorScene {
     }
     if (hovered !== this.hoveredStand) {
       this.hoveredStand = hovered;
-      this.renderer.domElement.style.cursor = hovered ? 'pointer' : '';
+      this.renderer.domElement.style.cursor = hovered || this.petHovered ? 'pointer' : '';
     }
     stands.forEach((stand) => {
       const target = stand === hovered ? 1 : 0;
@@ -1474,6 +1735,8 @@ export class SketchCorridorScene {
   dispose() {
     this.disposed = true;
     if (this.animationId) cancelAnimationFrame(this.animationId);
+    this.spiritPet?.dispose();
+    this.spiritPet = null;
     window.removeEventListener('resize', this.resizeHandler);
     window.removeEventListener('keydown', this.keydownHandler);
     document.removeEventListener('visibilitychange', this.visibilityHandler);
@@ -1485,22 +1748,34 @@ export class SketchCorridorScene {
       canvas.removeEventListener('pointerup', this.pointerUpHandler);
       canvas.removeEventListener('pointercancel', this.pointerUpHandler);
     }
-    this.scene?.traverse((child) => {
-      child.geometry?.dispose?.();
-      const materials = Array.isArray(child.material) ? child.material : [child.material];
-      materials.filter(Boolean).forEach((material) => {
-        Object.keys(material).forEach((key) => {
-          if (material[key]?.isTexture) material[key].dispose();
-        });
-        material.dispose();
-      });
-    });
+    disposeObjectResources(this.scene);
+    this.corridorKit = null;
+    this.corridorLanterns = [];
     this.textureCache.clear();
     this.renderer?.dispose();
     if (canvas?.parentNode === this.container) {
       this.container.removeChild(canvas);
     }
   }
+}
+
+// 共享几何体、材质和贴图各释放一次。
+function disposeObjectResources(object) {
+  const geometries = new Set();
+  const materials = new Set();
+  const textures = new Set();
+  object?.traverse(child => {
+    if (child.geometry) geometries.add(child.geometry);
+    if (child.isInstancedMesh) child.dispose();
+    const list = Array.isArray(child.material) ? child.material : [child.material];
+    list.filter(Boolean).forEach(material => materials.add(material));
+  });
+  materials.forEach(material => {
+    Object.values(material).filter(value => value?.isTexture).forEach(texture => textures.add(texture));
+    material.dispose();
+  });
+  textures.forEach(texture => texture.dispose());
+  geometries.forEach(geometry => geometry.dispose());
 }
 
 // 按最大边缩放到目标尺寸并居中。
