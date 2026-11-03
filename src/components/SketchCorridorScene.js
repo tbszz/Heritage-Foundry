@@ -11,6 +11,7 @@ import { Easing, Tween, update as updateTweens } from '@tweenjs/tween.js/dist/tw
 import { createGLTFLoader } from '../utils/modelLoader.js';
 import { getMuseumRenderBudget, loadManagedMuseumTexture } from '../utils/museumTexture.js';
 import { PET, SpiritPet } from './SpiritPet.js';
+import { buildThemedHall } from './museumHalls.js';
 
 const HALL_INK = 0x171411;
 const DOOR_LEAF_GAP = 0.01;
@@ -344,6 +345,8 @@ export class SketchCorridorScene {
     layouts.forEach((layout) => this.buildDoor(layout));
     this.buildFrames(chapters);
     this.buildLanterns();
+    // 主题展厅的烘焙厅体等长廊模块到手后、游客走近门口时再取，不和首屏抢带宽，也不一次占满五个厅的显存
+    this.corridorKitPromise.then(() => { this.hallShellsReady = true; });
     this.spawnSpiritPet();
     this.bindEvents();
 
@@ -687,6 +690,32 @@ export class SketchCorridorScene {
   buildRoom(door) {
     const dir = door.side === 'left' ? -1 : 1;
     const doorZ = door.position.z;
+    // 每个厅一个根节点，平时隐藏（连同厅内灯光），推门时才显示，走廊里不为墙后的厅付绘制开销
+    const roomGroup = new THREE.Group();
+    roomGroup.visible = false;
+    this.scene.add(roomGroup);
+    door.roomGroup = roomGroup;
+
+    // 主题展厅在局部坐标里搭建：根节点放到门洞，-z 朝厅内深处
+    const hallRoot = new THREE.Group();
+    hallRoot.position.set(dir * ROOM.wallX, 0, doorZ);
+    hallRoot.rotation.y = dir === -1 ? Math.PI / 2 : -Math.PI / 2;
+    const hall = buildThemedHall(door, hallRoot, {
+      room: ROOM,
+      doorway: { width: CORRIDOR.doorWidth + 0.24, height: CORRIDOR.doorHeight + 0.1 },
+      anisotropy: this.textureAnisotropy,
+      makeRoomTitleTexture: (chapter, ink) => this.makeRoomTitleTexture(chapter, ink),
+      makeStandLabelTexture: (craft) => this.makeStandLabelTexture(craft),
+      loadModel: (url) => this.loader.loadAsync(url),
+      isDisposed: () => this.disposed
+    });
+    if (hall) {
+      roomGroup.add(hallRoot);
+      door.hall = hall;
+      door.roomStands.push(...hall.stands);
+      return;
+    }
+
     const centerX = dir * (ROOM.wallX + ROOM.depth / 2);
     const farX = dir * (ROOM.wallX + ROOM.depth);
 
@@ -701,7 +730,7 @@ export class SketchCorridorScene {
     );
     floor.rotation.x = -Math.PI / 2;
     floor.position.set(centerX, 0, doorZ);
-    this.scene.add(floor);
+    roomGroup.add(floor);
 
     const ceiling = new THREE.Mesh(
       new THREE.PlaneGeometry(ROOM.depth, ROOM.width),
@@ -713,7 +742,7 @@ export class SketchCorridorScene {
     );
     ceiling.rotation.x = Math.PI / 2;
     ceiling.position.set(centerX, ROOM.height, doorZ);
-    this.scene.add(ceiling);
+    roomGroup.add(ceiling);
 
     // 两侧墙（z 方向）
     const sideWallGeometry = new THREE.PlaneGeometry(ROOM.depth, ROOM.height);
@@ -727,7 +756,7 @@ export class SketchCorridorScene {
       );
       wall.rotation.y = rotationY;
       wall.position.set(centerX, ROOM.height / 2, z);
-      this.scene.add(wall);
+      roomGroup.add(wall);
     });
 
     // 尽头墙（面向展厅入口）+ 展厅大标题
@@ -738,7 +767,7 @@ export class SketchCorridorScene {
     );
     farWall.rotation.y = farWallRotation;
     farWall.position.set(farX, ROOM.height / 2, doorZ);
-    this.scene.add(farWall);
+    roomGroup.add(farWall);
 
     const title = new THREE.Mesh(
       new THREE.PlaneGeometry(5.2, 2.6),
@@ -746,14 +775,12 @@ export class SketchCorridorScene {
     );
     title.rotation.y = farWallRotation;
     title.position.set(farX - dir * 0.08, 2.5, doorZ);
-    this.scene.add(title);
+    roomGroup.add(title);
 
     // 展厅照明：暖金点光源悬于厅心，仅在观众进入该厅时点亮（控制同屏灯数）
     const roomLight = new THREE.PointLight(0xffddb0, 12, 52, 1.2);
     roomLight.position.set(centerX, ROOM.height - 0.7, doorZ);
-    roomLight.visible = false;
-    this.scene.add(roomLight);
-    door.roomLight = roomLight;
+    roomGroup.add(roomLight);
 
     // 石墨石展台通过真实受光呈现细颗粒，避免自发光把材质压平。
     const pedestalGeometry = new THREE.CylinderGeometry(0.5, 0.58, 1.0, 24);
@@ -795,7 +822,7 @@ export class SketchCorridorScene {
       const stand = { ...layout, group, modelAnchor, hoverT: 0 };
       group.userData.stand = stand;
       door.roomStands.push(stand);
-      this.scene.add(group);
+      roomGroup.add(group);
     });
   }
 
@@ -810,7 +837,7 @@ export class SketchCorridorScene {
         .then((gltf) => {
           if (this.disposed || stand.modelAnchor.children.length) return;
           const model = gltf.scene.clone(true);
-          normalizeObject(model, ROOM.modelSize);
+          normalizeObject(model, stand.modelSize ?? ROOM.modelSize);
           stand.modelAnchor.add(model);
         })
         .catch(() => {});
@@ -873,8 +900,9 @@ export class SketchCorridorScene {
     this.inputEnabled = false;
     this.currentDoor = door;
     this.requestRoomModels(door);
-    // 点亮该厅射灯（其余展厅的灯保持熄灭，控制同屏灯数）
-    if (door.roomLight) door.roomLight.visible = true;
+    door.hall?.preload?.();
+    // 显出该厅（含厅内灯光；其余展厅保持隐藏，控制同屏灯数）
+    door.roomGroup.visible = true;
     // 进厅动作一开始就让首页覆盖层淡出（等走完再切会遮挡穿门过程）
     this.callbacks.onRoomEnter?.(door.chapter.id);
 
@@ -950,10 +978,13 @@ export class SketchCorridorScene {
       this.viewState = 'corridor';
       this.callbacks.onRoomExit?.();
       if (door) {
-        if (door.roomLight) door.roomLight.visible = false;
         new Tween(door.pivot.rotation)
           .to({ y: 0 }, 700)
           .easing(Easing.Cubic.InOut)
+          .onComplete(() => {
+            // 门合上后再藏起展厅；若期间又推门进来则保持显示
+            if (!door.opened) door.roomGroup.visible = false;
+          })
           .start();
         door.opened = false;
       }
@@ -1303,7 +1334,8 @@ export class SketchCorridorScene {
   }
 
   // 展厅尽头墙大标题：展厅名 + 副题 + 馆藏数
-  makeRoomTitleTexture(chapter) {
+  // ink：副标题颜色，浅色墙的展厅要换深色才看得清
+  makeRoomTitleTexture(chapter, ink = MIST) {
     const canvas = document.createElement('canvas');
     canvas.width = 1024;
     canvas.height = 512;
@@ -1321,7 +1353,7 @@ export class SketchCorridorScene {
       ctx.lineTo(742, 288);
       ctx.stroke();
       ctx.font = '50px "LXGW WenKai", serif';
-      ctx.fillStyle = MIST;
+      ctx.fillStyle = ink;
       ctx.fillText(chapter?.subtitle || '', 512, 368);
       ctx.font = '40px "LXGW WenKai", serif';
       ctx.fillText(`${chapter?.crafts?.length || 0} 件馆藏`, 512, 438);
@@ -1659,8 +1691,12 @@ export class SketchCorridorScene {
       this.currentDoor.roomStands.forEach((stand, index) => {
         if (!stand.modelAnchor.children.length) return;
         stand.modelAnchor.rotation.y += dt * 0.4;
-        stand.modelAnchor.position.y = 1.55 + Math.sin(now * 0.001 + index) * 0.05;
+        stand.modelAnchor.position.y = (stand.baseY ?? 1.55) + Math.sin(now * 0.001 + index) * 0.05;
       });
+    }
+    // 主题展厅自己的动态（窑火、火星等），只在厅可见时运行
+    if (!this.reducedMotion && this.currentDoor?.roomGroup?.visible) {
+      this.currentDoor.hall?.update(dt, now);
     }
 
     this.updateSpiritPet(dt);
@@ -1687,6 +1723,7 @@ export class SketchCorridorScene {
         doorZ: door.position.z,
         viewState: this.viewState
       });
+      if (door.spot.visible && this.hallShellsReady) door.hall?.preload?.();
       const target = door === hovered && !door.opened ? 1 : 0;
       door.hoverT += (target - door.hoverT) * Math.min(1, dt * 10);
       door.sign.scale.setScalar(1 + door.hoverT * 0.08);
